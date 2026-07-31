@@ -224,7 +224,9 @@ const CONFIG={
   // Synchronizace mezi zařízeními (nepovinná). Chceš vlastní? Založ si projekt
   // na supabase.com a vlož sem jeho URL a veřejný "anon" klíč — nebo je zadej
   // přímo v appce v Nastavení → Synchronizace.
-  cloud:{url:'',key:''},
+  // Klíč je veřejný (publishable) — je určený do prohlížeče. Data chrání
+  // řádkové zabezpečení: každý vidí jen své vlastní.
+  cloud:{url:'https://gxdeprnnhgxasilstavh.supabase.co',key:'sb_publishable_HmJT8PZ8AkDxloBy0NFlWw_k4w3QtGG'},
   accents:['#c4694a','#3a8a7a','#5a7fa0','#7a5a8c','#c0902f','#4a7a52','#b0583b','#2c2520'],
   categories:[   // kind: 'need' = potřeba (50 %), 'want' = přání (30 %) — pro pravidlo 50/30/20
     {nm:'Bydlení',icon:'home',kind:'need',items:['Nájem / hypotéka','Energie','Internet']},
