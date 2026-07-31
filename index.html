@@ -301,6 +301,7 @@ const ICON={
   x:'<path d="M6 6l12 12M18 6 6 18"/>',
   cleft:'<path d="M15 6l-6 6 6 6"/>',
   cright:'<path d="M9 6l6 6-6 6"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
   up:'<path d="M12 19V5M6 11l6-6 6 6"/>',
   down:'<path d="M12 5v14M6 13l6 6 6-6"/>',
   coin:'<circle cx="12" cy="12" r="8"/><path d="M12 8v8M10 10h3a1.5 1.5 0 0 1 0 3h-3"/>',
@@ -420,7 +421,9 @@ async function autosaveFile(){if(!fileHandle||!fileOK)return;if(saving){saveQueu
 const P=()=>{let p=S.periods.find(x=>x.id===S.curId);if(!p){p=S.periods[S.periods.length-1];if(p)S.curId=p.id;}return p;};
 const periodIndex=()=>S.periods.findIndex(x=>x.id===S.curId);
 const itemActual=it=>(it.log||[]).reduce((s,e)=>s+(e.a||0),0);
-const catPlan=c=>c.it.reduce((s,i)=>s+(i.pl||0),0);
+const itemsPlan=c=>c.it.reduce((s,i)=>s+(i.pl||0),0);
+// plán kategorie: vlastní měsíční plán má přednost, jinak se sečte z položek
+const catPlan=c=>(c.pl>0?c.pl:itemsPlan(c));
 const catActual=c=>c.it.reduce((s,i)=>s+itemActual(i),0);
 const sumPlan=p=>p.cats.reduce((s,c)=>s+catPlan(c),0);
 const sumActual=p=>p.cats.reduce((s,c)=>s+catActual(c),0);
@@ -509,11 +512,25 @@ function vPrehled(p){
   const elapsed=Math.max(0,Math.min(days,Math.round((new Date()-new Date(p.from))/864e5)));
   const left=Math.max(0,days-elapsed);const perDay=left>0?free/left:free;
   let h='';
-  if(!fileOK)h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Ochrana dat:</b> ${fileHandle?'Klikni na „Klikni pro připojení" nahoře a potvrď přístup.':'Připoj datový soubor, ať už nikdy nepřijdeš o data.'} <a onclick="${fsaSupported()?'connectFile()':"go('nastaveni')"}">${fsaSupported()?'Připojit soubor →':'Jak na to →'}</a></div></div>`;
-  if(base===0&&exp===0){h+=`<div class="card"><div class="ct" style="margin-bottom:10px">${ic('rocket',15)} Začínáme — 3 kroky</div>
-    <div class="row" style="cursor:pointer" onclick="incomeModal()"><div class="ic" style="background:var(--accent-bg);color:var(--accent-d);font-weight:600">1</div><div class="m"><div class="t1">Nastav si příjem</div><div class="t2">kolik čekáš / kolik přišlo tenhle cyklus</div></div><span style="color:var(--text4)">${ic('cright',16)}</span></div>
-    <div class="row" style="cursor:pointer" onclick="go('vydaje')"><div class="ic" style="background:var(--teal-bg);color:var(--teal);font-weight:600">2</div><div class="m"><div class="t1">Naplánuj výdaje</div><div class="t2">nastav plány u kategorií, ať vidíš plán vs. realitu</div></div><span style="color:var(--text4)">${ic('cright',16)}</span></div>
-    <div class="row" style="cursor:pointer" onclick="${fsaSupported()?'connectFile()':"go('nastaveni')"}"><div class="ic" style="background:var(--plum-bg);color:var(--plum);font-weight:600">3</div><div class="m"><div class="t1">Připoj datový soubor</div><div class="t2">ať se všechno samo ukládá na disk</div></div><span style="color:var(--text4)">${ic('cright',16)}</span></div></div>`;}
+  if(fsaSupported()&&!fileOK)h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Ochrana dat:</b> ${fileHandle?'Klikni na „Klikni pro připojení" nahoře a potvrď přístup.':'Připoj datový soubor, ať už nikdy nepřijdeš o data.'} <a onclick="connectFile()">Připojit soubor →</a></div></div>`;
+  else if(!fsaSupported()&&(!S.lastExport||Date.now()-new Date(S.lastExport+'T00:00:00').getTime()>7*864e5))
+    h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Data jsou jen v tomhle zařízení.</b> Telefon a počítač mají každý svoje — nepropojí se samy. Občas si stáhni zálohu. <a onclick="exportData()">Stáhnout zálohu →</a></div></div>`;
+  const steps=[
+    {ok:base>0,t:'Nastav si příjem',s:'kolik čekáš / kolik přišlo tenhle cyklus',fn:'incomeModal()',c:'var(--accent-bg)',fg:'var(--accent-d)'},
+    {ok:sumPlan(p)>0,t:'Naplánuj měsíční výdaje',s:'kolik chceš utratit v každé kategorii',fn:'plansModal()',c:'var(--teal-bg)',fg:'var(--teal)'},
+    fsaSupported()
+      ? {ok:fileOK,t:'Připoj datový soubor',s:'ať se všechno samo ukládá na disk',fn:'connectFile()',c:'var(--plum-bg)',fg:'var(--plum)'}
+      : {ok:!!S.lastExport,t:'Stáhni si zálohu',s:'ať o data nikdy nepřijdeš',fn:'exportData()',c:'var(--plum-bg)',fg:'var(--plum)'},
+  ];
+  const doneCount=steps.filter(s=>s.ok).length;
+  if(doneCount<steps.length&&!S.ui.hideIntro){
+    h+=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('rocket',15)} Začínáme — ${doneCount}/${steps.length} hotovo</span><button class="btn gho sm" onclick="hideIntro()">Skrýt</button></div>`;
+    steps.forEach((st,i)=>{h+=`<div class="row" style="cursor:pointer;${st.ok?'opacity:.55':''}" onclick="${st.fn}">
+      <div class="ic" style="background:${st.ok?'var(--teal-bg)':st.c};color:${st.ok?'var(--teal)':st.fg};font-weight:600">${st.ok?ic('check',18):(i+1)}</div>
+      <div class="m"><div class="t1" style="${st.ok?'text-decoration:line-through':''}">${st.t}</div><div class="t2">${st.s}</div></div>
+      <span style="color:var(--text4)">${st.ok?'':ic('cright',16)}</span></div>`;});
+    h+=`</div>`;
+  }
   h+=`<div class="hero"><div class="blob" style="background:${free<0?'#e2a29a':'#a0d0c6'}"></div>
     <div class="lbl">Zbývá volných z výplaty</div>
     <div class="big ${free<0?'neg':''}">${fm(free)}</div>
@@ -555,7 +572,10 @@ function vPrehled(p){
 function vVydaje(p){
   if(detailCat){const c=p.cats.find(x=>x.id===detailCat);if(c)return catDetail(p,c);detailCat=null;}
   const fixedCount=p.cats.reduce((s,c)=>s+c.it.filter(i=>i.fixed&&i.pl>0).length,0);
-  let h=fixedCount?`<div style="margin-bottom:14px"><button class="btn fill" onclick="payRecurring()">${ic('repeat',15)} Zaplatit pravidelné (${fixedCount})</button> <span class="mini">jedním klikem zapíše plánované částky pravidelných položek</span></div>`:'';
+  let h=`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+    <button class="btn" onclick="plansModal()">${ic('list',15)} Měsíční plány</button>
+    ${fixedCount?`<button class="btn fill" onclick="payRecurring()">${ic('repeat',15)} Zaplatit pravidelné (${fixedCount})</button>`:''}
+    <div class="sp"></div><span class="mini">Plán celkem ${fm(sumPlan(p))} · utraceno ${fm(sumActual(p))}</span></div>`;
   h+=`<div class="catgrid">`;
   p.cats.forEach((c,i)=>{const a=catActual(c),pl=catPlan(c),over=a>pl&&pl>0,pu=pl>0?Math.min(100,Math.round(a/pl*100)):0;
     h+=`<div class="catcard" onclick="openCat('${c.id}')">
@@ -575,7 +595,11 @@ function catDetail(p,c){
     <div class="grid3" style="margin-bottom:6px">
       <div style="text-align:center"><div class="mini">Plán</div><div class="num" style="font-size:19px">${fm(pl)}</div></div>
       <div style="text-align:center"><div class="mini">Skutečnost</div><div class="num" style="font-size:19px;color:${a>pl&&pl>0?'var(--neg)':'var(--teal)'}">${fm(a)}</div></div>
-      <div style="text-align:center"><div class="mini">Rozdíl</div><div class="num ${diff>=0?'pos':'neg'}" style="font-size:19px">${diff>=0?'+':''}${fm(diff)}</div></div></div></div>`;
+      <div style="text-align:center"><div class="mini">Rozdíl</div><div class="num ${diff>=0?'pos':'neg'}" style="font-size:19px">${diff>=0?'+':''}${fm(diff)}</div></div></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1.5px solid var(--line);flex-wrap:wrap">
+      <span class="mini" style="font-weight:600">Měsíční plán kategorie</span>
+      <input class="inp num" type="number" value="${c.pl||''}" placeholder="0" onchange="setCatPlan('${c.id}',this.value)" style="flex:0 0 120px;text-align:right">
+      ${(c.pl>0&&itemsPlan(c)>0)?`<span class="mini">z položek by vyšlo ${fm(itemsPlan(c))} — platí zadaný plán</span>`:`<span class="mini">${itemsPlan(c)>0?'teď se počítá z plánů položek':'nech 0 a plán se sečte z položek'}</span>`}</div></div>`;
   h+=`<div class="card"><div class="ct" style="margin-bottom:14px">Položky</div>`;
   if(!c.it.length)h+=`<div class="empty">Zatím žádné položky.</div>`;
   c.it.forEach(it=>{const ia=itemActual(it),d=(it.pl||0)-ia,isOpen=openItem===it.id;const logs=(it.log||[]).slice().sort((x,y)=>(y.d||'').localeCompare(x.d||''));
@@ -778,11 +802,11 @@ function statAvg(){
 /* ---------- NASTAVENÍ ---------- */
 function vNastaveni(p){
   let h=`<div class="card"><div class="ct" style="margin-bottom:6px">${ic('shield',15)} Ochrana dat (nejdůležitější)</div>
-    <p class="mini" style="margin:0 0 14px">${fileOK?'Data se automaticky ukládají do souboru na disku. Přežije to i smazání historie prohlížeče.':'Data jsou zatím jen v prohlížeči. Připoj soubor na disku, ať o ně nepřijdeš.'}</p>`;
+    <p class="mini" style="margin:0 0 14px">${fileOK?'Data se automaticky ukládají do souboru na disku. Přežije to i smazání historie prohlížeče.':fsaSupported()?'Data jsou zatím jen v prohlížeči. Připoj soubor na disku, ať o ně nepřijdeš.':'Data se ukládají v prohlížeči tohoto zařízení.'}</p>`;
   if(fsaSupported()){if(fileOK)h+=`<div class="banner info" style="margin:0 0 12px"><span class="bi">${ic('coins',16)}</span><div>Ukládá se do připojeného souboru.</div></div>`;
     h+=`<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn fill" onclick="connectFile()">${fileOK?'Připojit jiný soubor':'Připojit datový soubor'}</button>`;
     if(fileHandle&&!fileOK)h+=`<button class="btn" onclick="regrantFile()">Znovu povolit přístup</button>`;
-  }else{h+=`<div class="banner warn" style="margin:0 0 12px"><span class="bi">${ic('bulb',16)}</span><div>Tenhle prohlížeč neumí auto-ukládání do souboru. Otevři appku v <b>Chrome</b> nebo <b>Edge</b>, nebo dělej ruční zálohy.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap">`;}
+  }else{h+=`<div class="banner info" style="margin:0 0 12px"><span class="bi">${ic('phone',16)}</span><div><b>Data má každé zařízení svoje.</b> Telefon a počítač se samy nepropojí — appka nic neposílá na internet.<br><br><b>Přenos z počítače do mobilu:</b> na počítači dej <i>Stáhnout zálohu</i>, soubor si pošli (mail, Úložiště, WhatsApp…) a tady dej <i>Obnovit ze zálohy</i>. Stejně to jde i opačně.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap">`;}
   h+=`<button class="btn" onclick="exportData()">Stáhnout zálohu</button><button class="btn" onclick="document.getElementById('impf').click()">Obnovit ze zálohy</button><button class="btn" onclick="exportCSV()">Export CSV (Excel)</button></div>
     <p class="mini" style="margin-top:12px">Poslední ruční záloha: ${S.lastExport?fdFull(S.lastExport):'nikdy'}.</p></div>`;
 
@@ -791,6 +815,7 @@ function vNastaveni(p){
     <div class="fg"><span class="fl">Název aplikace</span><input class="inp" value="${esc(S.ui.appName)}" onchange="S.ui.appName=this.value.trim()||'Rozpočet';commit()"></div>
     <div class="fg"><span class="fl">Barva</span><div class="swatches">${CONFIG.accents.map(hx=>`<div class="swatch ${S.ui.accent.toLowerCase()===hx.toLowerCase()?'on':''}" style="background:${hx}" onclick="setAccent('${hx}')"></div>`).join('')}
       <label class="swatch" style="background:conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);display:grid;place-items:center;overflow:hidden"><input type="color" value="${S.ui.accent}" oninput="setAccent(this.value)" style="opacity:0;width:100%;height:100%;cursor:pointer"></label></div></div>
+    ${S.ui.hideIntro?`<div class="fg"><span class="fl">Průvodce začátkem</span><button class="btn sm" onclick="showIntro()">${ic('rocket',14)} Zobrazit znovu</button></div>`:''}
     <div class="fg"><span class="fl">Font čísel</span><select class="inp" onchange="setNumFont(this.value)">${Object.entries(NUMFONTS).map(([k,f])=>`<option value="${k}" ${S.ui.numFont===k?'selected':''}>${f.label}</option>`).join('')}</select>
       <div class="mini" style="margin-top:8px">Ukázka: <span class="num" style="font-size:20px;color:var(--text)">1&nbsp;234&nbsp;567&nbsp;Kč · 28&nbsp;000 · 15,5&nbsp;%</span></div></div>
     <div class="fg"><span class="fl">Záložky v menu (přejmenuj, skryj, přeřaď)</span><div style="margin-top:2px">`;
@@ -826,7 +851,8 @@ function vNastaveni(p){
    ACTIONS
    ===================================================================== */
 function switchPeriod(d){const i=periodIndex()+d;if(i<0||i>=S.periods.length)return;S.curId=S.periods[i].id;detailCat=null;openItem=null;commit();}
-function openCat(id){detailCat=id;openItem=null;go('vydaje');}
+// pozor: nesmí volat go() — to by detailCat hned vynulovalo
+function openCat(id){tab='vydaje';detailCat=id;openItem=null;R();window.scrollTo(0,0);}
 function closeCat(){detailCat=null;openItem=null;R();}
 function toggleItem(id){openItem=openItem===id?null:id;R();}
 
@@ -845,6 +871,7 @@ function delLog(cid,iid,li){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.
 function setItemPlan(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(it){it.pl=num(v);openItem=iid;commit();}}
 function addItem(cid){const c=P().cats.find(x=>x.id===cid);if(!c)return;const nm=document.getElementById('nit-'+cid).value.trim();if(!nm){toast('Zadej název');return;}c.it.push({id:uid(),nm,pl:num(document.getElementById('nitp-'+cid).value),log:[]});commit();}
 function delItem(cid,iid){if(!confirm('Smazat položku?'))return;const c=P().cats.find(x=>x.id===cid);c.it=c.it.filter(x=>x.id!==iid);openItem=null;commit();}
+function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
 function toggleFixed(cid,iid){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(it){it.fixed=!it.fixed;openItem=iid;commit();}}
 function payRecurring(){const p=P();let cnt=0,tot=0;p.cats.forEach(c=>c.it.forEach(it=>{if(!it.fixed||!(it.pl>0))return;const paid=(it.log||[]).some(e=>e.d>=p.from&&e.d<p.to&&e.n==='(pravidelné)');if(paid)return;(it.log||(it.log=[])).push({d:todayISO(),a:it.pl,n:'(pravidelné)'});cnt++;tot+=it.pl;}));if(!cnt){toast('Pravidelné už zaplaceny nebo žádné nenastaveny');return;}toast(`Zaplaceno ${cnt} pravidelných · ${fm(tot)}`);commit();}
 
@@ -865,6 +892,21 @@ function catModal(id){const c=id?P().cats.find(x=>x.id===id):null;mctx={id,icon:
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveCat()">${c?'Uložit':'Vytvořit'}</button></div>`);}
 function saveCat(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const p=P();if(mctx.id){const c=p.cats.find(x=>x.id===mctx.id);c.nm=nm;c.icon=mctx.icon;c.kind=mctx.kind;}else p.cats.push({id:uid(),nm,icon:mctx.icon,kind:mctx.kind,it:[]});closeModal();commit();}
 function delCat(id){if(!confirm('Smazat celou kategorii i s položkami?'))return;const p=P();p.cats=p.cats.filter(x=>x.id!==id);detailCat=null;closeModal();commit();}
+
+/* měsíční plány kategorií — vše na jedné obrazovce */
+function plansModal(){const p=P();
+  openModal(`<h3>Měsíční plány</h3><div class="md">Kolik chceš v každé kategorii utratit za jeden výplatní cyklus. Nech 0 tam, kde plán nechceš.</div>
+    <div id="plrows">${p.cats.map(c=>`<div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+      <span style="color:var(--text3)">${ic(c.icon,17)}</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">${esc(c.nm)}</span>
+      <input class="inp num" type="number" data-cid="${c.id}" value="${catPlan(c)||''}" placeholder="0" style="flex:0 0 110px;text-align:right"></div>`).join('')}</div>
+    <div style="display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line);font-size:14px;font-weight:600">
+      <span>Celkem za cyklus</span><span class="num" id="pltot">${fm(sumPlan(p))}</span></div>
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="savePlans()">Uložit plány</button></div>`);
+  const upd=()=>{let s=0;document.querySelectorAll('#plrows [data-cid]').forEach(i=>s+=num(i.value));document.getElementById('pltot').textContent=fm(s);};
+  document.querySelectorAll('#plrows [data-cid]').forEach(i=>{i.oninput=upd;i.onkeydown=e=>{if(e.key==='Enter')savePlans();};});
+  setTimeout(()=>document.querySelector('#plrows [data-cid]')?.focus(),50);}
+function savePlans(){const p=P();document.querySelectorAll('#plrows [data-cid]').forEach(i=>{const c=p.cats.find(x=>x.id===i.dataset.cid);if(c)c.pl=num(i.value);});closeModal();toast('Plány uloženy');commit();}
 
 /* income */
 function incomeModal(){const p=P();openModal(`<h3>Příjmy období</h3><div class="md">Skutečně = kolik reálně přišlo (podle toho počítám „zbývá volných").</div>
@@ -947,6 +989,8 @@ function doDebtPay(){const d=S.debts.find(x=>x.id===mctx.id);const a=Math.abs(nu
 function delDebtPay(id,i){const d=S.debts.find(x=>x.id===id);d.pay.splice(i,1);commit();}
 
 /* customization actions */
+function hideIntro(){S.ui.hideIntro=true;toast('Skryto — vrátíš v Nastavení');commit();}
+function showIntro(){S.ui.hideIntro=false;go('prehled');}
 function setAccent(hex){S.ui.accent=hex;applyAccent(hex);commit();}
 function renameTab(id,v){const t=S.ui.tabs.find(x=>x.id===id);if(t){t.label=v.trim()||t.label;persist();}}
 function toggleTab(id){const t=S.ui.tabs.find(x=>x.id===id);if(t&&t.id!=='nastaveni'){t.visible=!t.visible;commit();}}
