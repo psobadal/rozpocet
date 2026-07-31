@@ -2,7 +2,7 @@
 
 Osobní finanční appka **od výplaty k výplatě** — jeden HTML soubor, žádný server, žádná registrace. Data zůstávají u tebe.
 
-**[▶ Otevřít appku](https://OWNER.github.io/REPO/)**
+**[▶ Otevřít appku](https://psobadal.github.io/rozpocet/)**
 
 ## Co umí
 
