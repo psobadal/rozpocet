@@ -342,7 +342,8 @@ function applyTheme(){applyAccent(S.ui.accent);applyNumFont(S.ui.numFont);}
 /* ---------- defaults ---------- */
 function defCats(){return CONFIG.categories.map(c=>({id:uid(),nm:c.nm,icon:c.icon,kind:c.kind||'need',it:(c.items||[]).map(n=>({id:uid(),nm:n,pl:0,log:[]}))}));}
 function defPeriod(nm,from,to){return{id:uid(),nm,from,to,income:[{label:'Výplata',pl:0,ac:0},{label:'Jiné',pl:0,ac:0}],cats:defCats()};}
-function curCycleDates(){const d=new Date();const day=d.getDate();let start=new Date(d.getFullYear(),d.getMonth(),15);if(day<15)start=new Date(d.getFullYear(),d.getMonth()-1,15);const end=new Date(start.getFullYear(),start.getMonth()+1,15);return{from:iso(start),to:iso(end)};}
+// první období nového uživatele: ode dneška na měsíc — datum si pak upraví podle své výplaty
+function curCycleDates(){const s=new Date();s.setHours(0,0,0,0);const e=new Date(s.getFullYear(),s.getMonth()+1,s.getDate());return{from:iso(s),to:iso(e)};}
 const MON=['ledna','února','března','dubna','května','června','července','srpna','září','října','listopadu','prosince'];
 function monthName(isoStr){const p=isoStr.split('-');return MON[+p[1]-1]+' '+p[0];}
 const defTabs=()=>[
@@ -357,7 +358,7 @@ const defTabs=()=>[
 function defState(){
   const c=curCycleDates();const per=defPeriod('Výplata '+monthName(c.from),c.from,c.to);
   return{
-    v:2,created:todayISO(),payFrom:14,payTo:18,tax:CONFIG.taxRate,
+    v:2,created:todayISO(),tax:CONFIG.taxRate,
     ui:{appName:CONFIG.appName,accent:CONFIG.accent,numFont:CONFIG.numFont,tabs:defTabs()},
     periods:[per],curId:per.id,
     envelopes:CONFIG.envelopes.map(e=>({id:uid(),nm:e.nm,icon:e.icon,bal:0,monthly:0,target:0,hist:[]})),
@@ -812,11 +813,9 @@ function vNastaveni(p){
   h+=`</div>`;
 
   // finance settings
-  h+=`<div class="card"><div class="ct" style="margin-bottom:14px">${ic('percent',15)} Daně & výplata</div>
-    <div class="fr" style="max-width:420px"><div class="fg"><span class="fl">Daň z úroků %</span><input class="inp num" type="number" value="${S.tax}" onchange="S.tax=+this.value;commit()"></div>
-      <div class="fg"><span class="fl">Výplata od dne</span><input class="inp num" type="number" value="${S.payFrom}" onchange="S.payFrom=+this.value;persist()"></div>
-      <div class="fg"><span class="fl">do dne</span><input class="inp num" type="number" value="${S.payTo}" onchange="S.payTo=+this.value;persist()"></div></div>
-    <p class="mini" style="margin-top:6px">Daň se strhává z připsaného úroku u spořáků/investic (v ČR běžně 15 %).</p></div>`;
+  h+=`<div class="card"><div class="ct" style="margin-bottom:14px">${ic('percent',15)} Daň z úroků</div>
+    <div style="max-width:200px"><div class="fg"><span class="fl">Sazba %</span><input class="inp num" type="number" value="${S.tax}" onchange="S.tax=+this.value;commit()"></div></div>
+    <p class="mini" style="margin-top:10px">Strhává se z úroku připsaného u spořáků a investic (v ČR běžně 15 %).</p></div>`;
 
   h+=`<div class="card"><div class="ct" style="margin-bottom:10px;color:var(--neg)">Nebezpečná zóna</div><p class="mini" style="margin:0 0 12px">Smaže všechna data. Jde vrátit jen ze zálohy.</p><button class="btn dgr" onclick="resetAll()">${ic('trash',15)} Smazat všechna data</button></div>`;
   h+=`<div class="banner tip"><span class="bi">${ic('rocket',18)}</span><div><b>Mobil a synchronizace</b> jsou další krok — až budeš chtít appku i do telefonu se stejnými daty, řekni.</div></div>`;
@@ -955,7 +954,7 @@ function moveTab(id,dir){const i=S.ui.tabs.findIndex(x=>x.id===id);const j=i+dir
 
 /* periods */
 function newPeriodModal(){const last=S.periods[S.periods.length-1];const from=last?last.to:todayISO();const fd2=new Date(from);const to=iso(new Date(fd2.getFullYear(),fd2.getMonth()+1,fd2.getDate()));
-  openModal(`<h3>Nové výplatní období</h3><div class="md">Zadej podle skutečného data výplaty (u tebe 14.–18.).</div>
+  openModal(`<h3>Nové výplatní období</h3><div class="md">Zadej skutečná data — od dne, kdy přišla výplata, do příští výplaty. Klidně pokaždé jiná.</div>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="Výplata ${monthName(from)}"></div>
     <div class="fr"><div class="fg"><span class="fl">Od výplaty</span><input class="inp" id="m_f" type="date" value="${from}"></div><div class="fg"><span class="fl">Příští výplata</span><input class="inp" id="m_t" type="date" value="${to}"></div></div>
     <label class="fg" style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="m_copy" checked style="width:auto"> Zkopírovat plán výdajů z aktuálního</label>
