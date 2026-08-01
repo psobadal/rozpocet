@@ -436,15 +436,38 @@ const sumActual=p=>p.cats.reduce((s,c)=>s+catActual(c),0);
 const incPlan=p=>p.income.reduce((s,r)=>s+(r.pl||0),0);
 const incActual=p=>p.income.reduce((s,r)=>s+(r.ac||0),0);
 const incBase=p=>{const a=incActual(p);return a>0?a:incPlan(p);};
-const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pid===pid&&h.t==='in').reduce((ss,h)=>ss+h.a,0),0);
+// .src = záznam vznikl z propojené položky výdajů → do „zbývá" se počítá už tam, tady ne (žádné dvojí počítání)
+const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pid===pid&&h.t==='in'&&!h.src).reduce((ss,h)=>ss+h.a,0),0);
 const investedInPeriod=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid).reduce((ss,h)=>ss+h.a,0),0);
-const debtPaidInPeriod=p=>S.debts.reduce((s,d)=>s+(d.pay||[]).filter(x=>x.d>=p.from&&x.d<p.to).reduce((ss,x)=>ss+x.a,0),0);
+const debtPaidInPeriod=p=>S.debts.reduce((s,d)=>s+(d.pay||[]).filter(x=>x.d>=p.from&&x.d<p.to&&!x.src).reduce((ss,x)=>ss+x.a,0),0);
 function freeLeft(p){return incBase(p)-sumActual(p)-savedInPeriod(p.id)-investedInPeriod(p.id)-debtPaidInPeriod(p);}
 const totalInvest=()=>S.investments.reduce((s,i)=>s+(i.val||0),0);
 const totalEnvelopes=()=>S.envelopes.reduce((s,e)=>s+(e.bal||0),0);
 const debtRemaining=d=>Math.max(0,(d.principal||0)-(d.paid0||0)-(d.pay||[]).reduce((s,x)=>s+x.a,0));
 const debtPaid=d=>(d.paid0||0)+(d.pay||[]).reduce((s,x)=>s+x.a,0);
 const totalDebt=()=>S.debts.reduce((s,d)=>s+debtRemaining(d),0);
+/* ---------- propojení položky výdajů s dluhem / obálkou ----------
+   Zápis u propojené položky rovnou založí splátku dluhu nebo vklad do obálky.
+   Peníze se počítají jen jednou — u položky; propojený záznam nese .src. */
+function linkTarget(it){
+  if(!it||!it.link)return null;
+  const i=it.link.indexOf(':');if(i<0)return null;
+  const t=it.link.slice(0,i),id=it.link.slice(i+1);
+  if(t==='debt'){const o=S.debts.find(d=>d.id===id);return o?{type:'debt',obj:o}:null;}
+  if(t==='env'){const o=S.envelopes.find(e=>e.id===id);return o?{type:'env',obj:o}:null;}
+  return null;
+}
+const linkLabel=it=>{const t=linkTarget(it);return t?(t.type==='debt'?'Dluh: ':'Obálka: ')+t.obj.nm:'';};
+function pushLinked(it,le){
+  const t=linkTarget(it);if(!t)return;
+  if(t.type==='debt'){t.obj.pay=t.obj.pay||[];t.obj.pay.push({d:le.d,a:le.a,n:le.n||it.nm,src:le.id});}
+  else{t.obj.hist=t.obj.hist||[];t.obj.hist.push({d:le.d,t:'in',a:le.a,n:le.n||it.nm,pid:S.curId,src:le.id});t.obj.bal=(t.obj.bal||0)+le.a;}
+}
+function removeLinked(logId){
+  if(!logId)return;
+  S.debts.forEach(d=>{d.pay=(d.pay||[]).filter(x=>x.src!==logId);});
+  S.envelopes.forEach(e=>{const keep=[];(e.hist||[]).forEach(x=>{if(x.src===logId)e.bal=(e.bal||0)-(x.t==='in'?x.a:-x.a);else keep.push(x);});e.hist=keep;});
+}
 function futureMonthStr(n){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+n);return (d.getMonth()+1)+'/'+d.getFullYear();}
 function monthsBetween(a,b){return Math.max(1,(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()));}
 function debtPayoff(d){const B=debtRemaining(d),pay=d.monthly||0,r=(d.rate||0)/100/12;if(B<=0)return{done:true};if(pay<=0)return null;if(r===0){const n=Math.ceil(B/pay);return{n,interest:0,date:futureMonthStr(n)};}const mi=B*r;if(pay<=mi)return{never:true};const n=Math.ceil(-Math.log(1-r*B/pay)/Math.log(1+r));return{n,interest:Math.max(0,Math.round(pay*n-B)),date:futureMonthStr(n)};}
@@ -649,6 +672,11 @@ function vPrehled(p){
       ${inv?`<div><span>Investováno</span><b style="color:var(--plum)">${fm(inv)}</b></div>`:''}
       ${debt?`<div><span>Splátky</span><b style="color:var(--blue)">${fm(debt)}</b></div>`:''}
     </div></div>`;
+  const plan=sumPlan(p),afterPlan=base-plan;
+  if(plan>0)h+=`<div class="tiles">
+    <div class="tile"><div class="tl">Naplánováno</div><div class="tv">${fm(plan)}</div></div>
+    <div class="tile"><div class="tl">Výplata − plán</div><div class="tv ${afterPlan<0?'neg':'pos'}">${fm(afterPlan)}</div></div>
+    <div class="tile"><div class="tl">Z plánu utraceno</div><div class="tv">${Math.round(exp/plan*100)} %</div></div></div>`;
   h+=`<div class="qa"><div class="qa-t">${ic('plus',15)} Rychlé zadání</div>
     <div class="qa-row">
       <select class="inp" id="qcat" style="flex:1.1;min-width:130px"><optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaSel==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaSel==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}</select>
@@ -729,7 +757,21 @@ function catDetail(p,c){
         <input class="inp" value="${esc(it.nm)}" onchange="renameItem('${c.id}','${it.id}',this.value)" style="flex:1;min-width:130px" title="Název položky" placeholder="Název">
         <input class="inp num" type="number" value="${it.pl||0}" onchange="setItemPlan('${c.id}','${it.id}',this.value)" style="flex:0 0 100px" title="Plán"><span class="mini">plán</span>
         <label class="mini" style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" ${it.fixed?'checked':''} onchange="toggleFixed('${c.id}','${it.id}')" style="width:auto"> pravidelná</label>
-        <button class="ib" onclick="delItem('${c.id}','${it.id}')" title="Smazat položku">${ic('trash',15)}</button></div></div>`;}
+        <button class="ib" onclick="delItem('${c.id}','${it.id}')" title="Smazat položku">${ic('trash',15)}</button></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <span class="mini" style="flex:0 0 auto">Propsat platbu do</span>
+        <select class="inp" onchange="setItemLink('${c.id}','${it.id}',this.value)" style="flex:1;min-width:150px;padding:7px 10px;font-size:13px">
+          <option value="">— nikam —</option>
+          ${S.debts.length?`<optgroup label="Dluhy">${S.debts.map(d=>`<option value="debt:${d.id}" ${it.link==='debt:'+d.id?'selected':''}>${esc(d.nm)}</option>`).join('')}</optgroup>`:''}
+          ${S.envelopes.length?`<optgroup label="Obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${it.link==='env:'+e.id?'selected':''}>${esc(e.nm)}</option>`).join('')}</optgroup>`:''}
+        </select>
+        <span class="mini" style="flex:0 0 auto">50/30/20</span>
+        <select class="inp" onchange="setItemKind('${c.id}','${it.id}',this.value)" style="flex:0 0 140px;padding:7px 10px;font-size:13px">
+          <option value="" ${!it.kind?'selected':''}>jako kategorie</option>
+          <option value="need" ${it.kind==='need'?'selected':''}>Potřeba</option>
+          <option value="want" ${it.kind==='want'?'selected':''}>Přání</option>
+        </select></div>
+      ${linkTarget(it)?`<div class="mini" style="margin-top:6px;color:var(--teal)">${ic('check',13)} Zápisy se rovnou propíšou do „${esc(linkTarget(it).obj.nm)}" a nepočítají se dvakrát.</div>`:''}</div>`;}
     h+=`</div>`;});
   h+=`<div class="logadd" style="border-top:1.5px dashed var(--line2);margin-top:10px;padding-top:14px"><input class="inp" id="nit-${c.id}" placeholder="Nová položka" style="flex:2"><input class="inp num" id="nitp-${c.id}" type="number" placeholder="Plán" style="flex:1"><button class="btn fill sm" onclick="addItem('${c.id}')">${ic('plus',15)} Položka</button></div></div>`;
   return h;
@@ -831,8 +873,12 @@ function overUnder(over,under){let h=`<div class="grid2" style="margin-bottom:14
 function rule503020(p){
   const actBase=incBase(p), planBase=incPlan(p)||actBase;
   if(planBase<=0&&actBase<=0)return `<div class="card"><div class="ct" style="margin-bottom:10px">Pravidlo 50/30/20</div><div class="empty">Nastav si příjem a uvidíš, jak si stojíš vůči 50 % potřeby · 30 % přání · 20 % úspory.</div></div>`;
+  // typ se bere u položky, a když ho nemá, dědí se z kategorie
   let needsA=0,wantsA=0,needsP=0,wantsP=0;
-  p.cats.forEach(c=>{const a=catActual(c),pl=catPlan(c);if((c.kind||'need')==='want'){wantsA+=a;wantsP+=pl;}else{needsA+=a;needsP+=pl;}});
+  p.cats.forEach(c=>{const ck=c.kind||'need';
+    if(c.pl>0){if(ck==='want')wantsP+=c.pl;else needsP+=c.pl;}   // plán zadaný za celou kategorii
+    c.it.forEach(it=>{const k=it.kind||ck,a=itemActual(it),pl=(c.pl>0?0:(it.pl||0));
+      if(k==='want'){wantsA+=a;wantsP+=pl;}else{needsA+=a;needsP+=pl;}});});
   const savA=savedInPeriod(p.id)+investedInPeriod(p.id)+debtPaidInPeriod(p);
   const savP=S.envelopes.reduce((s,e)=>s+(e.monthly||0),0)+S.debts.reduce((s,d)=>s+(d.monthly||0),0);
   const hasPlan=(needsP+wantsP+savP)>0&&planBase>0;
@@ -842,7 +888,7 @@ function rule503020(p){
     {label:'Úspory & splátky',target:20,a:savA,pl:savP,col:'var(--teal)',hint:'obálky, investice, dluhy',okIfBelow:false},
   ];
   let h=`<div class="card"><div class="ct" style="margin-bottom:4px">Pravidlo 50/30/20</div>
-    <div class="mini" style="margin-bottom:16px">Doporučené rozdělení příjmu: 50 % potřeby · 30 % přání · 20 % úspory.${hasPlan?' Světlý pruh = plán, sytý = skutečnost.':' Typ kategorie nastavíš v její úpravě.'}</div>`;
+    <div class="mini" style="margin-bottom:16px">Doporučené rozdělení příjmu: 50 % potřeby · 30 % přání · 20 % úspory.${hasPlan?' Světlý pruh = plán, sytý = skutečnost.':''} Typ nastavíš u kategorie, a když chceš jinak, i u jednotlivé položky.</div>`;
   rows.forEach(r=>{
     const pcA=actBase>0?Math.round(r.a/actBase*100):0;
     const pcP=planBase>0?Math.round(r.pl/planBase*100):0;
@@ -1013,19 +1059,25 @@ function quickAdd(){const p=P();const val=document.getElementById('qcat').value;
   if(val.startsWith('env:')){const e=S.envelopes.find(x=>x.id===val.slice(4));if(!e)return;e.bal=(e.bal||0)+amt;e.hist.push({d:date,t:'in',a:amt,n:nm||'',pid:S.curId});toast(`Odloženo ${fm(amt)} → ${e.nm}`);}
   else{const cid=val.startsWith('cat:')?val.slice(4):val;const c=p.cats.find(x=>x.id===cid);if(!c)return;
     const itNm=nm||'Ostatní';let it=c.it.find(x=>x.nm.toLowerCase()===itNm.toLowerCase());if(!it){it={id:uid(),nm:itNm,pl:0,log:[]};c.it.push(it);}
-    it.log.push({d:date,a:amt,n:''});toast(`${c.nm}: ${fm(amt)}`);}
+    const le={id:uid(),d:date,a:amt,n:''};it.log.push(le);pushLinked(it,le);
+    const lt=linkTarget(it);toast(`${c.nm}: ${fm(amt)}`+(lt?` → ${lt.obj.nm}`:''));}
   commit();setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.focus();},60);}
 function quickModal(){go('prehled');setTimeout(()=>document.getElementById('qamt')?.focus(),60);}
 
-function addLog(cid,iid){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;const a=Math.abs(num(document.getElementById('la-'+iid).value));if(!a){toast('Zadej částku');return;}it.log.push({d:document.getElementById('ld-'+iid).value||todayISO(),a,n:document.getElementById('ln-'+iid).value.trim()});openItem=iid;toast(`${it.nm}: +${fm(a)}`);commit();}
-function delLog(cid,iid,li){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;it.log.splice(li,1);openItem=iid;commit();}
+function addLog(cid,iid){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;const a=Math.abs(num(document.getElementById('la-'+iid).value));if(!a){toast('Zadej částku');return;}
+  const le={id:uid(),d:document.getElementById('ld-'+iid).value||todayISO(),a,n:document.getElementById('ln-'+iid).value.trim()};
+  it.log.push(le);pushLinked(it,le);openItem=iid;
+  const lt=linkTarget(it);toast(`${it.nm}: +${fm(a)}`+(lt?` → ${lt.obj.nm}`:''));commit();}
+function delLog(cid,iid,li){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;const le=it.log[li];if(le&&le.id)removeLinked(le.id);it.log.splice(li,1);openItem=iid;commit();}
 function setItemPlan(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(it){it.pl=num(v);openItem=iid;commit();}}
 function addItem(cid){const c=P().cats.find(x=>x.id===cid);if(!c)return;const nm=document.getElementById('nit-'+cid).value.trim();if(!nm){toast('Zadej název');return;}c.it.push({id:uid(),nm,pl:num(document.getElementById('nitp-'+cid).value),log:[]});commit();}
-function delItem(cid,iid){if(!confirm('Smazat položku?'))return;const c=P().cats.find(x=>x.id===cid);c.it=c.it.filter(x=>x.id!==iid);openItem=null;commit();}
+function delItem(cid,iid){if(!confirm('Smazat položku?'))return;const c=P().cats.find(x=>x.id===cid);const it=c.it.find(x=>x.id===iid);if(it)(it.log||[]).forEach(le=>removeLinked(le.id));c.it=c.it.filter(x=>x.id!==iid);openItem=null;commit();}
+function setItemLink(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;it.link=v||'';openItem=iid;toast(v?('Propojeno — '+linkLabel(it)):'Propojení zrušeno');commit();}
+function setItemKind(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;if(v)it.kind=v;else delete it.kind;openItem=iid;commit();}
 function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
 function renameItem(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);const nm=(v||'').trim();if(!it)return;if(!nm){toast('Název nesmí být prázdný');R();return;}it.nm=nm;openItem=iid;commit();}
 function toggleFixed(cid,iid){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(it){it.fixed=!it.fixed;openItem=iid;commit();}}
-function payRecurring(){const p=P();let cnt=0,tot=0;p.cats.forEach(c=>c.it.forEach(it=>{if(!it.fixed||!(it.pl>0))return;const paid=(it.log||[]).some(e=>e.d>=p.from&&e.d<p.to&&e.n==='(pravidelné)');if(paid)return;(it.log||(it.log=[])).push({d:todayISO(),a:it.pl,n:'(pravidelné)'});cnt++;tot+=it.pl;}));if(!cnt){toast('Pravidelné už zaplaceny nebo žádné nenastaveny');return;}toast(`Zaplaceno ${cnt} pravidelných · ${fm(tot)}`);commit();}
+function payRecurring(){const p=P();let cnt=0,tot=0;p.cats.forEach(c=>c.it.forEach(it=>{if(!it.fixed||!(it.pl>0))return;const paid=(it.log||[]).some(e=>e.d>=p.from&&e.d<p.to&&e.n==='(pravidelné)');if(paid)return;const le={id:uid(),d:todayISO(),a:it.pl,n:'(pravidelné)'};(it.log||(it.log=[])).push(le);pushLinked(it,le);cnt++;tot+=it.pl;}));if(!cnt){toast('Pravidelné už zaplaceny nebo žádné nenastaveny');return;}toast(`Zaplaceno ${cnt} pravidelných · ${fm(tot)}`);commit();}
 
 /* modal infra */
 function openModal(html){const ov=document.createElement('div');ov.className='ov';ov.id='ov';ov.innerHTML=`<div class="modal">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);}
