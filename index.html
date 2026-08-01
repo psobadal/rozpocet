@@ -60,7 +60,7 @@ svg.i{display:block;flex:none}
 
 .tabs{display:flex;gap:3px;background:var(--white);border-radius:var(--rs);padding:4px;margin-bottom:18px;box-shadow:var(--sh);overflow-x:auto;scrollbar-width:none;position:sticky;top:10px;z-index:40}
 .tabs::-webkit-scrollbar{display:none}
-.tab{flex:1;min-width:max-content;background:none;border:none;color:var(--text3);padding:10px 13px;cursor:pointer;font-size:13.5px;font-weight:600;border-radius:9px;white-space:nowrap;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+.tab{flex:1;min-width:max-content;background:none;border:none;color:var(--text3);padding:10px 13px;cursor:pointer;font-size:13.5px;font-weight:600;border-radius:9px;white-space:nowrap;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px;line-height:1}
 .tab:hover{color:var(--text2)}
 .tab.on{background:var(--text);color:var(--bg)}
 
@@ -829,23 +829,40 @@ function overUnder(over,under){let h=`<div class="grid2" style="margin-bottom:14
   if(under.length)under.forEach(x=>h+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0"><span>${esc(x.nm)}</span><span class="num pos">${fm(x.d)}</span></div>`);else h+=`<div class="mini" style="text-align:center;padding:8px">Žádné</div>`;
   return h+`</div></div>`;}
 function rule503020(p){
-  const base=incBase(p);if(base<=0)return `<div class="card"><div class="ct" style="margin-bottom:10px">Pravidlo 50/30/20</div><div class="empty">Nastav si příjem a uvidíš, jak si stojíš vůči 50 % potřeby · 30 % přání · 20 % úspory.</div></div>`;
-  let needs=0,wants=0;
-  p.cats.forEach(c=>{const a=catActual(c);if((c.kind||'need')==='want')wants+=a;else needs+=a;});
-  const sav=savedInPeriod(p.id)+investedInPeriod(p.id)+debtPaidInPeriod(p);
+  const actBase=incBase(p), planBase=incPlan(p)||actBase;
+  if(planBase<=0&&actBase<=0)return `<div class="card"><div class="ct" style="margin-bottom:10px">Pravidlo 50/30/20</div><div class="empty">Nastav si příjem a uvidíš, jak si stojíš vůči 50 % potřeby · 30 % přání · 20 % úspory.</div></div>`;
+  let needsA=0,wantsA=0,needsP=0,wantsP=0;
+  p.cats.forEach(c=>{const a=catActual(c),pl=catPlan(c);if((c.kind||'need')==='want'){wantsA+=a;wantsP+=pl;}else{needsA+=a;needsP+=pl;}});
+  const savA=savedInPeriod(p.id)+investedInPeriod(p.id)+debtPaidInPeriod(p);
+  const savP=S.envelopes.reduce((s,e)=>s+(e.monthly||0),0)+S.debts.reduce((s,d)=>s+(d.monthly||0),0);
+  const hasPlan=(needsP+wantsP+savP)>0&&planBase>0;
   const rows=[
-    {label:'Potřeby',target:50,a:needs,col:'var(--blue)',hint:'nájem, jídlo, doprava…',okIfBelow:true},
-    {label:'Přání',target:30,a:wants,col:'var(--accent)',hint:'zábava, věci navíc…',okIfBelow:true},
-    {label:'Úspory & splátky',target:20,a:sav,col:'var(--teal)',hint:'obálky, investice, dluhy',okIfBelow:false},
+    {label:'Potřeby',target:50,a:needsA,pl:needsP,col:'var(--blue)',hint:'nájem, jídlo, doprava…',okIfBelow:true},
+    {label:'Přání',target:30,a:wantsA,pl:wantsP,col:'var(--accent)',hint:'zábava, věci navíc…',okIfBelow:true},
+    {label:'Úspory & splátky',target:20,a:savA,pl:savP,col:'var(--teal)',hint:'obálky, investice, dluhy',okIfBelow:false},
   ];
-  let h=`<div class="card"><div class="ct" style="margin-bottom:4px">Pravidlo 50/30/20</div><div class="mini" style="margin-bottom:16px">Doporučené rozdělení příjmu: 50 % potřeby · 30 % přání · 20 % úspory. Typ kategorie nastavíš v její úpravě.</div>`;
-  rows.forEach(r=>{const pc=Math.round(r.a/base*100);const w=Math.min(100,pc);
-    const ok=r.okIfBelow?pc<=r.target:pc>=r.target;const near=r.okIfBelow?pc<=r.target+7:pc>=r.target-7;
+  let h=`<div class="card"><div class="ct" style="margin-bottom:4px">Pravidlo 50/30/20</div>
+    <div class="mini" style="margin-bottom:16px">Doporučené rozdělení příjmu: 50 % potřeby · 30 % přání · 20 % úspory.${hasPlan?' Světlý pruh = plán, sytý = skutečnost.':' Typ kategorie nastavíš v její úpravě.'}</div>`;
+  rows.forEach(r=>{
+    const pcA=actBase>0?Math.round(r.a/actBase*100):0;
+    const pcP=planBase>0?Math.round(r.pl/planBase*100):0;
+    const judged=hasPlan?pcP:pcA;   // dokud je plán, hodnotíme plán — ať víš dopředu
+    const ok=r.okIfBelow?judged<=r.target:judged>=r.target;
+    const near=r.okIfBelow?judged<=r.target+7:judged>=r.target-7;
     const tag=ok?'ok':near?'wr':'bd';const tagTxt=ok?(r.okIfBelow?'v limitu':'splněno'):near?'téměř':(r.okIfBelow?'nad limit':'málo');
     h+=`<div style="margin-bottom:15px"><div class="barinfo"><span class="n">${r.label} <span class="mini" style="font-weight:400">· ${r.hint}</span></span>
-      <span class="v"><span class="tag ${tag}" style="margin-right:7px">${tagTxt}</span><b class="num" style="color:var(--text)">${pc}%</b> / ${r.target}% · ${fm(r.a)}</span></div>
-      <div class="track" style="height:10px"><div class="act" style="width:${w}%;background:${r.col}"></div><div style="position:absolute;top:-2px;bottom:-2px;left:${r.target}%;width:2px;background:var(--text);opacity:.45;border-radius:1px"></div></div></div>`;});
-  h+=`<div class="mini">Svislá čárka = cíl. Úspory zahrnují obálky, investice a splátky dluhů.</div></div>`;
+      <span class="v"><span class="tag ${tag}" style="margin-right:7px">${tagTxt}</span>${hasPlan?`plán <b class="num" style="color:var(--text)">${pcP}%</b>`:`<b class="num" style="color:var(--text)">${pcA}%</b>`} / ${r.target}%</span></div>
+      <div class="track" style="height:10px">
+        ${hasPlan?`<div class="plan" style="width:${Math.min(100,pcP)}%;background:${r.col}"></div>`:''}
+        <div class="act" style="width:${Math.min(100,pcA)}%;background:${r.col}"></div>
+        <div style="position:absolute;top:-2px;bottom:-2px;left:${r.target}%;width:2px;background:var(--text);opacity:.45;border-radius:1px"></div></div>
+      <div class="mini" style="margin-top:4px;display:flex;justify-content:space-between;gap:8px">
+        <span>${hasPlan?`plán ${fm(r.pl)}`:''}</span><span>utraceno ${fm(r.a)} · ${pcA} %</span></div></div>`;});
+  if(hasPlan){const tot=needsP+wantsP+savP,totPc=Math.round(tot/planBase*100),rest=planBase-tot;
+    h+=`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;margin-top:4px;border-top:1.5px solid var(--line);font-size:13px">
+      <span style="font-weight:600">Plán celkem</span>
+      <span><b class="num">${fm(tot)}</b> <span class="mini">z příjmu ${fm(planBase)} · ${totPc} %</span> <span class="tag ${rest<0?'bd':rest>0?'ok':'wr'}" style="margin-left:6px">${rest<0?'chybí '+fm(-rest):rest>0?'volných '+fm(rest):'přesně'}</span></span></div>`;}
+  h+=`<div class="mini" style="margin-top:10px">Svislá čárka = cíl. Úspory zahrnují obálky (měsíční odkládání), investice a splátky dluhů.${hasPlan?'':' Nastav si plány a uvidíš dopředu, jestli ti rozpočet sedí.'}</div></div>`;
   return h;
 }
 function nwBlock(){return mrow([['Investice',fm(totalInvest()),'color:var(--plum)'],['Obálky',fm(totalEnvelopes()),'color:var(--gold)'],['Dluhy','−'+fm(totalDebt()),'color:var(--blue)']])+`<div class="card" style="text-align:center"><div class="ct" style="margin-bottom:6px">Čisté jmění</div><div class="num" style="font-size:28px;color:${netWorth()>=0?'var(--teal)':'var(--neg)'}">${fm(netWorth())}</div><div class="mini">investice + obálky − dluhy</div></div>`;}
