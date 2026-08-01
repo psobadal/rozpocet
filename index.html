@@ -383,7 +383,7 @@ let fileHandle=null, fileOK=false;
 function loadLS(){try{const r=localStorage.getItem(LS);if(r)return migrate(JSON.parse(r));}catch(e){}return null;}
 function migrate(s){
   s.periods||=[];s.envelopes||=[];s.investments||=[];s.debts||=[];
-  s.debts.forEach(d=>{d.paid0=d.paid0||0;d.monthly=d.monthly||0;d.pay||=[];});
+  s.debts.forEach(d=>{d.paid0=d.paid0||0;d.monthly=d.monthly||0;d.group=d.group||'';d.pay||=[];});
   s.tax=(s.tax==null?CONFIG.taxRate:s.tax);
   s.ui||={};s.ui.appName||=CONFIG.appName;s.ui.accent||=CONFIG.accent;s.ui.numFont||=CONFIG.numFont||'bahnschrift';
   if(!s.ui.tabs||!s.ui.tabs.length)s.ui.tabs=defTabs();
@@ -847,8 +847,37 @@ function vDluhy(p){
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Splátky tento cyklus</div><div class="num" style="font-size:24px">${fm(debtPaidInPeriod(p))}</div></div></div>`;
   h+=`<div style="text-align:right;margin-bottom:14px"><button class="btn fill" onclick="debtModal()">${ic('plus',15)} Nový dluh</button></div>`;
   if(!S.debts.length)h+=`<div class="card"><div class="empty">Zatím žádné dluhy. Přidej třeba „Půjčka od rodičů" (0 %) nebo „Hypotéka".</div></div>`;
-  S.debts.forEach((d,i)=>{const rem=debtRemaining(d),paid=debtPaid(d),pc=d.principal>0?Math.min(100,Math.round(paid/d.principal*100)):0;const mInt=d.rate>0?Math.round(rem*d.rate/100/12):0;const pcol=pc>=100?'var(--teal)':'var(--blue)';
-    h+=`<div class="card" style="border-left:4px solid ${col(i)}">
+  // dluhy se stejnou skupinou (např. Byt) se sčítají do společného souhrnu
+  const groups=new Map(),solo=[];
+  S.debts.forEach((d,i)=>{const g=(d.group||'').trim();if(g){if(!groups.has(g))groups.set(g,[]);groups.get(g).push({d,i});}else solo.push({d,i});});
+  let gc=0;
+  groups.forEach((arr,g)=>{const gcol=col(gc++);
+    const principal=arr.reduce((s,x)=>s+(x.d.principal||0),0);
+    const paid=arr.reduce((s,x)=>s+debtPaid(x.d),0);
+    const rem=arr.reduce((s,x)=>s+debtRemaining(x.d),0);
+    const monthly=arr.reduce((s,x)=>s+(x.d.monthly||0),0);
+    const pc=principal>0?Math.min(100,Math.round(paid/principal*100)):0;
+    let maxN=0,never=false,anyOpen=false;
+    arr.forEach(x=>{const po=debtPayoff(x.d);if(!po)return;if(po.never)never=true;else if(!po.done){anyOpen=true;maxN=Math.max(maxN,po.n);}});
+    h+=`<div class="card" style="border-left:4px solid ${gcol};background:linear-gradient(180deg,${gcol}0e,transparent 60%)">
+      <div class="ch" style="margin-bottom:12px"><span style="font-size:17px;font-weight:600;display:flex;align-items:center;gap:9px"><span style="color:${gcol}">${ic('home',19)}</span>${esc(g)}</span>
+        <span class="tag" style="background:var(--bg2);color:var(--text3)">${arr.length} ${arr.length===1?'dluh':arr.length<5?'dluhy':'dluhů'}</span></div>
+      <div class="grid3">
+        <div style="text-align:center"><div class="mini">Zbývá celkem</div><div class="num" style="font-size:24px;color:var(--blue)">${fm(rem)}</div></div>
+        <div style="text-align:center"><div class="mini">Splaceno</div><div class="num" style="font-size:24px;color:var(--teal)">${fm(paid)}</div></div>
+        <div style="text-align:center"><div class="mini">Celkem</div><div class="num" style="font-size:24px">${fm(principal)}</div></div></div>
+      ${principal>0?`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pc>=100?'var(--teal)':gcol}">${pc}% splaceno</span><span class="mini">${monthly>0?fm(monthly)+' / měs':''}</span></div><div class="prog"><i style="width:${pc}%;background:${pc>=100?'var(--teal)':gcol}"></i></div></div>`:''}
+      ${monthly>0&&anyOpen&&!never?`<div class="mini" style="margin-top:8px">Při ${fm(monthly)}/měs máš celé splaceno ~<b>${futureMonthStr(maxN)}</b></div>`:''}
+      ${!anyOpen&&principal>0&&rem<=0?`<div class="mini" style="margin-top:8px;color:var(--teal)">${ic('check',13)} Doplaceno</div>`:''}</div>`;
+    arr.forEach(x=>h+=debtCard(x.d,x.i,true));
+  });
+  solo.forEach(x=>h+=debtCard(x.d,x.i,false));
+  return h;
+}
+function debtCard(d,i,inGroup){
+  let h='';
+  {const rem=debtRemaining(d),paid=debtPaid(d),pc=d.principal>0?Math.min(100,Math.round(paid/d.principal*100)):0;const mInt=d.rate>0?Math.round(rem*d.rate/100/12):0;const pcol=pc>=100?'var(--teal)':'var(--blue)';
+    h+=`<div class="card" style="border-left:4px solid ${col(i)}${inGroup?';margin-left:22px':''}">
       <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:9px"><span style="color:${col(i)}">${ic(d.icon||'landmark',18)}</span>${esc(d.nm)}${d.type?` <span class="tag" style="background:var(--bg2);color:var(--text3)">${esc(d.type)}</span>`:''}</span>
         <div style="display:flex;gap:4px"><button class="btn sm fill" onclick="debtPayModal('${d.id}')">Splátka</button><button class="ib" onclick="debtModal('${d.id}')">${ic('edit',15)}</button><button class="ib" onclick="delDebt('${d.id}')">${ic('trash',15)}</button></div></div>
       <div class="grid3">
@@ -861,7 +890,7 @@ function vDluhy(p){
     if(d.monthly>0&&po)h+=`<div class="mini" style="margin-top:8px">${po.done?'Doplaceno':po.never?`Splátka ${fm(d.monthly)}/měs nepokryje měsíční úrok`:`Při ${fm(d.monthly)}/měs doplatíš ~<b>${po.date}</b>${po.interest>0?` · úroky celkem ~${fm(po.interest)}`:''}`}</div>`;
     const pays=(d.pay||[]).slice().sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,5);
     if(pays.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Poslední splátky</div>`;pays.forEach(x=>{const oi=d.pay.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span style="display:flex;align-items:center;gap:8px"><span class="num" style="font-weight:600;color:var(--teal)">−${fm(x.a)}</span><button class="ib" onclick="delDebtPay('${d.id}',${oi})">${ic('x',13)}</button></span></div>`;});h+=`</div>`;}
-    h+=`</div>`;});
+    h+=`</div>`;}
   return h;
 }
 
@@ -1189,7 +1218,10 @@ function doInvAdd(){const inv=S.investments.find(x=>x.id===mctx.id);const a=num(
 function debtModal(id){const d=id?S.debts.find(x=>x.id===id):null;mctx={id,icon:d?d.icon:'landmark'};
   openModal(`<h3>${d?'Upravit':'Nový'} dluh</h3>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${d?esc(d.nm):''}" placeholder="např. Půjčka od rodičů"></div>
-    <div class="fg"><span class="fl">Typ (štítek, nepovinné)</span><input class="inp" id="m_ty" value="${d?esc(d.type||''):''}" placeholder="např. Půjčka, Hypotéka"></div>
+    <div class="fr"><div class="fg"><span class="fl">Typ (štítek, nepovinné)</span><input class="inp" id="m_ty" value="${d?esc(d.type||''):''}" placeholder="např. Půjčka, Hypotéka"></div>
+      <div class="fg"><span class="fl">Skupina (nepovinné)</span><input class="inp" id="m_gr" list="m_grlist" value="${d?esc(d.group||''):''}" placeholder="např. Byt">
+        <datalist id="m_grlist">${[...new Set(S.debts.map(x=>(x.group||'').trim()).filter(Boolean))].map(g=>`<option value="${esc(g)}">`).join('')}</datalist></div></div>
+    <p class="mini" style="margin-top:6px">Dluhy se stejnou skupinou (třeba půjčky od rodičů i hypotéka na byt) se sečtou do společného souhrnu.</p>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(DEBT_ICONS,mctx.icon)}</div>
     <div class="fr"><div class="fg"><span class="fl">Celková částka (jistina)</span><input class="inp num" id="m_pr" type="number" value="${d?d.principal||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Úrok % p.a. (0 = bez)</span><input class="inp num" id="m_rate" type="number" step="0.01" value="${d?d.rate||0:''}" placeholder="0"></div></div>
@@ -1198,8 +1230,8 @@ function debtModal(id){const d=id?S.debts.find(x=>x.id===id):null;mctx={id,icon:
     <p class="mini" style="margin-top:6px">Měsíční splátka → spočítám, kdy dluh doplatíš a kolik zaplatíš na úrocích.</p>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveDebt()">${d?'Uložit':'Vytvořit'}</button></div>`);}
 function saveDebt(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const pr=num(document.getElementById('m_pr').value),rate=num(document.getElementById('m_rate').value),p0=num(document.getElementById('m_p0').value),ty=document.getElementById('m_ty').value.trim();
-  const dm=num(document.getElementById('m_dm').value);
-  if(mctx.id){const d=S.debts.find(x=>x.id===mctx.id);d.nm=nm;d.icon=mctx.icon;d.principal=pr;d.rate=rate;d.type=ty;d.paid0=p0;d.monthly=dm;}else S.debts.push({id:uid(),nm,icon:mctx.icon,type:ty,principal:pr,rate,paid0:p0,monthly:dm,pay:[]});closeModal();commit();}
+  const dm=num(document.getElementById('m_dm').value),gr=document.getElementById('m_gr').value.trim();
+  if(mctx.id){const d=S.debts.find(x=>x.id===mctx.id);d.nm=nm;d.icon=mctx.icon;d.principal=pr;d.rate=rate;d.type=ty;d.paid0=p0;d.monthly=dm;d.group=gr;}else S.debts.push({id:uid(),nm,icon:mctx.icon,type:ty,group:gr,principal:pr,rate,paid0:p0,monthly:dm,pay:[]});closeModal();commit();}
 function delDebt(id){if(!confirm('Smazat dluh i s platbami?'))return;S.debts=S.debts.filter(x=>x.id!==id);commit();}
 function debtPayModal(id){const d=S.debts.find(x=>x.id===id);mctx={id};openModal(`<h3>Splátka: ${esc(d.nm)}</h3><div class="md">Zbývá splatit: <b>${fm(debtRemaining(d))}</b>${d.rate>0?` · úrok ${(''+d.rate).replace('.',',')} % p.a.`:''}</div>
     <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" placeholder="0" onkeydown="if(event.key==='Enter')doDebtPay()"></div>
