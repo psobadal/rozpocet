@@ -474,6 +474,7 @@ function removeLinked(logId){
 }
 // typ pro 50/30/20: vlastní > propojená položka je vždy úspora/splátka > dědí se z kategorie
 const itemKind=(it,c)=>it.kind||(it.link?'save':(c.kind||'need'));
+const KIND_LABEL={need:'Potřeba',want:'Přání',save:'Úspora'};
 function futureMonthStr(n){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+n);return (d.getMonth()+1)+'/'+d.getFullYear();}
 function monthsBetween(a,b){return Math.max(1,(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()));}
 function debtPayoff(d){const B=debtRemaining(d),pay=d.monthly||0,r=(d.rate||0)/100/12;if(B<=0)return{done:true};if(pay<=0)return null;if(r===0){const n=Math.ceil(B/pay);return{n,interest:0,date:futureMonthStr(n)};}const mi=B*r;if(pay<=mi)return{never:true};const n=Math.ceil(-Math.log(1-r*B/pay)/Math.log(1+r));return{n,interest:Math.max(0,Math.round(pay*n-B)),date:futureMonthStr(n)};}
@@ -748,8 +749,10 @@ function catDetail(p,c){
   if(!c.it.length)h+=`<div class="empty">Zatím žádné položky.</div>`;
   c.it.forEach(it=>{const ia=itemActual(it),d=(it.pl||0)-ia,isOpen=openItem===it.id;const logs=(it.log||[]).slice().sort((x,y)=>(y.d||'').localeCompare(x.d||''));
     h+=`<div class="item ${isOpen?'op':''}"><div class="itop" onclick="toggleItem('${it.id}')">
-      <div style="flex:1;min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.nm)}</div>
-        <div class="mini">Plán ${fm(it.pl||0)} · <span class="${d>=0?'pos':'neg'}">${d>=0?'zbývá ':'−'}${fm(Math.abs(d))}</span></div></div>
+      <div style="flex:1;min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:7px">
+        <span style="overflow:hidden;text-overflow:ellipsis">${esc(it.nm)}</span>
+        ${(it.kind||it.link)?`<span class="tag ${itemKind(it,c)==='save'?'ok':itemKind(it,c)==='want'?'wr':''}" style="font-weight:600;${itemKind(it,c)==='need'?'background:var(--bg2);color:var(--text3)':''}">${KIND_LABEL[itemKind(it,c)]}</span>`:''}</div>
+        <div class="mini">Plán ${fm(it.pl||0)} · <span class="${d>=0?'pos':'neg'}">${d>=0?'zbývá ':'−'}${fm(Math.abs(d))}</span>${linkTarget(it)?` · ${ic('cright',11)&&''}→ ${esc(linkTarget(it).obj.nm)}`:''}</div></div>
       <div class="num" style="font-size:16px;color:${ia>0?'var(--text)':'var(--text4)'}">${fm(ia)}</div>
       <span style="color:var(--text4);transform:rotate(${isOpen?90:0}deg);transition:.2s">${ic('cright',16)}</span></div>`;
     if(isOpen){h+=`<div style="margin-top:12px;padding-top:10px;border-top:1.5px solid var(--line)">`;
@@ -1103,10 +1106,10 @@ function catModal(id){const c=id?P().cats.find(x=>x.id===id):null;mctx={id,icon:
   openModal(`<h3>${c?'Upravit':'Nová'} kategorie</h3>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${c?esc(c.nm):''}" placeholder="např. Zábava"></div>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(CAT_ICONS,mctx.icon)}</div>
-    <div class="fg"><span class="fl">Typ (pro pravidlo 50/30/20)</span><div class="seg" id="m_kind" style="font-size:12px">
+    <div class="fg"><span class="fl">Výchozí typ položek (50/30/20)</span><div class="seg" id="m_kind" style="font-size:12px">
       ${[['need','Potřeba','50 %'],['want','Přání','30 %'],['save','Úspora','20 %']].map(([k,l,pc])=>
         `<button class="${(mctx.kind||'need')===k?'on':''}" data-k="${k}" onclick="mctx.kind='${k}';document.querySelectorAll('#m_kind button').forEach(b=>b.classList.toggle('on',b.dataset.k==='${k}'))">${l}<br><span style="opacity:.7;font-weight:400">${pc}</span></button>`).join('')}</div>
-      <div class="mini" style="margin-top:6px">Potřeba = nájem, jídlo, doprava… Přání = zábava, věci navíc… Úspora = splátky, odkládání, investice (peníze, které ti zůstávají).</div></div>
+      <div class="mini" style="margin-top:6px">Potřeba = nájem, jídlo, doprava… Přání = zábava, věci navíc… Úspora = splátky, odkládání, investice (peníze, které ti zůstávají).<br>Platí pro všechny položky kategorie — u jednotlivé položky to jde nastavit jinak.</div></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveCat()">${c?'Uložit':'Vytvořit'}</button></div>`);}
 function saveCat(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const p=P();if(mctx.id){const c=p.cats.find(x=>x.id===mctx.id);c.nm=nm;c.icon=mctx.icon;c.kind=mctx.kind;}else p.cats.push({id:uid(),nm,icon:mctx.icon,kind:mctx.kind,it:[]});closeModal();commit();}
 function delCat(id){if(!confirm('Smazat celou kategorii i s položkami?'))return;const p=P();p.cats=p.cats.filter(x=>x.id!==id);detailCat=null;closeModal();commit();}
