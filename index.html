@@ -391,7 +391,9 @@ function migrate(s){
   const have=new Set(s.ui.tabs.map(t=>t.id));
   defTabs().forEach(dt=>{if(!have.has(dt.id))s.ui.tabs.push(dt);});
   s.ui.tabs=s.ui.tabs.filter(t=>defTabs().some(d=>d.id===t.id));
-  s.investments.forEach(i=>{i.rate=i.rate||0;if(i.lastInt===undefined)i.lastInt=null;i.hist||=[];});
+  s.investments.forEach(i=>{i.rate=i.rate||0;if(i.lastInt===undefined)i.lastInt=null;i.hist||=[];
+    // base = kolik jsi do toho vložil ze svého (bez zhodnocení); u starých dat dopočítáme
+    if(i.base==null)i.base=Math.max(0,(i.val||0)-(i.hist||[]).filter(h=>!h.k).reduce((s2,h)=>s2+h.a,0));});
   if(!s.periods.length){const c=curCycleDates();const per=defPeriod('Výplata '+monthName(c.from),c.from,c.to);s.periods=[per];s.curId=per.id;}
   s.periods.forEach(pp=>(pp.cats||[]).forEach(c=>{if(!c.kind){const cfg=CONFIG.categories.find(x=>x.nm===c.nm);c.kind=cfg?cfg.kind:'need';}}));
   if(!s.curId&&s.periods[0])s.curId=s.periods[0].id;
@@ -438,7 +440,10 @@ const incActual=p=>p.income.reduce((s,r)=>s+(r.ac||0),0);
 const incBase=p=>{const a=incActual(p);return a>0?a:incPlan(p);};
 // .src = záznam vznikl z propojené položky výdajů → do „zbývá" se počítá už tam, tady ne (žádné dvojí počítání)
 const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pid===pid&&h.t==='in'&&!h.src).reduce((ss,h)=>ss+h.a,0),0);
-const investedInPeriod=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid&&!h.src).reduce((ss,h)=>ss+h.a,0),0);
+// h.k='gain' = zhodnocení/úrok, ne tvoje vložené peníze
+const investedInPeriod=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid&&!h.src&&!h.k).reduce((ss,h)=>ss+h.a,0),0);
+const invIn=inv=>(inv.base||0)+(inv.hist||[]).filter(h=>!h.k).reduce((s,h)=>s+h.a,0);
+const invGain=inv=>(inv.val||0)-invIn(inv);
 const debtPaidInPeriod=p=>S.debts.reduce((s,d)=>s+(d.pay||[]).filter(x=>x.d>=p.from&&x.d<p.to&&!x.src).reduce((ss,x)=>ss+x.a,0),0);
 function freeLeft(p){return incBase(p)-sumActual(p)-savedInPeriod(p.id)-investedInPeriod(p.id)-debtPaidInPeriod(p);}
 const totalInvest=()=>S.investments.reduce((s,i)=>s+(i.val||0),0);
@@ -496,7 +501,7 @@ function creditInterest(){
       if(next>today)break;
       const gross=(inv.val||0)*inv.rate/100/12;
       const net=Math.round(gross*(1-(S.tax||0)/100));
-      if(net!==0){inv.val=(inv.val||0)+net;inv.hist.push({d:iso(next),a:net,n:'Úrok (po dani '+(S.tax||0)+' %)'});}
+      if(net!==0){inv.val=(inv.val||0)+net;inv.hist.push({d:iso(next),a:net,n:'Úrok (po dani '+(S.tax||0)+' %)',k:'gain'});}
       inv.lastInt=iso(next);cur=next;changed=true;
     }
   });
@@ -821,18 +826,24 @@ function vInvestice(p){
   let h=`<div class="card" style="text-align:center;background:var(--plum-bg)"><div class="ct" style="margin-bottom:6px">Celková hodnota investic & úspor</div>
     <div class="num" style="font-size:30px;color:var(--plum)">${fm(ti)}</div>
     <div class="mini" style="margin-top:6px">Tento cyklus vloženo: <b style="color:var(--teal)">+${fm(investedInPeriod(p.id))}</b></div></div>`;
-  h+=`<div class="banner info"><span class="bi">${ic('percent',18)}</span><div>Nastav u položky <b>úrok % p.a.</b> a appka <b>k 1. dni v měsíci</b> sama připíše úrok po zdanění (daň ${S.tax} % — změníš v Nastavení).</div></div>`;
+  h+=`<div class="banner info"><span class="bi">${ic('percent',18)}</span><div><b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b> — zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.</div></div>`;
   h+=`<div style="text-align:right;margin-bottom:14px"><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
   if(!S.investments.length)h+=`<div class="card"><div class="empty">Zatím žádné investice.</div></div>`;
   const sorted=S.investments.map((x,i)=>({x,i})).sort((a,b)=>(b.x.val||0)-(a.x.val||0));
   sorted.forEach(({x:inv,i})=>{const pcw=ti>0?Math.round(inv.val/ti*100):0;const mInt=inv.rate>0?Math.round((inv.val||0)*inv.rate/100/12*(1-(S.tax||0)/100)):0;
+    const put=invIn(inv),gain=invGain(inv),gpc=put>0?Math.round(gain/put*1000)/10:0;
     h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px">
       <div class="ic" style="background:${col(i)}22;color:${col(i)}">${ic(inv.icon,18)}</div>
       <div style="flex:1;min-width:0"><div style="font-weight:600">${esc(inv.nm)}</div>
         ${inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
         <div class="prog" style="height:6px;margin-top:5px"><i style="width:${pcw}%;background:var(--plum)"></i></div></div>
       <div style="text-align:right"><div class="num" style="font-size:17px">${fm(inv.val||0)}</div><div class="mini">${pcw}%</div></div>
-      <div style="display:flex;flex-direction:column;gap:3px"><button class="btn sm" onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button><button class="ib" onclick="invModal('${inv.id}')">${ic('edit',15)}</button></div></div>`;
+      <div style="display:flex;flex-direction:column;gap:3px"><button class="btn sm" onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button><button class="ib" onclick="invModal('${inv.id}')">${ic('edit',15)}</button></div></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1.5px solid var(--line)">
+        <span class="mini">Vloženo <b class="num" style="color:var(--text2)">${fm(put)}</b></span>
+        <span class="mini">Zhodnocení <b class="num" style="color:${gain>0?'var(--teal)':gain<0?'var(--neg)':'var(--text3)'}">${gain>0?'+':''}${fm(gain)}${put>0?` (${gain>0?'+':''}${(''+gpc).replace('.',',')} %)`:''}</b></span>
+        <div style="flex:1"></div>
+        <button class="btn sm" onclick="invRevalue('${inv.id}')">${ic('trending',14)} Přecenit</button></div>`;
     const hist=(inv.hist||[]).slice(-3).reverse();
     if(hist.length){h+=`<div style="margin-top:10px;padding-top:10px;border-top:1.5px solid var(--line)">`;hist.forEach(x=>{h+=`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);padding:2px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span class="num" style="color:${x.a>=0?'var(--teal)':'var(--neg)'}">${x.a>=0?'+':''}${fm(x.a)}</span></div>`;});h+=`</div>`;}
     h+=`</div>`;});
@@ -1204,8 +1215,23 @@ function invModal(id){const inv=id?S.investments.find(x=>x.id===id):null;mctx={i
     ${inv?`<div style="text-align:right;margin-top:8px"><button class="btn dgr sm" onclick="delInv('${inv.id}')">Smazat</button></div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveInv()">${inv?'Uložit':'Vytvořit'}</button></div>`);}
 function saveInv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const val=num(document.getElementById('m_val').value),rate=num(document.getElementById('m_rate').value);
-  if(mctx.id){const inv=S.investments.find(x=>x.id===mctx.id);inv.nm=nm;inv.icon=mctx.icon;inv.val=val;inv.rate=rate;if(rate>0&&!inv.lastInt)inv.lastInt=iso(firstOfMonth(new Date()));}
-  else{const inv={id:uid(),nm,icon:mctx.icon,val,rate,lastInt:rate>0?iso(firstOfMonth(new Date())):null,hist:[]};S.investments.push(inv);}closeModal();commit();}
+  if(mctx.id){const inv=S.investments.find(x=>x.id===mctx.id);inv.nm=nm;inv.icon=mctx.icon;
+    inv.base=(inv.base||0)+(val-(inv.val||0));   // ruční oprava hodnoty → posuň i vložené, zhodnocení zůstane
+    inv.val=val;inv.rate=rate;if(rate>0&&!inv.lastInt)inv.lastInt=iso(firstOfMonth(new Date()));}
+  else{const inv={id:uid(),nm,icon:mctx.icon,val,base:val,rate,lastInt:rate>0?iso(firstOfMonth(new Date())):null,hist:[]};S.investments.push(inv);}closeModal();commit();}
+/* přecenění: hodnotu určuje trh, rozdíl je zhodnocení (ne tvůj vklad) */
+function invRevalue(id){const inv=S.investments.find(x=>x.id===id);mctx={id};
+  openModal(`<h3>Přecenit: ${esc(inv.nm)}</h3><div class="md">Zadej, kolik to má dnes hodnotu podle brokera. Rozdíl se zapíše jako zhodnocení — nezamíchá se ti to mezi vklady.</div>
+    <div class="fg"><span class="fl">Aktuální hodnota</span><input class="inp num" id="m_v" type="number" value="${inv.val||0}" onkeydown="if(event.key==='Enter')doInvRevalue()"></div>
+    <div class="mini" id="m_diff" style="margin-top:8px">Teď evidováno ${fm(inv.val||0)} · vloženo ${fm(invIn(inv))}</div>
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doInvRevalue()">Přecenit</button></div>`);
+  const el=document.getElementById('m_v'),df=document.getElementById('m_diff');
+  el.oninput=()=>{const d=num(el.value)-(inv.val||0);df.innerHTML=d===0?`Beze změny`:`Zhodnocení <b style="color:${d>0?'var(--teal)':'var(--neg)'}">${d>0?'+':''}${fm(d)}</b> · celkem vloženo ${fm(invIn(inv))}`;};
+  setTimeout(()=>{el.focus();el.select();},50);}
+function doInvRevalue(){const inv=S.investments.find(x=>x.id===mctx.id);const v=num(document.getElementById('m_v').value);
+  const diff=v-(inv.val||0);if(!diff){closeModal();return;}
+  inv.val=v;inv.hist.push({id:uid(),d:todayISO(),a:diff,n:'Přecenění',k:'gain'});
+  closeModal();toast(`${inv.nm}: ${diff>0?'+':''}${fm(diff)}`);commit();}
 function delInv(id){if(!confirm('Smazat?'))return;S.investments=S.investments.filter(x=>x.id!==id);closeModal();commit();}
 function invAdd(id){const inv=S.investments.find(x=>x.id===id);mctx={id};openModal(`<h3>Přidat částku: ${esc(inv.nm)}</h3><div class="md">Hodnota: <b>${fm(inv.val||0)}</b> · záporná částka = odečtení.</div>
     <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" placeholder="0" onkeydown="if(event.key==='Enter')doInvAdd()"></div>
