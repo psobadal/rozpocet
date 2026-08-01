@@ -438,7 +438,7 @@ const incActual=p=>p.income.reduce((s,r)=>s+(r.ac||0),0);
 const incBase=p=>{const a=incActual(p);return a>0?a:incPlan(p);};
 // .src = záznam vznikl z propojené položky výdajů → do „zbývá" se počítá už tam, tady ne (žádné dvojí počítání)
 const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pid===pid&&h.t==='in'&&!h.src).reduce((ss,h)=>ss+h.a,0),0);
-const investedInPeriod=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid).reduce((ss,h)=>ss+h.a,0),0);
+const investedInPeriod=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid&&!h.src).reduce((ss,h)=>ss+h.a,0),0);
 const debtPaidInPeriod=p=>S.debts.reduce((s,d)=>s+(d.pay||[]).filter(x=>x.d>=p.from&&x.d<p.to&&!x.src).reduce((ss,x)=>ss+x.a,0),0);
 function freeLeft(p){return incBase(p)-sumActual(p)-savedInPeriod(p.id)-investedInPeriod(p.id)-debtPaidInPeriod(p);}
 const totalInvest=()=>S.investments.reduce((s,i)=>s+(i.val||0),0);
@@ -455,19 +455,25 @@ function linkTarget(it){
   const t=it.link.slice(0,i),id=it.link.slice(i+1);
   if(t==='debt'){const o=S.debts.find(d=>d.id===id);return o?{type:'debt',obj:o}:null;}
   if(t==='env'){const o=S.envelopes.find(e=>e.id===id);return o?{type:'env',obj:o}:null;}
+  if(t==='inv'){const o=S.investments.find(x=>x.id===id);return o?{type:'inv',obj:o}:null;}
   return null;
 }
-const linkLabel=it=>{const t=linkTarget(it);return t?(t.type==='debt'?'Dluh: ':'Obálka: ')+t.obj.nm:'';};
+const LINK_PREFIX={debt:'Dluh: ',env:'Obálka: ',inv:'Investice: '};
+const linkLabel=it=>{const t=linkTarget(it);return t?LINK_PREFIX[t.type]+t.obj.nm:'';};
 function pushLinked(it,le){
   const t=linkTarget(it);if(!t)return;
   if(t.type==='debt'){t.obj.pay=t.obj.pay||[];t.obj.pay.push({d:le.d,a:le.a,n:le.n||it.nm,src:le.id});}
+  else if(t.type==='inv'){t.obj.hist=t.obj.hist||[];t.obj.hist.push({d:le.d,a:le.a,n:le.n||it.nm,pid:S.curId,src:le.id});t.obj.val=(t.obj.val||0)+le.a;}
   else{t.obj.hist=t.obj.hist||[];t.obj.hist.push({d:le.d,t:'in',a:le.a,n:le.n||it.nm,pid:S.curId,src:le.id});t.obj.bal=(t.obj.bal||0)+le.a;}
 }
 function removeLinked(logId){
   if(!logId)return;
   S.debts.forEach(d=>{d.pay=(d.pay||[]).filter(x=>x.src!==logId);});
   S.envelopes.forEach(e=>{const keep=[];(e.hist||[]).forEach(x=>{if(x.src===logId)e.bal=(e.bal||0)-(x.t==='in'?x.a:-x.a);else keep.push(x);});e.hist=keep;});
+  S.investments.forEach(v=>{const keep=[];(v.hist||[]).forEach(x=>{if(x.src===logId)v.val=(v.val||0)-x.a;else keep.push(x);});v.hist=keep;});
 }
+// typ pro 50/30/20: vlastní > propojená položka je vždy úspora/splátka > dědí se z kategorie
+const itemKind=(it,c)=>it.kind||(it.link?'save':(c.kind||'need'));
 function futureMonthStr(n){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+n);return (d.getMonth()+1)+'/'+d.getFullYear();}
 function monthsBetween(a,b){return Math.max(1,(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()));}
 function debtPayoff(d){const B=debtRemaining(d),pay=d.monthly||0,r=(d.rate||0)/100/12;if(B<=0)return{done:true};if(pay<=0)return null;if(r===0){const n=Math.ceil(B/pay);return{n,interest:0,date:futureMonthStr(n)};}const mi=B*r;if(pay<=mi)return{never:true};const n=Math.ceil(-Math.log(1-r*B/pay)/Math.log(1+r));return{n,interest:Math.max(0,Math.round(pay*n-B)),date:futureMonthStr(n)};}
@@ -764,12 +770,14 @@ function catDetail(p,c){
           <option value="">— nikam —</option>
           ${S.debts.length?`<optgroup label="Dluhy">${S.debts.map(d=>`<option value="debt:${d.id}" ${it.link==='debt:'+d.id?'selected':''}>${esc(d.nm)}</option>`).join('')}</optgroup>`:''}
           ${S.envelopes.length?`<optgroup label="Obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${it.link==='env:'+e.id?'selected':''}>${esc(e.nm)}</option>`).join('')}</optgroup>`:''}
+          ${S.investments.length?`<optgroup label="Investice">${S.investments.map(v=>`<option value="inv:${v.id}" ${it.link==='inv:'+v.id?'selected':''}>${esc(v.nm)}</option>`).join('')}</optgroup>`:''}
         </select>
         <span class="mini" style="flex:0 0 auto">50/30/20</span>
-        <select class="inp" onchange="setItemKind('${c.id}','${it.id}',this.value)" style="flex:0 0 140px;padding:7px 10px;font-size:13px">
-          <option value="" ${!it.kind?'selected':''}>jako kategorie</option>
+        <select class="inp" onchange="setItemKind('${c.id}','${it.id}',this.value)" style="flex:0 0 165px;padding:7px 10px;font-size:13px">
+          <option value="" ${!it.kind?'selected':''}>${it.link?'automaticky (úspora)':'jako kategorie'}</option>
           <option value="need" ${it.kind==='need'?'selected':''}>Potřeba</option>
           <option value="want" ${it.kind==='want'?'selected':''}>Přání</option>
+          <option value="save" ${it.kind==='save'?'selected':''}>Úspora či splátka</option>
         </select></div>
       ${linkTarget(it)?`<div class="mini" style="margin-top:6px;color:var(--teal)">${ic('check',13)} Zápisy se rovnou propíšou do „${esc(linkTarget(it).obj.nm)}" a nepočítají se dvakrát.</div>`:''}</div>`;}
     h+=`</div>`;});
@@ -873,14 +881,20 @@ function overUnder(over,under){let h=`<div class="grid2" style="margin-bottom:14
 function rule503020(p){
   const actBase=incBase(p), planBase=incPlan(p)||actBase;
   if(planBase<=0&&actBase<=0)return `<div class="card"><div class="ct" style="margin-bottom:10px">Pravidlo 50/30/20</div><div class="empty">Nastav si příjem a uvidíš, jak si stojíš vůči 50 % potřeby · 30 % přání · 20 % úspory.</div></div>`;
-  // typ se bere u položky, a když ho nemá, dědí se z kategorie
-  let needsA=0,wantsA=0,needsP=0,wantsP=0;
+  // typ se bere u položky, a když ho nemá, dědí se z kategorie (propojená položka = úspora)
+  const A={need:0,want:0,save:0},PL={need:0,want:0,save:0};
+  const linked=new Set();
   p.cats.forEach(c=>{const ck=c.kind||'need';
-    if(c.pl>0){if(ck==='want')wantsP+=c.pl;else needsP+=c.pl;}   // plán zadaný za celou kategorii
-    c.it.forEach(it=>{const k=it.kind||ck,a=itemActual(it),pl=(c.pl>0?0:(it.pl||0));
-      if(k==='want'){wantsA+=a;wantsP+=pl;}else{needsA+=a;needsP+=pl;}});});
-  const savA=savedInPeriod(p.id)+investedInPeriod(p.id)+debtPaidInPeriod(p);
-  const savP=S.envelopes.reduce((s,e)=>s+(e.monthly||0),0)+S.debts.reduce((s,d)=>s+(d.monthly||0),0);
+    if(c.pl>0)PL[ck]=(PL[ck]||0)+c.pl;                            // plán zadaný za celou kategorii
+    c.it.forEach(it=>{if(it.link)linked.add(it.link);
+      const k=itemKind(it,c),a=itemActual(it),pl=(c.pl>0?0:(it.pl||0));
+      A[k]=(A[k]||0)+a;PL[k]=(PL[k]||0)+pl;});});
+  const needsA=A.need,wantsA=A.want,needsP=PL.need,wantsP=PL.want;
+  // k úsporám z položek přičti to, co běží mimo výdaje (nepropojené obálky, investice, splátky)
+  const savA=A.save+savedInPeriod(p.id)+investedInPeriod(p.id)+debtPaidInPeriod(p);
+  const savP=PL.save
+    +S.envelopes.reduce((s,e)=>s+(linked.has('env:'+e.id)?0:(e.monthly||0)),0)
+    +S.debts.reduce((s,d)=>s+(linked.has('debt:'+d.id)?0:(d.monthly||0)),0);
   const hasPlan=(needsP+wantsP+savP)>0&&planBase>0;
   const rows=[
     {label:'Potřeby',target:50,a:needsA,pl:needsP,col:'var(--blue)',hint:'nájem, jídlo, doprava…',okIfBelow:true},
@@ -1089,10 +1103,10 @@ function catModal(id){const c=id?P().cats.find(x=>x.id===id):null;mctx={id,icon:
   openModal(`<h3>${c?'Upravit':'Nová'} kategorie</h3>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${c?esc(c.nm):''}" placeholder="např. Zábava"></div>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(CAT_ICONS,mctx.icon)}</div>
-    <div class="fg"><span class="fl">Typ (pro pravidlo 50/30/20)</span><div class="seg" id="m_kind">
-      <button class="${mctx.kind!=='want'?'on':''}" data-k="need" onclick="mctx.kind='need';document.querySelectorAll('#m_kind button').forEach(b=>b.classList.toggle('on',b.dataset.k==='need'))">Potřeba (50 %)</button>
-      <button class="${mctx.kind==='want'?'on':''}" data-k="want" onclick="mctx.kind='want';document.querySelectorAll('#m_kind button').forEach(b=>b.classList.toggle('on',b.dataset.k==='want'))">Přání (30 %)</button></div>
-      <div class="mini" style="margin-top:6px">Potřeba = nájem, jídlo, doprava… Přání = zábava, restaurace, věci navíc.</div></div>
+    <div class="fg"><span class="fl">Typ (pro pravidlo 50/30/20)</span><div class="seg" id="m_kind" style="font-size:12px">
+      ${[['need','Potřeba','50 %'],['want','Přání','30 %'],['save','Úspora','20 %']].map(([k,l,pc])=>
+        `<button class="${(mctx.kind||'need')===k?'on':''}" data-k="${k}" onclick="mctx.kind='${k}';document.querySelectorAll('#m_kind button').forEach(b=>b.classList.toggle('on',b.dataset.k==='${k}'))">${l}<br><span style="opacity:.7;font-weight:400">${pc}</span></button>`).join('')}</div>
+      <div class="mini" style="margin-top:6px">Potřeba = nájem, jídlo, doprava… Přání = zábava, věci navíc… Úspora = splátky, odkládání, investice (peníze, které ti zůstávají).</div></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveCat()">${c?'Uložit':'Vytvořit'}</button></div>`);}
 function saveCat(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const p=P();if(mctx.id){const c=p.cats.find(x=>x.id===mctx.id);c.nm=nm;c.icon=mctx.icon;c.kind=mctx.kind;}else p.cats.push({id:uid(),nm,icon:mctx.icon,kind:mctx.kind,it:[]});closeModal();commit();}
 function delCat(id){if(!confirm('Smazat celou kategorii i s položkami?'))return;const p=P();p.cats=p.cats.filter(x=>x.id!==id);detailCat=null;closeModal();commit();}
