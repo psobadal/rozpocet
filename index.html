@@ -705,7 +705,11 @@ function catDetail(p,c){
     <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1.5px solid var(--line);flex-wrap:wrap">
       <span class="mini" style="font-weight:600">Měsíční plán kategorie</span>
       <input class="inp num" type="number" value="${c.pl||''}" placeholder="0" onchange="setCatPlan('${c.id}',this.value)" style="flex:0 0 120px;text-align:right">
-      ${(c.pl>0&&itemsPlan(c)>0)?`<span class="mini">z položek by vyšlo ${fm(itemsPlan(c))} — platí zadaný plán</span>`:`<span class="mini">${itemsPlan(c)>0?'teď se počítá z plánů položek':'nech 0 a plán se sečte z položek'}</span>`}</div></div>`;
+      ${(c.pl>0&&itemsPlan(c)>0)
+        ?`<span class="mini">Platí tenhle plán. Z položek by jinak vyšlo ${fm(itemsPlan(c))}.</span>`
+        :itemsPlan(c)>0
+          ?`<span class="mini">Nech 0 — plán se sčítá z položek. Zadej číslo, jen když chceš jeden plán za celou kategorii místo nich.</span>`
+          :`<span class="mini">Nechceš rozepisovat položky? Zadej sem jeden plán za celou kategorii.</span>`}</div></div>`;
   h+=`<div class="card"><div class="ct" style="margin-bottom:14px">Položky</div>`;
   if(!c.it.length)h+=`<div class="empty">Zatím žádné položky.</div>`;
   c.it.forEach(it=>{const ia=itemActual(it),d=(it.pl||0)-ia,isOpen=openItem===it.id;const logs=(it.log||[]).slice().sort((x,y)=>(y.d||'').localeCompare(x.d||''));
@@ -721,7 +725,11 @@ function catDetail(p,c){
         <input class="inp" id="ln-${it.id}" placeholder="Poznámka" style="flex:1;min-width:80px">
         <input class="inp num" id="la-${it.id}" type="number" placeholder="Kč" style="flex:0 0 90px" onkeydown="if(event.key==='Enter')addLog('${c.id}','${it.id}')">
         <button class="btn fill sm" onclick="addLog('${c.id}','${it.id}')">${ic('plus',15)}</button></div>
-      <div style="display:flex;gap:6px;align-items:center;margin-top:8px"><input class="inp num" type="number" value="${it.pl||0}" onchange="setItemPlan('${c.id}','${it.id}',this.value)" style="flex:0 0 120px" title="Plán"><span class="mini">plán</span><div style="flex:1"></div><label class="mini" style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-right:8px"><input type="checkbox" ${it.fixed?'checked':''} onchange="toggleFixed('${c.id}','${it.id}')" style="width:auto"> pravidelná</label><button class="ib" onclick="delItem('${c.id}','${it.id}')" title="Smazat položku">${ic('trash',15)}</button></div></div>`;}
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <input class="inp" value="${esc(it.nm)}" onchange="renameItem('${c.id}','${it.id}',this.value)" style="flex:1;min-width:130px" title="Název položky" placeholder="Název">
+        <input class="inp num" type="number" value="${it.pl||0}" onchange="setItemPlan('${c.id}','${it.id}',this.value)" style="flex:0 0 100px" title="Plán"><span class="mini">plán</span>
+        <label class="mini" style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" ${it.fixed?'checked':''} onchange="toggleFixed('${c.id}','${it.id}')" style="width:auto"> pravidelná</label>
+        <button class="ib" onclick="delItem('${c.id}','${it.id}')" title="Smazat položku">${ic('trash',15)}</button></div></div>`;}
     h+=`</div>`;});
   h+=`<div class="logadd" style="border-top:1.5px dashed var(--line2);margin-top:10px;padding-top:14px"><input class="inp" id="nit-${c.id}" placeholder="Nová položka" style="flex:2"><input class="inp num" id="nitp-${c.id}" type="number" placeholder="Plán" style="flex:1"><button class="btn fill sm" onclick="addItem('${c.id}')">${ic('plus',15)} Položka</button></div></div>`;
   return h;
@@ -998,6 +1006,7 @@ function setItemPlan(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x
 function addItem(cid){const c=P().cats.find(x=>x.id===cid);if(!c)return;const nm=document.getElementById('nit-'+cid).value.trim();if(!nm){toast('Zadej název');return;}c.it.push({id:uid(),nm,pl:num(document.getElementById('nitp-'+cid).value),log:[]});commit();}
 function delItem(cid,iid){if(!confirm('Smazat položku?'))return;const c=P().cats.find(x=>x.id===cid);c.it=c.it.filter(x=>x.id!==iid);openItem=null;commit();}
 function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
+function renameItem(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);const nm=(v||'').trim();if(!it)return;if(!nm){toast('Název nesmí být prázdný');R();return;}it.nm=nm;openItem=iid;commit();}
 function toggleFixed(cid,iid){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(it){it.fixed=!it.fixed;openItem=iid;commit();}}
 function payRecurring(){const p=P();let cnt=0,tot=0;p.cats.forEach(c=>c.it.forEach(it=>{if(!it.fixed||!(it.pl>0))return;const paid=(it.log||[]).some(e=>e.d>=p.from&&e.d<p.to&&e.n==='(pravidelné)');if(paid)return;(it.log||(it.log=[])).push({d:todayISO(),a:it.pl,n:'(pravidelné)'});cnt++;tot+=it.pl;}));if(!cnt){toast('Pravidelné už zaplaceny nebo žádné nenastaveny');return;}toast(`Zaplaceno ${cnt} pravidelných · ${fm(tot)}`);commit();}
 
