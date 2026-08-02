@@ -440,7 +440,13 @@ const itemsPlan=c=>c.it.reduce((s,i)=>s+(i.pl||0),0);
 const catPlan=c=>(c.pl>0?c.pl:itemsPlan(c));
 const catActual=c=>c.it.reduce((s,i)=>s+itemActual(i),0);
 const sumPlan=p=>p.cats.reduce((s,c)=>s+catPlan(c),0);
+// sumActual/catActual = kolik reálně ubylo z výplaty (pro "zbývá volných") — NEMĚNIT, přidávat jen zobrazovací variantu
 const sumActual=p=>p.cats.reduce((s,c)=>s+catActual(c),0);
+// peníze zaplacené z obálky, zapsané pro přehled do kategorie — bez vlivu na "zbývá volných" (uže se odečetly při vkladu)
+const envSpendForCat=(catName,pid)=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.t==='out'&&h.pid===pid&&h.cat===catName).reduce((ss,h)=>ss+h.a,0),0);
+// zobrazovací "kolik jsem v týhle kategorii utratil" = z výplaty + z obálek — jen pro tiles/grafy, NIKDY pro rozpočet
+const catActualDisplay=(c,pid)=>catActual(c)+envSpendForCat(c.nm,pid);
+const sumActualDisplay=p=>p.cats.reduce((s,c)=>s+catActualDisplay(c,p.id),0);
 const incPlan=p=>p.income.reduce((s,r)=>s+(r.pl||0),0);
 const incActual=p=>p.income.reduce((s,r)=>s+(r.ac||0),0);
 const incBase=p=>{const a=incActual(p);return a>0?a:incPlan(p);};
@@ -761,12 +767,12 @@ function vPrehled(p){
     <div class="grid2"><div><div class="mini">Plánováno</div><div class="num" style="font-size:20px">${fm(incPlan(p))}</div></div>
       <div><div class="mini">Skutečně</div><div class="num" style="font-size:20px;color:${incActual(p)>0?'var(--teal)':'var(--text4)'}">${incActual(p)>0?fm(incActual(p)):'—'}</div></div></div></div>`;
   h+=`<div class="card"><div class="ch"><span class="ct">Kam jdou peníze</span><a onclick="go('vydaje')">detail →</a></div>`;
-  const cats=p.cats.map((c,i)=>({c,a:catActual(c),pl:catPlan(c),i})).filter(x=>x.a>0||x.pl>0).sort((a,b)=>b.a-a.a);
+  const cats=p.cats.map((c,i)=>({c,a:catActualDisplay(c,p.id),pl:catPlan(c),i})).filter(x=>x.a>0||x.pl>0).sort((a,b)=>b.a-a.a);
   if(!cats.length)h+=`<div class="empty">Zatím žádné výdaje. Přidej první přes „Rychlý výdaj".</div>`;
   cats.forEach(({c,a,pl,i})=>{const mx=Math.max(a,pl,1),over=a>pl&&pl>0;
     h+=`<div class="barrow" onclick="openCat('${c.id}')"><div class="barinfo"><span class="n"><span style="color:${col(i)}">${ic(c.icon,16)}</span>${esc(c.nm)}</span><span class="v">${fm(a)}${pl?' / '+fm(pl):''}</span></div>
       <div class="track"><div class="plan" style="width:${pl/mx*100}%;background:${col(i)}"></div><div class="act" style="width:${a/mx*100}%;background:${over?'var(--neg)':col(i)}"></div></div></div>`;});
-  if(cats.length)h+=`<div class="totals"><span style="color:var(--text3)">Celkem výdaje</span><span class="num">${fm(sumPlan(p))} → ${fm(sumActual(p))}</span></div>`;
+  if(cats.length)h+=`<div class="totals"><span style="color:var(--text3)">Celkem výdaje</span><span class="num">${fm(sumPlan(p))} → ${fm(sumActualDisplay(p))}</span></div>`;
   h+=`</div>`;
   h+=`<div class="grid3">
     <div class="card go" style="margin-bottom:0" onclick="go('obalky')"><div class="ch" style="margin-bottom:8px"><span class="ct">${ic('envelope',14)} Obálky</span><span style="color:var(--text4)">${ic('cright',15)}</span></div><div class="num" style="font-size:22px;color:var(--gold)">${fm(totalEnvelopes())}</div><div class="mini">odloženo</div></div>
@@ -780,11 +786,16 @@ function vVydaje(p){
   if(detailCat){const c=p.cats.find(x=>x.id===detailCat);if(c)return catDetail(p,c);detailCat=null;}
   let h=`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
     <button class="btn" onclick="plansModal()">${ic('list',15)} Měsíční plány</button>
-    <div class="sp"></div><span class="mini">Plán celkem ${fm(sumPlan(p))} · utraceno ${fm(sumActual(p))}</span></div>`;
+    <div class="sp"></div><span class="mini">Plán celkem ${fm(sumPlan(p))} · utraceno ${fm(sumActualDisplay(p))}</span></div>`;
   h+=`<div class="catgrid">`;
-  p.cats.forEach((c,i)=>{const a=catActual(c),pl=catPlan(c),over=a>pl&&pl>0,pu=pl>0?Math.min(100,Math.round(a/pl*100)):0;
+  p.cats.forEach((c,i)=>{const a=catActualDisplay(c,p.id),pl=catPlan(c),over=a>pl&&pl>0,pu=pl>0?Math.min(100,Math.round(a/pl*100)):0;
     h+=`<div class="catcard" onclick="openCat('${c.id}')">
-      <div class="cic" style="background:${col(i)}22;color:${col(i)}">${ic(c.icon,20)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div class="cic" style="background:${col(i)}22;color:${col(i)};margin-bottom:0">${ic(c.icon,20)}</div>
+        <div style="display:flex;gap:1px" onclick="event.stopPropagation()">
+          <button class="ib" style="padding:4px${i===0?';opacity:.25;pointer-events:none':''}" title="Posunout dřív" onclick="moveCat('${c.id}',-1)">${ic('cleft',13)}</button>
+          <button class="ib" style="padding:4px${i===p.cats.length-1?';opacity:.25;pointer-events:none':''}" title="Posunout později" onclick="moveCat('${c.id}',1)">${ic('cright',13)}</button>
+        </div></div>
       <div class="cn">${esc(c.nm)}</div><div class="cv" style="color:${over?'var(--neg)':'var(--text)'}">${fm(a)}</div>
       <div class="cmeta"><span>Plán ${fm(pl)}</span>${pl?`<span style="font-weight:600;color:${over?'var(--neg)':pu>70?'var(--gold)':'var(--teal)'}">${pu}%</span>`:''}</div>
       ${(pl||a)?`<div class="track" style="height:6px"><div class="plan" style="width:${pl/Math.max(a,pl,1)*100}%;background:${col(i)}"></div><div class="act" style="width:${a/Math.max(a,pl,1)*100}%;background:${over?'var(--neg)':col(i)}"></div></div>`:''}
@@ -793,7 +804,7 @@ function vVydaje(p){
   return h;
 }
 function catDetail(p,c){
-  const a=catActual(c),pl=catPlan(c),diff=pl-a;
+  const aDirect=catActual(c),envA=envSpendForCat(c.nm,p.id),a=aDirect+envA,pl=catPlan(c),diff=pl-a;
   const ci=p.cats.findIndex(x=>x.id===c.id);
   let h=`<button class="back" onclick="closeCat()">${ic('cleft',15)} Zpět na výdaje</button>`;
   h+=`<div class="card"><div class="ch"><span class="ct"><span style="color:var(--accent)">${ic(c.icon,17)}</span> ${esc(c.nm)}</span>
@@ -803,7 +814,7 @@ function catDetail(p,c){
       <button class="btn sm" onclick="catModal('${c.id}')">${ic('edit',15)} Upravit</button><button class="ib" title="Smazat" onclick="delCat('${c.id}')">${ic('trash',16)}</button></div></div>
     <div class="grid3" style="margin-bottom:6px">
       <div style="text-align:center"><div class="mini">Plán</div><div class="num" style="font-size:19px">${fm(pl)}</div></div>
-      <div style="text-align:center"><div class="mini">Skutečnost</div><div class="num" style="font-size:19px;color:${a>pl&&pl>0?'var(--neg)':'var(--teal)'}">${fm(a)}</div></div>
+      <div style="text-align:center"><div class="mini">Skutečnost</div><div class="num" style="font-size:19px;color:${a>pl&&pl>0?'var(--neg)':'var(--teal)'}">${fm(a)}</div>${envA>0?`<div class="mini">z toho ${fm(envA)} z obálek</div>`:''}</div>
       <div style="text-align:center"><div class="mini">Rozdíl</div><div class="num ${diff>=0?'pos':'neg'}" style="font-size:19px">${diff>=0?'+':''}${fm(diff)}</div></div></div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1.5px solid var(--line);flex-wrap:wrap">
       <span class="mini" style="font-weight:600">Měsíční plán kategorie</span>
@@ -1000,7 +1011,7 @@ let statSub='m';
 function setStat(s){statSub=s;R();}
 const periodStats=p=>({inc:incBase(p),exp:sumActual(p),saved:savedInPeriod(p.id),inv:investedInPeriod(p.id),debt:debtPaidInPeriod(p)});
 function allItemsOf(p){const out=[];p.cats.forEach(c=>c.it.forEach(it=>{const a=itemActual(it);if(a>0)out.push({n:it.nm,a,cat:c.nm});}));S.envelopes.forEach(e=>(e.hist||[]).forEach(h=>{if(h.t==='out'&&h.pid===p.id&&h.a>0)out.push({n:h.n||('Obálka: '+e.nm),a:h.a,cat:h.cat||('Obálka '+e.nm)});}));return out.sort((x,y)=>y.a-x.a);}
-function spendByCategory(p){const m={};p.cats.forEach(c=>{const a=catActual(c);if(a)m[c.nm]=(m[c.nm]||0)+a;});S.envelopes.forEach(e=>(e.hist||[]).forEach(h=>{if(h.t==='out'&&h.pid===p.id&&h.cat&&h.a>0)m[h.cat]=(m[h.cat]||0)+h.a;}));return m;}
+function spendByCategory(p){const m={};p.cats.forEach(c=>{const a=catActualDisplay(c,p.id);if(a)m[c.nm]=a;});return m;}
 const netWorth=()=>totalInvest()+totalEnvelopes()-totalDebt();
 function catIconByName(nm){for(const pp of S.periods){const c=pp.cats.find(x=>x.nm===nm);if(c)return c.icon;}return 'dot';}
 function mrow(arr){return `<div style="display:grid;grid-template-columns:repeat(${arr.length>3?2:arr.length},1fr);gap:10px;margin-bottom:14px">`+arr.map(t=>`<div class="tile"><div class="tl">${t[0]}</div><div class="tv" style="${t[2]||''}">${t[1]}</div></div>`).join('')+`</div>`;}
