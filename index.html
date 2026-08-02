@@ -529,6 +529,13 @@ function debtLifetimeCost(d){const B=d.principal||0;if(B<=0)return{interest:0,to
   const r=amortizeFix(B,d.monthly,d.rate||0,d.fixDate,d.rateAfter);
   if(!r)return{unknown:true,total:B};if(r.never)return{never:true,total:B};
   return{interest:r.interest,total:r.total};}
+// opačný výpočet: znám dobu splácení, chci vědět měsíční splátku (anuitní vzorec)
+function annuityPayment(B,rateAnnual,nMonths){
+  if(!(B>0)||!(nMonths>0))return 0;
+  const r=(rateAnnual||0)/100/12;
+  if(r===0)return Math.ceil(B/nMonths);
+  return Math.ceil(B*r/(1-Math.pow(1+r,-nMonths)));
+}
 // živý náhled v modalu — stejná logika, ale z rozepsaných hodnot formuláře (dluh ještě neexistuje)
 function loanPreview(principal,rate,monthly,fixDate,rateAfter){
   if(!(principal>0))return null;
@@ -1328,6 +1335,8 @@ function debtModal(id){const d=id?S.debts.find(x=>x.id===id):null;mctx={id,icon:
     <div class="fr"><div class="fg"><span class="fl">Celková částka (jistina)</span><input class="inp num" id="m_pr" type="number" value="${d?d.principal||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Úrok % p.a. (0 = bez)</span><input class="inp num" id="m_rate" type="number" step="0.01" value="${d?d.rate||0:''}" placeholder="0"></div></div>
     <div class="mini" id="m_ltvsug" style="margin-top:2px"></div>
+    <div class="fg"><span class="fl">Nebo doba splácení v letech (nepovinné) — spočítám splátku</span><input class="inp num" id="m_term" type="number" placeholder="např. 30"></div>
+    <div class="mini" id="m_termsug" style="margin-top:2px"></div>
     <div class="fr"><div class="fg"><span class="fl">Už splaceno (bez data)</span><input class="inp num" id="m_p0" type="number" value="${d?d.paid0||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Měsíční splátka</span><input class="inp num" id="m_dm" type="number" value="${d?d.monthly||0:''}" placeholder="0"></div></div>
     <div class="mini" id="m_preview" style="margin-top:8px"></div>
@@ -1346,6 +1355,12 @@ function debtModal(id){const d=id?S.debts.find(x=>x.id===id):null;mctx={id,icon:
     if(gm&&gm.ltv>0){const totalPrice=(gm.price||0)+groupFeesTotal(g);const sug=Math.round(totalPrice*gm.ltv/100);
       sugEl.innerHTML=totalPrice>0?`${ic('percent',12)} Skupina „${esc(g)}" má LTV ${gm.ltv} % → doporučená jistina ~${fm(sug)}. <a onclick="document.getElementById('m_pr').value=${sug};document.getElementById('m_pr').dispatchEvent(new Event('input'))">Použít</a>`:'';
     }else sugEl.innerHTML='';
+    // opačný směr: znám dobu splácení, spočítej mi splátku
+    const term=num(document.getElementById('m_term').value);
+    const termEl=document.getElementById('m_termsug');
+    if(term>0&&pr>0){const sugPay=annuityPayment(pr,rate,term*12);
+      termEl.innerHTML=`Při ${term} letech${rate>0?` a ${(''+rate).replace('.',',')} % p.a.`:''} by splátka byla ~<b class="num">${fm(sugPay)}</b>/měs. <a onclick="document.getElementById('m_dm').value=${sugPay};document.getElementById('m_dm').dispatchEvent(new Event('input'))">Použít</a>`;
+    }else termEl.innerHTML='';
     // živý náhled celkových nákladů
     const prev=loanPreview(pr,rate,dm,fix,ratea===''?null:num(ratea));
     const pv=document.getElementById('m_preview');
@@ -1354,7 +1369,7 @@ function debtModal(id){const d=id?S.debts.find(x=>x.id===id):null;mctx={id,icon:
     else if(prev.never)pv.innerHTML=`<span style="color:var(--neg)">Tahle splátka nepokryje ani úrok — dluh by nikdy nesplatil.</span>`;
     else pv.innerHTML=`Při těchhle číslech <b>zaplatíš celkem ~${fm(prev.total)}</b>${prev.interest>0?` (z toho úroky ~${fm(prev.interest)})`:''} · doplatíš ~<b>${prev.date}</b>`;
   };
-  ['m_pr','m_rate','m_dm','m_gr','m_fix','m_ratea'].forEach(id=>document.getElementById(id).oninput=upd); upd();}
+  ['m_pr','m_rate','m_dm','m_gr','m_fix','m_ratea','m_term'].forEach(id=>document.getElementById(id).oninput=upd); upd();}
 function saveDebt(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const pr=num(document.getElementById('m_pr').value),rate=num(document.getElementById('m_rate').value),p0=num(document.getElementById('m_p0').value),ty=document.getElementById('m_ty').value.trim();
   const dm=num(document.getElementById('m_dm').value),gr=document.getElementById('m_gr').value.trim(),ptp=document.getElementById('m_ptp').checked;
   const fixDate=document.getElementById('m_fix').value,rateAfter=fixDate?num(document.getElementById('m_ratea').value):0;
