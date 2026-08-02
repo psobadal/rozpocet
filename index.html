@@ -384,7 +384,7 @@ let fileHandle=null, fileOK=false;
 function loadLS(){try{const r=localStorage.getItem(LS);if(r)return migrate(JSON.parse(r));}catch(e){}return null;}
 function migrate(s){
   s.periods||=[];s.envelopes||=[];s.investments||=[];s.debts||=[];
-  s.debts.forEach(d=>{d.paid0=d.paid0||0;d.monthly=d.monthly||0;d.group=d.group||'';d.pay||=[];d.paidToPrice=!!d.paidToPrice;});
+  s.debts.forEach(d=>{d.paid0=d.paid0||0;d.monthly=d.monthly||0;d.group=d.group||'';d.pay||=[];d.paidToPrice=!!d.paidToPrice;d.fixDate=d.fixDate||'';});
   s.debtGroups=s.debtGroups||{};
   Object.keys(s.debtGroups).forEach(g=>{const gm=s.debtGroups[g];gm.contrib||=[];gm.ltv=gm.ltv||0;
     if(gm.ownPaid){gm.contrib.push({d:s.created||todayISO(),a:gm.ownPaid,n:'Původní vklad'});delete gm.ownPaid;}
@@ -491,15 +491,51 @@ const itemKind=(it,c)=>it.kind||(it.link?'save':(c.kind||'need'));
 const KIND_LABEL={need:'Potřeba',want:'Přání',save:'Úspora'};
 function futureMonthStr(n){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+n);return (d.getMonth()+1)+'/'+d.getFullYear();}
 function monthsBetween(a,b){return Math.max(1,(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()));}
-function debtPayoff(d){const B=debtRemaining(d),pay=d.monthly||0,r=(d.rate||0)/100/12;if(B<=0)return{done:true};if(pay<=0)return null;if(r===0){const n=Math.ceil(B/pay);return{n,interest:0,date:futureMonthStr(n)};}const mi=B*r;if(pay<=mi)return{never:true};const n=Math.ceil(-Math.log(1-r*B/pay)/Math.log(1+r));return{n,interest:Math.max(0,Math.round(pay*n-B)),date:futureMonthStr(n)};}
-// odhad celkových nákladů dluhu OD ZAČÁTKU (z celé jistiny, ne z aktuálního zbytku) — "kolik na tom opravdu zaplatíš"
-function debtLifetimeCost(d){const B=d.principal||0,pay=d.monthly||0,r=(d.rate||0)/100/12;if(B<=0)return{interest:0,total:0};
-  if(r===0){if(pay<=0)return{interest:0,total:B};return{interest:0,total:B};}
-  if(pay<=0)return{unknown:true,total:B};
-  const mi=B*r;if(pay<=mi)return{never:true,total:B};
+// jádro amortizace: kolik měsíců (n) a kolik na úrocích (interest), fixní úrok po celou dobu
+function amortize(B,pay,rateAnnual){
+  const r=(rateAnnual||0)/100/12;
+  if(B<=0)return{n:0,interest:0,total:0};
+  if(pay<=0)return null;
+  if(r===0){const n=Math.ceil(B/pay);return{n,interest:0,total:B};}
+  const mi=B*r;if(pay<=mi)return{never:true};
   const n=Math.ceil(-Math.log(1-r*B/pay)/Math.log(1+r));
-  const interest=Math.max(0,Math.round(pay*n-B));
-  return{interest,total:B+interest};}
+  return{n,interest:Math.max(0,Math.round(pay*n-B)),total:B+Math.max(0,Math.round(pay*n-B))};
+}
+// jako amortize, ale s jednou plánovanou změnou úroku (fixace) k danému datu
+function amortizeFix(B,pay,rate1,fixDate,rate2){
+  if(!fixDate||rate2==null||rate2==='')return amortize(B,pay,rate1);
+  const monthsToFix=monthsBetween(new Date(),new Date(fixDate+'T00:00:00'));
+  if(monthsToFix<=0)return amortize(B,pay,rate1);
+  if(pay<=0)return null;
+  const r1=(rate1||0)/100/12;let bal=B,interest=0,n=0;
+  for(let i=0;i<monthsToFix&&bal>0;i++){
+    const mInt=bal*r1;
+    if(pay<=mInt)return{never:true};
+    bal=Math.max(0,bal-(pay-mInt));interest+=mInt;n++;
+  }
+  if(bal<=0)return{n,interest:Math.round(interest),total:B+Math.round(interest)};
+  const rest=amortize(bal,pay,rate2);
+  if(!rest)return null;
+  if(rest.never)return{never:true};
+  return{n:n+rest.n,interest:Math.round(interest+rest.interest),total:B+Math.round(interest+rest.interest)};
+}
+function debtPayoff(d){const B=debtRemaining(d);if(B<=0)return{done:true};
+  const r=amortizeFix(B,d.monthly||0,d.rate||0,d.fixDate,d.rateAfter);
+  if(!r)return null;if(r.never)return{never:true};
+  return{n:r.n,interest:r.interest,date:futureMonthStr(r.n)};}
+// odhad celkových nákladů dluhu OD ZAČÁTKU (z celé jistiny, ne z aktuálního zbytku) — "kolik na tom opravdu zaplatíš"
+function debtLifetimeCost(d){const B=d.principal||0;if(B<=0)return{interest:0,total:0};
+  if(!d.monthly)return{unknown:true,total:B};
+  const r=amortizeFix(B,d.monthly,d.rate||0,d.fixDate,d.rateAfter);
+  if(!r)return{unknown:true,total:B};if(r.never)return{never:true,total:B};
+  return{interest:r.interest,total:r.total};}
+// živý náhled v modalu — stejná logika, ale z rozepsaných hodnot formuláře (dluh ještě neexistuje)
+function loanPreview(principal,rate,monthly,fixDate,rateAfter){
+  if(!(principal>0))return null;
+  if(!(monthly>0))return{unknown:true};
+  const r=amortizeFix(principal,monthly,rate,fixDate,rateAfter);
+  if(!r)return{unknown:true};if(r.never)return{never:true};
+  return{n:r.n,date:futureMonthStr(r.n),interest:r.interest,total:r.total};}
 const COLS=['#c4694a','#3a8a7a','#7a5a8c','#c0902f','#5a7fa0','#a0604f','#5c8a5c','#8a6a9a','#b08a3a','#6a8f99','#9a6a7a','#7a9a5a'];
 const col=i=>COLS[i%COLS.length];
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
@@ -936,6 +972,7 @@ function debtCard(d,i,inGroup){
         <div style="text-align:center"><div class="mini">${d.rate>0?'Úrok/měs.':'Celkem'}</div><div class="num" style="font-size:22px">${d.rate>0?fm(mInt):fm(d.principal||0)}</div></div></div>
       ${d.principal>0?`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pcol}">${pc}% splaceno</span><span class="mini">${d.rate>0?(''+d.rate).replace('.',',')+' % p.a.':'bez úroku'} · z ${fm(d.principal)}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`:''}`;
     if((d.paid0||0)>0)h+=`<div class="mini" style="margin-top:10px">Dříve splaceno (bez data): <b>${fm(d.paid0)}</b></div>`;
+    if(d.fixDate)h+=`<div class="mini" style="margin-top:8px">${ic('percent',12)} Fixace do ${fdFull(d.fixDate)}, pak úrok ${(''+(d.rateAfter||0)).replace('.',',')} % p.a.</div>`;
     const po=debtPayoff(d);
     if(d.monthly>0&&po)h+=`<div class="mini" style="margin-top:8px">${po.done?'Doplaceno':po.never?`Splátka ${fm(d.monthly)}/měs nepokryje měsíční úrok`:`Při ${fm(d.monthly)}/měs doplatíš ~<b>${po.date}</b>${po.interest>0?` · úroky celkem ~${fm(po.interest)}`:''}`}</div>`;
     const pays=(d.pay||[]).slice().sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,5);
@@ -1290,15 +1327,38 @@ function debtModal(id){const d=id?S.debts.find(x=>x.id===id):null;mctx={id,icon:
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(DEBT_ICONS,mctx.icon)}</div>
     <div class="fr"><div class="fg"><span class="fl">Celková částka (jistina)</span><input class="inp num" id="m_pr" type="number" value="${d?d.principal||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Úrok % p.a. (0 = bez)</span><input class="inp num" id="m_rate" type="number" step="0.01" value="${d?d.rate||0:''}" placeholder="0"></div></div>
+    <div class="mini" id="m_ltvsug" style="margin-top:2px"></div>
     <div class="fr"><div class="fg"><span class="fl">Už splaceno (bez data)</span><input class="inp num" id="m_p0" type="number" value="${d?d.paid0||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Měsíční splátka</span><input class="inp num" id="m_dm" type="number" value="${d?d.monthly||0:''}" placeholder="0"></div></div>
-    <p class="mini" style="margin-top:6px">Měsíční splátka → spočítám, kdy dluh doplatíš a kolik zaplatíš na úrocích.</p>
-    <label class="fg" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="m_ptp" ${d&&d.paidToPrice?'checked':''} style="width:auto"> <span>Peníze z téhle půjčky už reálně šly do koupě (do ceny skupiny)</span></label>
+    <div class="mini" id="m_preview" style="margin-top:8px"></div>
+    <div class="fr" style="margin-top:13px"><div class="fg" style="margin-top:0"><span class="fl">Fixace končí (nepovinné)</span><input class="inp" id="m_fix" type="date" value="${d?d.fixDate||'':''}"></div>
+      <div class="fg" style="margin-top:0"><span class="fl">Úrok po fixaci % (nepovinné)</span><input class="inp num" id="m_ratea" type="number" step="0.01" value="${d&&d.fixDate?d.rateAfter||0:''}" placeholder="např. 3,9"></div></div>
+    <p class="mini" style="margin-top:6px">Vyplň, jen když víš, že se ti po fixaci úrok změní — třeba za 3 roky refix.</p>
+    <label class="mini" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:13px"><input type="checkbox" id="m_ptp" ${d&&d.paidToPrice?'checked':''} style="width:auto"> Peníze z téhle půjčky už reálně šly do koupě (do ceny skupiny)</label>
     <p class="mini" style="margin-top:2px">Dokud nezaškrtneš, dluh existuje, ale do „chybí dofinancovat" u skupiny se nepočítá — přesně pro sjednané, ale ještě nečerpané půjčky nebo budoucí hypotéku.</p>
-    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveDebt()">${d?'Uložit':'Vytvořit'}</button></div>`);}
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveDebt()">${d?'Uložit':'Vytvořit'}</button></div>`);
+  const upd=()=>{
+    const pr=num(document.getElementById('m_pr').value),rate=num(document.getElementById('m_rate').value),dm=num(document.getElementById('m_dm').value);
+    const fix=document.getElementById('m_fix').value,ratea=document.getElementById('m_ratea').value;
+    // návrh jistiny z LTV nastaveného u skupiny
+    const g=(document.getElementById('m_gr').value||'').trim();const gm=g?groupMeta(g):null;
+    const sugEl=document.getElementById('m_ltvsug');
+    if(gm&&gm.ltv>0){const totalPrice=(gm.price||0)+groupFeesTotal(g);const sug=Math.round(totalPrice*gm.ltv/100);
+      sugEl.innerHTML=totalPrice>0?`${ic('percent',12)} Skupina „${esc(g)}" má LTV ${gm.ltv} % → doporučená jistina ~${fm(sug)}. <a onclick="document.getElementById('m_pr').value=${sug};document.getElementById('m_pr').dispatchEvent(new Event('input'))">Použít</a>`:'';
+    }else sugEl.innerHTML='';
+    // živý náhled celkových nákladů
+    const prev=loanPreview(pr,rate,dm,fix,ratea===''?null:num(ratea));
+    const pv=document.getElementById('m_preview');
+    if(!prev)pv.textContent='';
+    else if(prev.unknown)pv.textContent=pr>0?'Zadej měsíční splátku, ať spočítám celkové náklady.':'';
+    else if(prev.never)pv.innerHTML=`<span style="color:var(--neg)">Tahle splátka nepokryje ani úrok — dluh by nikdy nesplatil.</span>`;
+    else pv.innerHTML=`Při těchhle číslech <b>zaplatíš celkem ~${fm(prev.total)}</b>${prev.interest>0?` (z toho úroky ~${fm(prev.interest)})`:''} · doplatíš ~<b>${prev.date}</b>`;
+  };
+  ['m_pr','m_rate','m_dm','m_gr','m_fix','m_ratea'].forEach(id=>document.getElementById(id).oninput=upd); upd();}
 function saveDebt(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const pr=num(document.getElementById('m_pr').value),rate=num(document.getElementById('m_rate').value),p0=num(document.getElementById('m_p0').value),ty=document.getElementById('m_ty').value.trim();
   const dm=num(document.getElementById('m_dm').value),gr=document.getElementById('m_gr').value.trim(),ptp=document.getElementById('m_ptp').checked;
-  if(mctx.id){const d=S.debts.find(x=>x.id===mctx.id);d.nm=nm;d.icon=mctx.icon;d.principal=pr;d.rate=rate;d.type=ty;d.paid0=p0;d.monthly=dm;d.group=gr;d.paidToPrice=ptp;}else S.debts.push({id:uid(),nm,icon:mctx.icon,type:ty,group:gr,principal:pr,rate,paid0:p0,monthly:dm,paidToPrice:ptp,pay:[]});closeModal();commit();}
+  const fixDate=document.getElementById('m_fix').value,rateAfter=fixDate?num(document.getElementById('m_ratea').value):0;
+  if(mctx.id){const d=S.debts.find(x=>x.id===mctx.id);d.nm=nm;d.icon=mctx.icon;d.principal=pr;d.rate=rate;d.type=ty;d.paid0=p0;d.monthly=dm;d.group=gr;d.paidToPrice=ptp;d.fixDate=fixDate;d.rateAfter=rateAfter;}else S.debts.push({id:uid(),nm,icon:mctx.icon,type:ty,group:gr,principal:pr,rate,paid0:p0,monthly:dm,paidToPrice:ptp,fixDate,rateAfter,pay:[]});closeModal();commit();}
 function delDebt(id){if(!confirm('Smazat dluh i s platbami?'))return;S.debts=S.debts.filter(x=>x.id!==id);commit();}
 function debtPayModal(id){const d=S.debts.find(x=>x.id===id);mctx={id};openModal(`<h3>Splátka: ${esc(d.nm)}</h3><div class="md">Zbývá splatit: <b>${fm(debtRemaining(d))}</b>${d.rate>0?` · úrok ${(''+d.rate).replace('.',',')} % p.a.`:''}</div>
     <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" placeholder="0" onkeydown="if(event.key==='Enter')doDebtPay()"></div>
