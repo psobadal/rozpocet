@@ -916,11 +916,12 @@ function vDluhy(p){
   h+=`<div class="grid2" style="margin-bottom:14px">
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Zbývá splatit celkem</div><div class="num" style="font-size:24px;color:var(--blue)">${fm(totalDebt())}</div></div>
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Splátky tento cyklus</div><div class="num" style="font-size:24px">${fm(debtPaidInPeriod(p))}</div></div></div>`;
-  h+=`<div style="text-align:right;margin-bottom:14px"><button class="btn fill" onclick="debtModal()">${ic('plus',15)} Nový dluh</button></div>`;
-  if(!S.debts.length)h+=`<div class="card"><div class="empty">Zatím žádné dluhy. Přidej třeba „Půjčka od rodičů" (0 %) nebo „Hypotéka".</div></div>`;
-  // dluhy se stejnou skupinou (např. Byt) se sčítají do společného souhrnu
+  h+=`<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px"><button class="btn" onclick="newGroupModal()">${ic('home',15)} Nový projekt (byt, auto…)</button><button class="btn fill" onclick="debtModal()">${ic('plus',15)} Nový dluh</button></div>`;
+  if(!S.debts.length&&!Object.keys(S.debtGroups).length)h+=`<div class="card"><div class="empty">Zatím žádné dluhy. Přidej třeba „Půjčka od rodičů" (0 %) nebo „Hypotéka" — nebo si nejdřív založ projekt jako „Byt" a dluhy k němu přidávej postupně.</div></div>`;
+  // dluhy se stejnou skupinou (např. Byt) se sčítají do společného souhrnu; projekt může existovat i bez dluhu
   const groups=new Map(),solo=[];
   S.debts.forEach((d,i)=>{const g=(d.group||'').trim();if(g){if(!groups.has(g))groups.set(g,[]);groups.get(g).push({d,i});}else solo.push({d,i});});
+  Object.keys(S.debtGroups).forEach(g=>{if(!groups.has(g))groups.set(g,[]);});
   let gc=0;
   groups.forEach((arr,g)=>{const gcol=col(gc++);
     const principal=arr.reduce((s,x)=>s+(x.d.principal||0),0);
@@ -943,8 +944,8 @@ function vDluhy(p){
     const lifetimeInterest=arr.reduce((s,x)=>{const lc=debtLifetimeCost(x.d);return s+(lc.interest||0);},0);
     h+=`<div class="card" style="border-left:4px solid ${gcol};background:linear-gradient(180deg,${gcol}0e,transparent 60%)">
       <div class="ch" style="margin-bottom:12px"><span style="font-size:17px;font-weight:600;display:flex;align-items:center;gap:9px"><span style="color:${gcol}">${ic('home',19)}</span>${esc(g)}</span>
-        <div style="display:flex;align-items:center;gap:8px"><span class="tag" style="background:var(--bg2);color:var(--text3)">${arr.length} ${arr.length===1?'dluh':arr.length<5?'dluhy':'dluhů'}</span>
-        <button class="ib" title="Cena a vklady" onclick="groupModal('${encodeURIComponent(g)}')">${ic('edit',15)}</button></div></div>
+        <div style="display:flex;align-items:center;gap:8px"><span class="tag" style="background:var(--bg2);color:var(--text3)">${arr.length===0?'zatím bez dluhu':arr.length===1?'1 dluh':arr.length<5?arr.length+' dluhy':arr.length+' dluhů'}</span>
+        <button class="ib" title="Cena a vklady" onclick="groupModal('${encodeURIComponent(g)}')">${ic('edit',15)}</button><button class="ib" title="Smazat projekt" onclick="delGroupMeta('${encodeURIComponent(g)}')">${ic('trash',15)}</button></div></div>
       ${totalPrice>0?`<div style="margin-bottom:8px"><div class="barinfo"><span class="n">Cena ${esc(g).toLowerCase()}${feesSum>0?` <span class="mini" style="font-weight:400">(${fm(price)} + poplatky ${fm(feesSum)})</span>`:''}</span><span class="v">${fm(totalPrice)}</span></div>
         <div class="track" style="height:10px"><div class="act" style="width:${pricePc}%;background:${pricePc>=100?'var(--teal)':gcol}"></div></div>
         <div style="display:flex;justify-content:space-between;margin-top:6px"><span class="mini">Reálně vloženo do koupě: <b class="num" style="color:var(--text2)">${fm(coveredTotal)}</b> (${pricePc}%)</span>${priceGap>0?`<span class="mini">Chybí dofinancovat: <b class="num" style="color:${gcol}">${fm(priceGap)}</b></span>`:`<span class="mini" style="color:var(--teal)">${ic('check',12)} kryto</span>`}</div>
@@ -955,13 +956,14 @@ function vDluhy(p){
       ${contribs.length?`<div style="margin-bottom:8px"><div class="mini" style="margin-bottom:4px;font-weight:600">Vklady</div>${contribs.slice(-3).reverse().map((c,ri)=>{const oi=contribs.length-1-ri;return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:2px 0"><span class="mini">${fd(c.d)} ${esc(c.n||'Vklad')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="color:var(--teal)">+${fm(c.a)}</span><button class="ib" onclick="delContrib('${encodeURIComponent(g)}',${oi})">${ic('x',12)}</button></span></div>`;}).join('')}</div>`:''}
       ${feeList.length?`<div style="margin-bottom:12px"><div class="mini" style="margin-bottom:4px;font-weight:600">Poplatky</div>${feeList.slice(-3).reverse().map((c,ri)=>{const oi=feeList.length-1-ri;return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:2px 0"><span class="mini">${fd(c.d)} ${esc(c.n||'Poplatek')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="color:var(--gold)">+${fm(c.a)}</span><button class="ib" onclick="delFee('${encodeURIComponent(g)}',${oi})">${ic('x',12)}</button></span></div>`;}).join('')}</div>`:''}
       <div style="display:flex;gap:8px;margin-bottom:12px"><button class="btn sm" onclick="contribModal('${encodeURIComponent(g)}')">${ic('plus',14)} Přidat vklad</button><button class="btn sm" onclick="feeModal('${encodeURIComponent(g)}')">${ic('plus',14)} Přidat poplatek</button></div>
+      ${arr.length===0?`<div class="empty" style="padding:14px 0 4px">Zatím k tomu nemáš žádný dluh.</div><button class="btn sm fill" onclick="debtModal(null,'${encodeURIComponent(g)}')">${ic('plus',14)} Přidat dluh do „${esc(g)}"</button>`:`
       <div class="grid3">
         <div style="text-align:center"><div class="mini">Zbývá splatit</div><div class="num" style="font-size:24px;color:var(--blue)">${fm(rem)}</div></div>
         <div style="text-align:center"><div class="mini">Splaceno z dluhů</div><div class="num" style="font-size:24px;color:var(--teal)">${fm(paid)}</div></div>
         <div style="text-align:center"><div class="mini">Dluhy celkem</div><div class="num" style="font-size:24px">${fm(principal)}</div></div></div>
       ${principal>0?`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pc>=100?'var(--teal)':gcol}">${pc}% dluhů splaceno</span><span class="mini">${monthly>0?fm(monthly)+' / měs':''}</span></div><div class="prog"><i style="width:${pc}%;background:${pc>=100?'var(--teal)':gcol}"></i></div></div>`:''}
       ${monthly>0&&anyOpen&&!never?`<div class="mini" style="margin-top:8px">Při ${fm(monthly)}/měs máš dluhy splacené ~<b>${futureMonthStr(maxN)}</b></div>`:''}
-      ${!anyOpen&&principal>0&&rem<=0?`<div class="mini" style="margin-top:8px;color:var(--teal)">${ic('check',13)} Dluhy doplaceny</div>`:''}</div>`;
+      ${!anyOpen&&principal>0&&rem<=0?`<div class="mini" style="margin-top:8px;color:var(--teal)">${ic('check',13)} Dluhy doplaceny</div>`:''}`}</div>`;
     arr.forEach(x=>h+=debtCard(x.d,x.i,true));
   });
   solo.forEach(x=>h+=debtCard(x.d,x.i,false));
@@ -1220,7 +1222,7 @@ function toggleFixed(cid,iid){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>
 function payRecurring(){const p=P();let cnt=0,tot=0;p.cats.forEach(c=>c.it.forEach(it=>{if(!it.fixed||!(it.pl>0))return;const paid=(it.log||[]).some(e=>e.d>=p.from&&e.d<p.to&&e.n==='(pravidelné)');if(paid)return;const le={id:uid(),d:todayISO(),a:it.pl,n:'(pravidelné)'};(it.log||(it.log=[])).push(le);pushLinked(it,le);cnt++;tot+=it.pl;}));if(!cnt){toast('Pravidelné už zaplaceny nebo žádné nenastaveny');return;}toast(`Zaplaceno ${cnt} pravidelných · ${fm(tot)}`);commit();}
 
 /* modal infra */
-function openModal(html){const ov=document.createElement('div');ov.className='ov';ov.id='ov';ov.innerHTML=`<div class="modal">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);}
+function openModal(html){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov';ov.id='ov';ov.innerHTML=`<div class="modal">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);}
 function closeModal(){document.getElementById('ov')?.remove();}
 function iconPicker(list,cur){return `<div class="iconpick" id="m_ic">${list.map(n=>`<button class="${cur===n?'on':''}" data-ic="${n}" onclick="mctx.icon='${n}';document.querySelectorAll('#m_ic button').forEach(b=>b.classList.toggle('on',b.dataset.ic==='${n}'))">${ic(n,20)}</button>`).join('')}</div>`;}
 
@@ -1324,12 +1326,14 @@ function invAdd(id){const inv=S.investments.find(x=>x.id===id);mctx={id};openMod
 function doInvAdd(){const inv=S.investments.find(x=>x.id===mctx.id);const a=num(document.getElementById('m_a').value);if(!a){toast('Zadej částku');return;}inv.val=(inv.val||0)+a;inv.hist.push({d:todayISO(),a,n:document.getElementById('m_n').value.trim(),pid:S.curId});closeModal();toast(`${a>0?'+':''}${fm(a)} · ${inv.nm}`);commit();}
 
 /* debts */
-function debtModal(id){const d=id?S.debts.find(x=>x.id===id):null;mctx={id,icon:d?d.icon:'landmark'};
+function debtModal(id,presetGroup){const d=id?S.debts.find(x=>x.id===id):null;mctx={id,icon:d?d.icon:'landmark'};
+  const gVal=d?(d.group||''):(presetGroup?decodeURIComponent(presetGroup):'');
+  const allGroups=[...new Set([...S.debts.map(x=>(x.group||'').trim()),...Object.keys(S.debtGroups)].filter(Boolean))];
   openModal(`<h3>${d?'Upravit':'Nový'} dluh</h3>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${d?esc(d.nm):''}" placeholder="např. Půjčka od rodičů"></div>
     <div class="fr"><div class="fg"><span class="fl">Typ (štítek, nepovinné)</span><input class="inp" id="m_ty" value="${d?esc(d.type||''):''}" placeholder="např. Půjčka, Hypotéka"></div>
-      <div class="fg"><span class="fl">Skupina (nepovinné)</span><input class="inp" id="m_gr" list="m_grlist" value="${d?esc(d.group||''):''}" placeholder="např. Byt">
-        <datalist id="m_grlist">${[...new Set(S.debts.map(x=>(x.group||'').trim()).filter(Boolean))].map(g=>`<option value="${esc(g)}">`).join('')}</datalist></div></div>
+      <div class="fg"><span class="fl">Skupina (nepovinné)</span><input class="inp" id="m_gr" list="m_grlist" value="${esc(gVal)}" placeholder="např. Byt">
+        <datalist id="m_grlist">${allGroups.map(g=>`<option value="${esc(g)}">`).join('')}</datalist></div></div>
     <p class="mini" style="margin-top:6px">Dluhy se stejnou skupinou (třeba půjčky od rodičů i hypotéka na byt) se sečtou do společného souhrnu.</p>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(DEBT_ICONS,mctx.icon)}</div>
     <div class="fr"><div class="fg"><span class="fl">Celková částka (jistina)</span><input class="inp num" id="m_pr" type="number" value="${d?d.principal||0:''}" placeholder="0"></div>
@@ -1384,6 +1388,19 @@ function doDebtPay(){const d=S.debts.find(x=>x.id===mctx.id);const a=Math.abs(nu
 function delDebtPay(id,i){const d=S.debts.find(x=>x.id===id);d.pay.splice(i,1);commit();}
 
 /* skupina dluhů: cena celku (např. Byt) — vklady i poplatky se přidávají zvlášť jako log, ne jedno číslo */
+function newGroupModal(){
+  openModal(`<h3>Nový projekt</h3><div class="md">Třeba „Byt" nebo „Auto" — založíš ho hned, cenu a % hypotéky nastavíš v dalším kroku, a dluhy (i víc) k němu přidáš, až budeš mít podepsáno.</div>
+    <div class="fg"><span class="fl">Název</span><input class="inp" id="m_gname" placeholder="např. Byt" onkeydown="if(event.key==='Enter')createGroup()"></div>
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="createGroup()">Vytvořit</button></div>`);
+  setTimeout(()=>document.getElementById('m_gname')?.focus(),50);}
+function createGroup(){const name=document.getElementById('m_gname').value.trim();if(!name){toast('Zadej název');return;}
+  if(S.debtGroups[name]||S.debts.some(d=>(d.group||'').trim().toLowerCase()===name.toLowerCase())){toast('Tenhle projekt už existuje');return;}
+  S.debtGroups[name]={price:0,ltv:0,contrib:[],fees:[]};persist();
+  closeModal();groupModal(encodeURIComponent(name));}
+function delGroupMeta(gEnc){const g=decodeURIComponent(gEnc);const hasDebts=S.debts.some(d=>(d.group||'').trim()===g);
+  const gm=S.debtGroups[g];const hasData=gm&&((gm.contrib||[]).length||(gm.fees||[]).length||gm.price>0);
+  if(!confirm(hasDebts?`Smazat nastavení projektu „${g}" (cenu, vklady, poplatky)? Dluhy v něm zůstanou, jen bez sledování ceny.`:`Smazat prázdný projekt „${g}"?`))return;
+  delete S.debtGroups[g];commit();}
 function groupModal(gEnc){const g=decodeURIComponent(gEnc);const gm=groupMeta(g);mctx={g};
   openModal(`<h3>${esc(g)}</h3><div class="md">Ať vidíš celkový obrázek — kolik to celé stojí a jak si to naplánuješ financovat.</div>
     <div class="fg"><span class="fl">Kupní cena (nepovinné)</span><input class="inp num" id="m_price" type="number" value="${gm.price||''}" placeholder="např. 3500000"></div>
