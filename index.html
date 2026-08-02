@@ -445,7 +445,8 @@ const incPlan=p=>p.income.reduce((s,r)=>s+(r.pl||0),0);
 const incActual=p=>p.income.reduce((s,r)=>s+(r.ac||0),0);
 const incBase=p=>{const a=incActual(p);return a>0?a:incPlan(p);};
 // .src = záznam vznikl z propojené položky výdajů → do „zbývá" se počítá už tam, tady ne (žádné dvojí počítání)
-const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pid===pid&&h.t==='in'&&!h.src).reduce((ss,h)=>ss+h.a,0),0);
+// .adj = oprava/historický zůstatek, ne nové odložení z výplaty tenhle cyklus
+const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pid===pid&&h.t==='in'&&!h.src&&!h.adj).reduce((ss,h)=>ss+h.a,0),0);
 // h.k='gain' = zhodnocení/úrok, ne tvoje vložené peníze
 const investedInPeriod=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid&&!h.src&&!h.k).reduce((ss,h)=>ss+h.a,0),0);
 const invIn=inv=>(inv.base||0)+(inv.hist||[]).filter(h=>!h.k).reduce((s,h)=>s+h.a,0);
@@ -855,7 +856,7 @@ function catDetail(p,c){
 
 /* ---------- OBÁLKY ---------- */
 function vObalky(p){
-  let h=`<div class="banner tip"><span class="bi">${ic('bulb',18)}</span><div>Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky.</div></div>`;
+  let h=`<div class="banner tip"><span class="bi">${ic('bulb',18)}</span><div>Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky. Zapisuješ starší úspory, co jsi neodkládal teď z výplaty? Použij <b>Opravit</b> — nesrazí ti to zbytečně tenhle cyklus.</div></div>`;
   h+=`<div class="grid2" style="margin-bottom:14px">
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Celkem odloženo</div><div class="num" style="font-size:24px;color:var(--gold)">${fm(totalEnvelopes())}</div></div>
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Odloženo tento cyklus</div><div class="num" style="font-size:24px">${fm(savedInPeriod(p.id))}</div></div></div>`;
@@ -867,6 +868,7 @@ function vObalky(p){
         <div style="display:flex;gap:4px">
           <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="envMove('${e.id}','in')">${ic('plus',14)} Vložit</button>
           <button class="btn sm" onclick="envMove('${e.id}','out')">Čerpat</button>
+          <button class="btn sm" title="Nastav skutečný zůstatek bez vlivu na tenhle cyklus — třeba pro starší úspory" onclick="envAdjust('${e.id}')">${ic('check',14)} Opravit</button>
           <button class="ib" onclick="envModal('${e.id}')">${ic('edit',15)}</button><button class="ib" onclick="delEnv('${e.id}')">${ic('trash',15)}</button></div></div>
       <div class="${hasT?'grid3':'grid2'}">
         <div style="text-align:center"><div class="mini">Zůstatek</div><div class="num" style="font-size:22px;color:${e.bal>0?'var(--gold)':'var(--text4)'}">${fm(e.bal||0)}</div></div>
@@ -874,8 +876,8 @@ function vObalky(p){
         ${hasT?`<div style="text-align:center"><div class="mini">Cíl</div><div class="num" style="font-size:22px;color:var(--plum)">${fm(e.target)}</div></div>`:``}</div>`;
     if(hasT){const pcol=pc>=100?'var(--teal)':pc>50?'var(--gold)':'var(--accent)';h+=`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pcol}">${pc}%</span><span class="mini">${pc>=100?'splněno':'zbývá '+fm(remain)+(months?` · ~${months} měs.`:'')}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`;}
     if(e.due&&e.target>0&&remain>0){const mtd=monthsBetween(new Date(),new Date(e.due+'T00:00:00'));const req=Math.ceil(remain/mtd);h+=`<div class="mini" style="margin-top:8px">Do ${fdFull(e.due)} (~${mtd} měs.) odkládej ~<b>${fm(req)}</b>/měs${e.monthly>0?` — teď ${fm(e.monthly)}, ${e.monthly>=req?'stačí':'málo'}`:''}</div>`;}
-    const hist=(e.hist||[]).filter(x=>x.pid===p.id).slice(-4).reverse();
-    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Tento cyklus</div>`;hist.forEach(x=>{h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span><span class="tag ${x.t==='in'?'ok':'bd'}" style="margin-right:6px">${x.t==='in'?'vklad':'čerpáno'}</span>${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span><span class="num" style="font-weight:600;color:${x.t==='in'?'var(--teal)':'var(--neg)'}">${x.t==='in'?'+':'−'}${fm(x.a)}</span></div>`;});h+=`</div>`;}
+    const histAll=e.hist||[];const hist=histAll.filter(x=>x.pid===p.id).slice(-4).reverse();
+    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Tento cyklus</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);const tagTxt=x.adj?'oprava':(x.t==='in'?'vklad':'čerpáno');const tagCls=x.adj?'wr':(x.t==='in'?'ok':'bd');h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span><span class="tag ${tagCls}" style="margin-right:6px">${tagTxt}</span>${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:600;color:${x.t==='in'?'var(--teal)':'var(--neg)'}">${x.t==='in'?'+':'−'}${fm(x.a)}</span><button class="ib" onclick="delEnvHist('${e.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
     h+=`</div>`;});
   return h;
 }
@@ -1277,7 +1279,7 @@ function envModal(id){const e=id?S.envelopes.find(x=>x.id===id):null;mctx={id,ic
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveEnv()">${e?'Uložit':'Vytvořit'}</button></div>`);}
 function saveEnv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const mo=num(document.getElementById('m_mo').value),tg=num(document.getElementById('m_tg').value),due=document.getElementById('m_due').value;
   if(mctx.id){const e=S.envelopes.find(x=>x.id===mctx.id);e.nm=nm;e.icon=mctx.icon;e.monthly=mo;e.target=tg;e.due=due;}
-  else{const bal=num(document.getElementById('m_bal').value);const e={id:uid(),nm,icon:mctx.icon,bal:0,monthly:mo,target:tg,due,hist:[]};if(bal){e.bal=bal;e.hist.push({d:todayISO(),t:'in',a:bal,n:'Počáteční',pid:S.curId});}S.envelopes.push(e);}closeModal();commit();}
+  else{const bal=num(document.getElementById('m_bal').value);const e={id:uid(),nm,icon:mctx.icon,bal:0,monthly:mo,target:tg,due,hist:[]};if(bal){e.bal=bal;e.hist.push({d:todayISO(),t:'in',a:bal,n:'Počáteční',pid:S.curId,adj:true});}S.envelopes.push(e);}closeModal();commit();}
 function delEnv(id){const e=S.envelopes.find(x=>x.id===id);if(e.bal>0&&!confirm(`V obálce je ${fm(e.bal)}. Opravdu smazat?`))return;if(e.bal<=0&&!confirm('Smazat obálku?'))return;S.envelopes=S.envelopes.filter(x=>x.id!==id);commit();}
 function envMove(id,dir){const e=S.envelopes.find(x=>x.id===id);mctx={id,dir};openModal(`<h3>${dir==='in'?'Vložit do':'Čerpat z'}: ${esc(e.nm)}</h3><div class="md">Zůstatek: <b>${fm(e.bal||0)}</b>${dir==='in'?' · vklad se započítá jako „odloženo" tento cyklus.':' · ubyde z obálky (do výplaty se už nepočítá).'}</div>
     <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" placeholder="0" onkeydown="if(event.key==='Enter')doEnvMove()"></div>
@@ -1291,6 +1293,21 @@ function doEnvMove(){const e=S.envelopes.find(x=>x.id===mctx.id);const a=Math.ab
   if(mctx.dir==='out'){const cat=document.getElementById('m_cat')?.value;if(cat)entry.cat=cat;}
   e.bal=(e.bal||0)+(mctx.dir==='in'?a:-a);e.hist.push(entry);closeModal();toast(`${mctx.dir==='in'?'+':'−'}${fm(a)} · ${e.nm}`);commit();}
 
+function envAdjust(id){const e=S.envelopes.find(x=>x.id===id);mctx={id};
+  openModal(`<h3>Upravit zůstatek: ${esc(e.nm)}</h3><div class="md">Oprav zůstatek na skutečnou hodnotu — třeba když zapisuješ starší úspory nebo opravuješ překlep. Rozdíl se <b>nezapočítá</b> jako nové odložení tenhle cyklus.</div>
+    <div class="fg"><span class="fl">Skutečný zůstatek</span><input class="inp num" id="m_bal" type="number" value="${e.bal||0}" onkeydown="if(event.key==='Enter')doEnvAdjust()"></div>
+    <div class="mini" id="m_diff" style="margin-top:8px">Beze změny</div>
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doEnvAdjust()">Uložit</button></div>`);
+  const el=document.getElementById('m_bal'),df=document.getElementById('m_diff');
+  el.oninput=()=>{const dd=num(el.value)-(e.bal||0);df.innerHTML=dd===0?'Beze změny':`Rozdíl <b style="color:${dd>0?'var(--teal)':'var(--neg)'}">${dd>0?'+':''}${fm(dd)}</b> — nepočítá se do odloženo tento cyklus.`;};
+  setTimeout(()=>{el.focus();el.select();},50);}
+function doEnvAdjust(){const e=S.envelopes.find(x=>x.id===mctx.id);const v=num(document.getElementById('m_bal').value);
+  const diff=v-(e.bal||0);if(!diff){closeModal();return;}
+  e.bal=v;e.hist.push({d:todayISO(),t:diff>0?'in':'out',a:Math.abs(diff),n:'Oprava zůstatku',pid:S.curId,adj:true});
+  closeModal();toast(`${e.nm}: ${diff>0?'+':''}${fm(diff)} (bez vlivu na tenhle cyklus)`);commit();}
+function delEnvHist(id,idx){const e=S.envelopes.find(x=>x.id===id);if(!e||!e.hist||!e.hist[idx])return;
+  const x=e.hist[idx];if(!confirm('Smazat tenhle záznam z historie obálky?'))return;
+  e.bal=(e.bal||0)-(x.t==='in'?x.a:-x.a);e.hist.splice(idx,1);commit();}
 function depositMonthlyAll(){const cur=S.curId;let cnt=0,tot=0;S.envelopes.forEach(e=>{if(!e.monthly||e.monthly<=0)return;if((e.hist||[]).some(h=>h.pid===cur&&h.n==='Měsíční odklad'))return;e.bal=(e.bal||0)+e.monthly;e.hist.push({d:todayISO(),t:'in',a:e.monthly,n:'Měsíční odklad',pid:cur});cnt++;tot+=e.monthly;});if(!cnt){toast('Měsíční částky už odloženy nebo nenastaveny');return;}toast(`Odloženo ${fm(tot)} do ${cnt} obálek`);commit();}
 /* investments */
 function invModal(id){const inv=id?S.investments.find(x=>x.id===id):null;mctx={id,icon:inv?inv.icon:'trending'};
