@@ -386,7 +386,7 @@ function migrate(s){
   s.periods||=[];s.envelopes||=[];s.investments||=[];s.debts||=[];
   s.debts.forEach(d=>{d.paid0=d.paid0||0;d.monthly=d.monthly||0;d.group=d.group||'';d.pay||=[];d.paidToPrice=!!d.paidToPrice;});
   s.debtGroups=s.debtGroups||{};
-  Object.keys(s.debtGroups).forEach(g=>{const gm=s.debtGroups[g];gm.contrib||=[];
+  Object.keys(s.debtGroups).forEach(g=>{const gm=s.debtGroups[g];gm.contrib||=[];gm.fees=gm.fees||0;gm.ltv=gm.ltv||0;
     if(gm.ownPaid){gm.contrib.push({d:s.created||todayISO(),a:gm.ownPaid,n:'Původní vklad'});delete gm.ownPaid;}});
   s.tax=(s.tax==null?CONFIG.taxRate:s.tax);
   s.ui||={};s.ui.appName||=CONFIG.appName;s.ui.accent||=CONFIG.accent;s.ui.numFont||=CONFIG.numFont||'bahnschrift';
@@ -455,7 +455,7 @@ const totalEnvelopes=()=>S.envelopes.reduce((s,e)=>s+(e.bal||0),0);
 const debtRemaining=d=>Math.max(0,(d.principal||0)-(d.paid0||0)-(d.pay||[]).reduce((s,x)=>s+x.a,0));
 const debtPaid=d=>(d.paid0||0)+(d.pay||[]).reduce((s,x)=>s+x.a,0);
 const totalDebt=()=>S.debts.reduce((s,d)=>s+debtRemaining(d),0);
-const groupMeta=g=>S.debtGroups[g]||{price:0,contrib:[]};
+const groupMeta=g=>S.debtGroups[g]||{price:0,fees:0,ltv:0,contrib:[]};
 const groupContribTotal=g=>(groupMeta(g).contrib||[]).reduce((s,c)=>s+c.a,0);
 /* ---------- propojení položky výdajů s dluhem / obálkou ----------
    Zápis u propojené položky rovnou založí splátku dluhu nebo vklad do obálky.
@@ -489,6 +489,14 @@ const KIND_LABEL={need:'Potřeba',want:'Přání',save:'Úspora'};
 function futureMonthStr(n){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+n);return (d.getMonth()+1)+'/'+d.getFullYear();}
 function monthsBetween(a,b){return Math.max(1,(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()));}
 function debtPayoff(d){const B=debtRemaining(d),pay=d.monthly||0,r=(d.rate||0)/100/12;if(B<=0)return{done:true};if(pay<=0)return null;if(r===0){const n=Math.ceil(B/pay);return{n,interest:0,date:futureMonthStr(n)};}const mi=B*r;if(pay<=mi)return{never:true};const n=Math.ceil(-Math.log(1-r*B/pay)/Math.log(1+r));return{n,interest:Math.max(0,Math.round(pay*n-B)),date:futureMonthStr(n)};}
+// odhad celkových nákladů dluhu OD ZAČÁTKU (z celé jistiny, ne z aktuálního zbytku) — "kolik na tom opravdu zaplatíš"
+function debtLifetimeCost(d){const B=d.principal||0,pay=d.monthly||0,r=(d.rate||0)/100/12;if(B<=0)return{interest:0,total:0};
+  if(r===0){if(pay<=0)return{interest:0,total:B};return{interest:0,total:B};}
+  if(pay<=0)return{unknown:true,total:B};
+  const mi=B*r;if(pay<=mi)return{never:true,total:B};
+  const n=Math.ceil(-Math.log(1-r*B/pay)/Math.log(1+r));
+  const interest=Math.max(0,Math.round(pay*n-B));
+  return{interest,total:B+interest};}
 const COLS=['#c4694a','#3a8a7a','#7a5a8c','#c0902f','#5a7fa0','#a0604f','#5c8a5c','#8a6a9a','#b08a3a','#6a8f99','#9a6a7a','#7a9a5a'];
 const col=i=>COLS[i%COLS.length];
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
@@ -876,21 +884,28 @@ function vDluhy(p){
     const pc=principal>0?Math.min(100,Math.round(paid/principal*100)):0;
     let maxN=0,never=false,anyOpen=false;
     arr.forEach(x=>{const po=debtPayoff(x.d);if(!po)return;if(po.never)never=true;else if(!po.done){anyOpen=true;maxN=Math.max(maxN,po.n);}});
-    const gm=groupMeta(g),contribs=gm.contrib||[],ownPaid=groupContribTotal(g),price=gm.price||0;
+    const gm=groupMeta(g),contribs=gm.contrib||[],ownPaid=groupContribTotal(g),price=gm.price||0,fees=gm.fees||0,ltv=gm.ltv||0;
+    const totalPrice=price+fees;
     const disbursedPrincipal=arr.filter(x=>x.d.paidToPrice).reduce((s,x)=>s+(x.d.principal||0),0);
     const coveredTotal=ownPaid+disbursedPrincipal;         // reálně použito na koupi: vklady + jen "vyřízené" půjčky
-    const priceGap=price>0?Math.max(0,price-coveredTotal):0;
-    const pricePc=price>0?Math.min(100,Math.round(coveredTotal/price*100)):0;
+    const priceGap=totalPrice>0?Math.max(0,totalPrice-coveredTotal):0;
+    const pricePc=totalPrice>0?Math.min(100,Math.round(coveredTotal/totalPrice*100)):0;
     const pendingPrincipal=principal-disbursedPrincipal;   // sjednáno, ale ještě nešlo do koupě
+    const suggestedMortgage=(ltv>0&&totalPrice>0)?Math.round(totalPrice*ltv/100):0;
+    // kolik to fakticky vyjde vč. úroků: vklady (bez úroku) + u každého dluhu jistina+odhad úroků za celou dobu
+    const lifetimeTotal=ownPaid+arr.reduce((s,x)=>s+debtLifetimeCost(x.d).total,0);
+    const lifetimeInterest=arr.reduce((s,x)=>{const lc=debtLifetimeCost(x.d);return s+(lc.interest||0);},0);
     h+=`<div class="card" style="border-left:4px solid ${gcol};background:linear-gradient(180deg,${gcol}0e,transparent 60%)">
       <div class="ch" style="margin-bottom:12px"><span style="font-size:17px;font-weight:600;display:flex;align-items:center;gap:9px"><span style="color:${gcol}">${ic('home',19)}</span>${esc(g)}</span>
         <div style="display:flex;align-items:center;gap:8px"><span class="tag" style="background:var(--bg2);color:var(--text3)">${arr.length} ${arr.length===1?'dluh':arr.length<5?'dluhy':'dluhů'}</span>
         <button class="ib" title="Cena a vklady" onclick="groupModal('${encodeURIComponent(g)}')">${ic('edit',15)}</button></div></div>
-      ${price>0?`<div style="margin-bottom:8px"><div class="barinfo"><span class="n">Cena ${esc(g).toLowerCase()}</span><span class="v">${fm(price)}</span></div>
+      ${totalPrice>0?`<div style="margin-bottom:8px"><div class="barinfo"><span class="n">Cena ${esc(g).toLowerCase()}${fees>0?` <span class="mini" style="font-weight:400">(${fm(price)} + poplatky ${fm(fees)})</span>`:''}</span><span class="v">${fm(totalPrice)}</span></div>
         <div class="track" style="height:10px"><div class="act" style="width:${pricePc}%;background:${pricePc>=100?'var(--teal)':gcol}"></div></div>
         <div style="display:flex;justify-content:space-between;margin-top:6px"><span class="mini">Reálně vloženo do koupě: <b class="num" style="color:var(--text2)">${fm(coveredTotal)}</b> (${pricePc}%)</span>${priceGap>0?`<span class="mini">Chybí dofinancovat: <b class="num" style="color:${gcol}">${fm(priceGap)}</b></span>`:`<span class="mini" style="color:var(--teal)">${ic('check',12)} kryto</span>`}</div>
-        ${pendingPrincipal>0?`<div class="mini" style="margin-top:6px">+ ${fm(pendingPrincipal)} sjednáno v dluzích, ale ještě nešlo do koupě — zaškrtni u dluhu „šlo do koupě", až se to stane</div>`:''}</div>`
+        ${pendingPrincipal>0?`<div class="mini" style="margin-top:6px">+ ${fm(pendingPrincipal)} sjednáno v dluzích, ale ještě nešlo do koupě — zaškrtni u dluhu „šlo do koupě", až se to stane</div>`:''}
+        ${suggestedMortgage>0?`<div class="mini" style="margin-top:6px">${ic('percent',12)} Při hypotéce ${ltv} % z ceny: jistina by měla být ~<b class="num">${fm(suggestedMortgage)}</b></div>`:''}</div>`
         :ownPaid>0?`<div class="mini" style="margin-bottom:12px">Vlastní vklady (hotovo, mimo dluhy): <b class="num" style="color:var(--text2)">${fm(ownPaid)}</b></div>`:''}
+      ${lifetimeInterest>0?`<div class="banner warn" style="margin:0 0 12px;padding:11px 14px"><span class="bi">${ic('percent',15)}</span><div>Se současnými splátkami a úroky <b>reálně zaplatíš ~${fm(lifetimeTotal)}</b>${totalPrice>0?` — o <b>${fm(lifetimeInterest)}</b> víc než cena ${esc(g).toLowerCase()}`:` (z toho úroky ~${fm(lifetimeInterest)})`}.</div></div>`:''}
       ${contribs.length?`<div style="margin-bottom:12px">${contribs.slice(-3).reverse().map((c,ri)=>{const oi=contribs.length-1-ri;return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:2px 0"><span class="mini">${fd(c.d)} ${esc(c.n||'Vklad')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="color:var(--teal)">+${fm(c.a)}</span><button class="ib" onclick="delContrib('${encodeURIComponent(g)}',${oi})">${ic('x',12)}</button></span></div>`;}).join('')}</div>`:''}
       <button class="btn sm" style="margin-bottom:12px" onclick="contribModal('${encodeURIComponent(g)}')">${ic('plus',14)} Přidat vklad</button>
       <div class="grid3">
@@ -1291,13 +1306,20 @@ function delDebtPay(id,i){const d=S.debts.find(x=>x.id===id);d.pay.splice(i,1);c
 
 /* skupina dluhů: cena celku (např. Byt) — vlastní vklady se přidávají zvlášť přes contribModal */
 function groupModal(gEnc){const g=decodeURIComponent(gEnc);const gm=groupMeta(g);mctx={g};
-  openModal(`<h3>${esc(g)}</h3><div class="md">Ať vidíš celkový obrázek — kolik to celé stojí.</div>
-    <div class="fg"><span class="fl">Celková cena (nepovinné)</span><input class="inp num" id="m_price" type="number" value="${gm.price||''}" placeholder="např. 3500000"></div>
-    <p class="mini" style="margin-top:6px">Vlastní vklady (mimo dluhy) přidáš pak přímo u skupiny tlačítkem „Přidat vklad" — můžeš jich mít víc, jak přibývají.</p>
-    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveGroupMeta()">Uložit</button></div>`);}
-function saveGroupMeta(){const g=mctx.g;const price=num(document.getElementById('m_price').value);
+  openModal(`<h3>${esc(g)}</h3><div class="md">Ať vidíš celkový obrázek — kolik to celé stojí a jak si to naplánuješ financovat.</div>
+    <div class="fr"><div class="fg"><span class="fl">Kupní cena (nepovinné)</span><input class="inp num" id="m_price" type="number" value="${gm.price||''}" placeholder="např. 3500000"></div>
+      <div class="fg"><span class="fl">Poplatky (nepovinné)</span><input class="inp num" id="m_fees" type="number" value="${gm.fees||''}" placeholder="advokát, katastr…"></div></div>
+    <div class="fg"><span class="fl">Kolik % chceš financovat hypotékou (LTV, nepovinné)</span><input class="inp num" id="m_ltv" type="number" step="1" value="${gm.ltv||''}" placeholder="např. 80"></div>
+    <p class="mini" id="m_ltvhint" style="margin-top:6px"></p>
+    <p class="mini" style="margin-top:6px">Vlastní vklady (mimo dluhy) přidáš pak přímo u skupiny tlačítkem „Přidat vklad".</p>
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveGroupMeta()">Uložit</button></div>`);
+  const upd=()=>{const p=num(document.getElementById('m_price').value),f=num(document.getElementById('m_fees').value),l=num(document.getElementById('m_ltv').value);
+    const hint=document.getElementById('m_ltvhint');const total=p+f;
+    hint.textContent=(l>0&&total>0)?`Cena celkem ${fm(total)} → hypotéka při ${l} % by měla mít jistinu ~${fm(Math.round(total*l/100))}.`:'';};
+  ['m_price','m_fees','m_ltv'].forEach(id=>document.getElementById(id).oninput=upd); upd();}
+function saveGroupMeta(){const g=mctx.g;const price=num(document.getElementById('m_price').value),fees=num(document.getElementById('m_fees').value),ltv=num(document.getElementById('m_ltv').value);
   const gm=groupMeta(g);const contrib=gm.contrib||[];
-  if(price||contrib.length)S.debtGroups[g]={price,contrib};else delete S.debtGroups[g];
+  if(price||fees||ltv||contrib.length)S.debtGroups[g]={price,fees,ltv,contrib};else delete S.debtGroups[g];
   closeModal();commit();}
 function contribModal(gEnc){const g=decodeURIComponent(gEnc);mctx={g};
   openModal(`<h3>Vklad do: ${esc(g)}</h3><div class="md">Vlastní peníze, které jsi na koupi reálně dal ze svého — mimo dluhy. Klidně přidávej postupně, jak se to bude dít.</div>
