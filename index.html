@@ -778,10 +778,8 @@ function vPrehled(p){
 /* ---------- VÝDAJE ---------- */
 function vVydaje(p){
   if(detailCat){const c=p.cats.find(x=>x.id===detailCat);if(c)return catDetail(p,c);detailCat=null;}
-  const fixedCount=p.cats.reduce((s,c)=>s+c.it.filter(i=>i.fixed&&i.pl>0).length,0);
   let h=`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
     <button class="btn" onclick="plansModal()">${ic('list',15)} Měsíční plány</button>
-    ${fixedCount?`<button class="btn fill" onclick="payRecurring()">${ic('repeat',15)} Zaplatit pravidelné (${fixedCount})</button>`:''}
     <div class="sp"></div><span class="mini">Plán celkem ${fm(sumPlan(p))} · utraceno ${fm(sumActual(p))}</span></div>`;
   h+=`<div class="catgrid">`;
   p.cats.forEach((c,i)=>{const a=catActual(c),pl=catPlan(c),over=a>pl&&pl>0,pu=pl>0?Math.min(100,Math.round(a/pl*100)):0;
@@ -796,9 +794,13 @@ function vVydaje(p){
 }
 function catDetail(p,c){
   const a=catActual(c),pl=catPlan(c),diff=pl-a;
+  const ci=p.cats.findIndex(x=>x.id===c.id);
   let h=`<button class="back" onclick="closeCat()">${ic('cleft',15)} Zpět na výdaje</button>`;
   h+=`<div class="card"><div class="ch"><span class="ct"><span style="color:var(--accent)">${ic(c.icon,17)}</span> ${esc(c.nm)}</span>
-    <div style="display:flex;gap:4px"><button class="btn sm" onclick="catModal('${c.id}')">${ic('edit',15)} Upravit</button><button class="ib" title="Smazat" onclick="delCat('${c.id}')">${ic('trash',16)}</button></div></div>
+    <div style="display:flex;gap:4px">
+      <button class="ib" title="Posunout dřív" ${ci===0?'disabled style=opacity:.3':''} onclick="moveCat('${c.id}',-1)">${ic('cleft',15)}</button>
+      <button class="ib" title="Posunout později" ${ci===p.cats.length-1?'disabled style=opacity:.3':''} onclick="moveCat('${c.id}',1)">${ic('cright',15)}</button>
+      <button class="btn sm" onclick="catModal('${c.id}')">${ic('edit',15)} Upravit</button><button class="ib" title="Smazat" onclick="delCat('${c.id}')">${ic('trash',16)}</button></div></div>
     <div class="grid3" style="margin-bottom:6px">
       <div style="text-align:center"><div class="mini">Plán</div><div class="num" style="font-size:19px">${fm(pl)}</div></div>
       <div style="text-align:center"><div class="mini">Skutečnost</div><div class="num" style="font-size:19px;color:${a>pl&&pl>0?'var(--neg)':'var(--teal)'}">${fm(a)}</div></div>
@@ -831,7 +833,6 @@ function catDetail(p,c){
       <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <input class="inp" value="${esc(it.nm)}" onchange="renameItem('${c.id}','${it.id}',this.value)" style="flex:1;min-width:130px" title="Název položky" placeholder="Název">
         <input class="inp num" type="number" value="${it.pl||0}" onchange="setItemPlan('${c.id}','${it.id}',this.value)" style="flex:0 0 100px" title="Plán"><span class="mini">plán</span>
-        <label class="mini" style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" ${it.fixed?'checked':''} onchange="toggleFixed('${c.id}','${it.id}')" style="width:auto"> pravidelná</label>
         <button class="ib" onclick="delItem('${c.id}','${it.id}')" title="Smazat položku">${ic('trash',15)}</button></div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <span class="mini" style="flex:0 0 auto">Propsat platbu do</span>
@@ -856,11 +857,11 @@ function catDetail(p,c){
 
 /* ---------- OBÁLKY ---------- */
 function vObalky(p){
-  let h=`<div class="banner tip"><span class="bi">${ic('bulb',18)}</span><div>Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky. Zapisuješ starší úspory, co jsi neodkládal teď z výplaty? Použij <b>Opravit</b> — nesrazí ti to zbytečně tenhle cyklus.</div></div>`;
+  let h=`<div class="banner tip"><span class="bi">${ic('bulb',18)}</span><div>Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky. Zapisuješ starší úspory, co jsi neodkládal teď z výplaty? Uprav zůstatek přímo v ✏️ — nesrazí ti to zbytečně tenhle cyklus.</div></div>`;
   h+=`<div class="grid2" style="margin-bottom:14px">
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Celkem odloženo</div><div class="num" style="font-size:24px;color:var(--gold)">${fm(totalEnvelopes())}</div></div>
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Odloženo tento cyklus</div><div class="num" style="font-size:24px">${fm(savedInPeriod(p.id))}</div></div></div>`;
-  h+=`<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px"><button class="btn" onclick="depositMonthlyAll()">${ic('coins',15)} Odložit měsíční</button><button class="btn fill" onclick="envModal()">${ic('plus',15)} Nová obálka</button></div>`;
+  h+=`<div style="text-align:right;margin-bottom:14px"><button class="btn fill" onclick="envModal()">${ic('plus',15)} Nová obálka</button></div>`;
   if(!S.envelopes.length)h+=`<div class="card"><div class="empty">Zatím žádné obálky.</div></div>`;
   S.envelopes.forEach((e,i)=>{const hasT=e.target>0,pc=hasT?Math.min(100,Math.round(e.bal/e.target*100)):0;const remain=Math.max(0,(e.target||0)-e.bal),months=e.monthly>0?Math.ceil(remain/e.monthly):null;
     h+=`<div class="card" style="border-left:4px solid ${col(i)}">
@@ -868,7 +869,6 @@ function vObalky(p){
         <div style="display:flex;gap:4px">
           <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="envMove('${e.id}','in')">${ic('plus',14)} Vložit</button>
           <button class="btn sm" onclick="envMove('${e.id}','out')">Čerpat</button>
-          <button class="btn sm" title="Nastav skutečný zůstatek bez vlivu na tenhle cyklus — třeba pro starší úspory" onclick="envAdjust('${e.id}')">${ic('check',14)} Opravit</button>
           <button class="ib" onclick="envModal('${e.id}')">${ic('edit',15)}</button><button class="ib" onclick="delEnv('${e.id}')">${ic('trash',15)}</button></div></div>
       <div class="${hasT?'grid3':'grid2'}">
         <div style="text-align:center"><div class="mini">Zůstatek</div><div class="num" style="font-size:22px;color:${e.bal>0?'var(--gold)':'var(--text4)'}">${fm(e.bal||0)}</div></div>
@@ -876,8 +876,8 @@ function vObalky(p){
         ${hasT?`<div style="text-align:center"><div class="mini">Cíl</div><div class="num" style="font-size:22px;color:var(--plum)">${fm(e.target)}</div></div>`:``}</div>`;
     if(hasT){const pcol=pc>=100?'var(--teal)':pc>50?'var(--gold)':'var(--accent)';h+=`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pcol}">${pc}%</span><span class="mini">${pc>=100?'splněno':'zbývá '+fm(remain)+(months?` · ~${months} měs.`:'')}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`;}
     if(e.due&&e.target>0&&remain>0){const mtd=monthsBetween(new Date(),new Date(e.due+'T00:00:00'));const req=Math.ceil(remain/mtd);h+=`<div class="mini" style="margin-top:8px">Do ${fdFull(e.due)} (~${mtd} měs.) odkládej ~<b>${fm(req)}</b>/měs${e.monthly>0?` — teď ${fm(e.monthly)}, ${e.monthly>=req?'stačí':'málo'}`:''}</div>`;}
-    const histAll=e.hist||[];const hist=histAll.filter(x=>x.pid===p.id).slice(-4).reverse();
-    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Tento cyklus</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);const tagTxt=x.adj?'oprava':(x.t==='in'?'vklad':'čerpáno');const tagCls=x.adj?'wr':(x.t==='in'?'ok':'bd');h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span><span class="tag ${tagCls}" style="margin-right:6px">${tagTxt}</span>${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:600;color:${x.t==='in'?'var(--teal)':'var(--neg)'}">${x.t==='in'?'+':'−'}${fm(x.a)}</span><button class="ib" onclick="delEnvHist('${e.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
+    const histAll=e.hist||[];const hist=histAll.filter(x=>x.pid===p.id&&!x.adj).slice(-4).reverse();
+    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Tento cyklus</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span><span class="tag ${x.t==='in'?'ok':'bd'}" style="margin-right:6px">${x.t==='in'?'vklad':'čerpáno'}</span>${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:600;color:${x.t==='in'?'var(--teal)':'var(--neg)'}">${x.t==='in'?'+':'−'}${fm(x.a)}</span><button class="ib" onclick="delEnvHist('${e.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
     h+=`</div>`;});
   return h;
 }
@@ -1223,8 +1223,6 @@ function setItemLink(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x
 function setItemKind(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;if(v)it.kind=v;else delete it.kind;openItem=iid;commit();}
 function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
 function renameItem(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);const nm=(v||'').trim();if(!it)return;if(!nm){toast('Název nesmí být prázdný');R();return;}it.nm=nm;openItem=iid;commit();}
-function toggleFixed(cid,iid){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(it){it.fixed=!it.fixed;openItem=iid;commit();}}
-function payRecurring(){const p=P();let cnt=0,tot=0;p.cats.forEach(c=>c.it.forEach(it=>{if(!it.fixed||!(it.pl>0))return;const paid=(it.log||[]).some(e=>e.d>=p.from&&e.d<p.to&&e.n==='(pravidelné)');if(paid)return;const le={id:uid(),d:todayISO(),a:it.pl,n:'(pravidelné)'};(it.log||(it.log=[])).push(le);pushLinked(it,le);cnt++;tot+=it.pl;}));if(!cnt){toast('Pravidelné už zaplaceny nebo žádné nenastaveny');return;}toast(`Zaplaceno ${cnt} pravidelných · ${fm(tot)}`);commit();}
 
 /* modal infra */
 function openModal(html){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov';ov.id='ov';ov.innerHTML=`<div class="modal">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);}
@@ -1243,6 +1241,7 @@ function catModal(id){const c=id?P().cats.find(x=>x.id===id):null;mctx={id,icon:
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveCat()">${c?'Uložit':'Vytvořit'}</button></div>`);}
 function saveCat(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const p=P();if(mctx.id){const c=p.cats.find(x=>x.id===mctx.id);c.nm=nm;c.icon=mctx.icon;c.kind=mctx.kind;}else p.cats.push({id:uid(),nm,icon:mctx.icon,kind:mctx.kind,it:[]});closeModal();commit();}
 function delCat(id){if(!confirm('Smazat celou kategorii i s položkami?'))return;const p=P();p.cats=p.cats.filter(x=>x.id!==id);detailCat=null;closeModal();commit();}
+function moveCat(id,dir){const p=P();const i=p.cats.findIndex(x=>x.id===id);const j=i+dir;if(i<0||j<0||j>=p.cats.length)return;const c=p.cats.splice(i,1)[0];p.cats.splice(j,0,c);commit();}
 
 /* měsíční plány kategorií — vše na jedné obrazovce */
 function plansModal(){const p=P();
@@ -1275,11 +1274,13 @@ function envModal(id){const e=id?S.envelopes.find(x=>x.id===id):null;mctx={id,ic
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(ENV_ICONS,mctx.icon)}</div>
     <div class="fr"><div class="fg"><span class="fl">Měsíčně odkládat</span><input class="inp num" id="m_mo" type="number" value="${e?e.monthly||0:''}" placeholder="0"></div><div class="fg"><span class="fl">Cíl (nepovinné)</span><input class="inp num" id="m_tg" type="number" value="${e?e.target||0:''}" placeholder="0"></div></div>
     <div class="fg"><span class="fl">Cíl splnit do (nepovinné)</span><input class="inp" id="m_due" type="date" value="${e?e.due||'':''}"></div>
-    ${!e?`<div class="fg"><span class="fl">Počáteční zůstatek</span><input class="inp num" id="m_bal" type="number" placeholder="0"></div>`:''}
+    <div class="fg"><span class="fl">${e?'Zůstatek':'Počáteční zůstatek'}</span><input class="inp num" id="m_bal" type="number" value="${e?e.bal||0:''}" placeholder="0"></div>
+    ${e?`<p class="mini" style="margin-top:2px">Uprav, jen když neodpovídá skutečnosti (třeba zapisuješ starší úsporu) — rozdíl se nezapočítá jako odloženo tenhle cyklus.</p>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveEnv()">${e?'Uložit':'Vytvořit'}</button></div>`);}
-function saveEnv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const mo=num(document.getElementById('m_mo').value),tg=num(document.getElementById('m_tg').value),due=document.getElementById('m_due').value;
-  if(mctx.id){const e=S.envelopes.find(x=>x.id===mctx.id);e.nm=nm;e.icon=mctx.icon;e.monthly=mo;e.target=tg;e.due=due;}
-  else{const bal=num(document.getElementById('m_bal').value);const e={id:uid(),nm,icon:mctx.icon,bal:0,monthly:mo,target:tg,due,hist:[]};if(bal){e.bal=bal;e.hist.push({d:todayISO(),t:'in',a:bal,n:'Počáteční',pid:S.curId,adj:true});}S.envelopes.push(e);}closeModal();commit();}
+function saveEnv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const mo=num(document.getElementById('m_mo').value),tg=num(document.getElementById('m_tg').value),due=document.getElementById('m_due').value,bal=num(document.getElementById('m_bal').value);
+  if(mctx.id){const e=S.envelopes.find(x=>x.id===mctx.id);e.nm=nm;e.icon=mctx.icon;e.monthly=mo;e.target=tg;e.due=due;
+    const diff=bal-(e.bal||0);if(diff){e.bal=bal;e.hist.push({d:todayISO(),t:diff>0?'in':'out',a:Math.abs(diff),n:'Oprava zůstatku',pid:S.curId,adj:true});}}
+  else{const e={id:uid(),nm,icon:mctx.icon,bal:0,monthly:mo,target:tg,due,hist:[]};if(bal){e.bal=bal;e.hist.push({d:todayISO(),t:'in',a:bal,n:'Počáteční',pid:S.curId,adj:true});}S.envelopes.push(e);}closeModal();commit();}
 function delEnv(id){const e=S.envelopes.find(x=>x.id===id);if(e.bal>0&&!confirm(`V obálce je ${fm(e.bal)}. Opravdu smazat?`))return;if(e.bal<=0&&!confirm('Smazat obálku?'))return;S.envelopes=S.envelopes.filter(x=>x.id!==id);commit();}
 function envMove(id,dir){const e=S.envelopes.find(x=>x.id===id);mctx={id,dir};openModal(`<h3>${dir==='in'?'Vložit do':'Čerpat z'}: ${esc(e.nm)}</h3><div class="md">Zůstatek: <b>${fm(e.bal||0)}</b>${dir==='in'?' · vklad se započítá jako „odloženo" tento cyklus.':' · ubyde z obálky (do výplaty se už nepočítá).'}</div>
     <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" placeholder="0" onkeydown="if(event.key==='Enter')doEnvMove()"></div>
@@ -1293,22 +1294,9 @@ function doEnvMove(){const e=S.envelopes.find(x=>x.id===mctx.id);const a=Math.ab
   if(mctx.dir==='out'){const cat=document.getElementById('m_cat')?.value;if(cat)entry.cat=cat;}
   e.bal=(e.bal||0)+(mctx.dir==='in'?a:-a);e.hist.push(entry);closeModal();toast(`${mctx.dir==='in'?'+':'−'}${fm(a)} · ${e.nm}`);commit();}
 
-function envAdjust(id){const e=S.envelopes.find(x=>x.id===id);mctx={id};
-  openModal(`<h3>Upravit zůstatek: ${esc(e.nm)}</h3><div class="md">Oprav zůstatek na skutečnou hodnotu — třeba když zapisuješ starší úspory nebo opravuješ překlep. Rozdíl se <b>nezapočítá</b> jako nové odložení tenhle cyklus.</div>
-    <div class="fg"><span class="fl">Skutečný zůstatek</span><input class="inp num" id="m_bal" type="number" value="${e.bal||0}" onkeydown="if(event.key==='Enter')doEnvAdjust()"></div>
-    <div class="mini" id="m_diff" style="margin-top:8px">Beze změny</div>
-    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doEnvAdjust()">Uložit</button></div>`);
-  const el=document.getElementById('m_bal'),df=document.getElementById('m_diff');
-  el.oninput=()=>{const dd=num(el.value)-(e.bal||0);df.innerHTML=dd===0?'Beze změny':`Rozdíl <b style="color:${dd>0?'var(--teal)':'var(--neg)'}">${dd>0?'+':''}${fm(dd)}</b> — nepočítá se do odloženo tento cyklus.`;};
-  setTimeout(()=>{el.focus();el.select();},50);}
-function doEnvAdjust(){const e=S.envelopes.find(x=>x.id===mctx.id);const v=num(document.getElementById('m_bal').value);
-  const diff=v-(e.bal||0);if(!diff){closeModal();return;}
-  e.bal=v;e.hist.push({d:todayISO(),t:diff>0?'in':'out',a:Math.abs(diff),n:'Oprava zůstatku',pid:S.curId,adj:true});
-  closeModal();toast(`${e.nm}: ${diff>0?'+':''}${fm(diff)} (bez vlivu na tenhle cyklus)`);commit();}
 function delEnvHist(id,idx){const e=S.envelopes.find(x=>x.id===id);if(!e||!e.hist||!e.hist[idx])return;
   const x=e.hist[idx];if(!confirm('Smazat tenhle záznam z historie obálky?'))return;
   e.bal=(e.bal||0)-(x.t==='in'?x.a:-x.a);e.hist.splice(idx,1);commit();}
-function depositMonthlyAll(){const cur=S.curId;let cnt=0,tot=0;S.envelopes.forEach(e=>{if(!e.monthly||e.monthly<=0)return;if((e.hist||[]).some(h=>h.pid===cur&&h.n==='Měsíční odklad'))return;e.bal=(e.bal||0)+e.monthly;e.hist.push({d:todayISO(),t:'in',a:e.monthly,n:'Měsíční odklad',pid:cur});cnt++;tot+=e.monthly;});if(!cnt){toast('Měsíční částky už odloženy nebo nenastaveny');return;}toast(`Odloženo ${fm(tot)} do ${cnt} obálek`);commit();}
 /* investments */
 function invModal(id){const inv=id?S.investments.find(x=>x.id===id):null;mctx={id,icon:inv?inv.icon:'trending'};
   openModal(`<h3>${inv?'Upravit':'Nová'} investice / úspora</h3>
