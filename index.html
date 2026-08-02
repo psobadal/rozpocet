@@ -457,6 +457,19 @@ const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pi
 const investedInPeriod=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid&&!h.src&&!h.k).reduce((ss,h)=>ss+h.a,0),0);
 const invIn=inv=>(inv.base||0)+(inv.hist||[]).filter(h=>!h.k).reduce((s,h)=>s+h.a,0);
 const invGain=inv=>(inv.val||0)-invIn(inv);
+const CRYPTO_LIST=[
+  {id:'bitcoin',nm:'Bitcoin (BTC)'},{id:'ethereum',nm:'Ethereum (ETH)'},{id:'solana',nm:'Solana (SOL)'},
+  {id:'cardano',nm:'Cardano (ADA)'},{id:'litecoin',nm:'Litecoin (LTC)'},{id:'dogecoin',nm:'Dogecoin (DOGE)'},
+  {id:'ripple',nm:'XRP'},{id:'binancecoin',nm:'BNB'},
+];
+async function fetchCryptoPrice(coinId){
+  const r=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=czk`);
+  if(!r.ok)throw new Error('fetch failed');
+  const j=await r.json();
+  const px=j[coinId]&&j[coinId].czk;
+  if(!px)throw new Error('no price');
+  return px;
+}
 const debtPaidInPeriod=p=>S.debts.reduce((s,d)=>s+(d.pay||[]).filter(x=>x.d>=p.from&&x.d<p.to&&!x.src).reduce((ss,x)=>ss+x.a,0),0);
 function freeLeft(p){return incBase(p)-sumActual(p)-savedInPeriod(p.id)-investedInPeriod(p.id)-debtPaidInPeriod(p);}
 const totalInvest=()=>S.investments.reduce((s,i)=>s+(i.val||0),0);
@@ -908,15 +921,15 @@ function vInvestice(p){
     h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px">
       <div class="ic" style="background:${col(i)}22;color:${col(i)}">${ic(inv.icon,18)}</div>
       <div style="flex:1;min-width:0"><div style="font-weight:600">${esc(inv.nm)}</div>
-        ${inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
+        ${inv.crypto?`<div class="mini">${(''+inv.qty).replace('.',',')} · auto kurz (CoinGecko)</div>`:inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
         <div class="prog" style="height:6px;margin-top:5px"><i style="width:${pcw}%;background:var(--plum)"></i></div></div>
       <div style="text-align:right"><div class="num" style="font-size:17px">${fm(inv.val||0)}</div><div class="mini">${pcw}%</div></div>
-      <div style="display:flex;flex-direction:column;gap:3px"><button class="btn sm" onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button><button class="ib" onclick="invModal('${inv.id}')">${ic('edit',15)}</button></div></div>
+      <div style="display:flex;flex-direction:column;gap:3px">${inv.crypto?'':`<button class="btn sm" onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button>`}<button class="ib" onclick="invModal('${inv.id}')">${ic('edit',15)}</button></div></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1.5px solid var(--line)">
         <span class="mini">Vloženo <b class="num" style="color:var(--text2)">${fm(put)}</b></span>
         <span class="mini">Zhodnocení <b class="num" style="color:${gain>0?'var(--teal)':gain<0?'var(--neg)':'var(--text3)'}">${gain>0?'+':''}${fm(gain)}${put>0?` (${gain>0?'+':''}${(''+gpc).replace('.',',')} %)`:''}</b></span>
         <div style="flex:1"></div>
-        <button class="btn sm" onclick="invRevalue('${inv.id}')">${ic('trending',14)} Přecenit</button></div>`;
+        ${inv.crypto?`<button class="btn sm" onclick="invRefreshPrice('${inv.id}')">${ic('trending',14)} Aktualizovat kurz</button>`:`<button class="btn sm" onclick="invRevalue('${inv.id}')">${ic('trending',14)} Přecenit</button>`}</div>`;
     const hist=(inv.hist||[]).slice(-3).reverse();
     if(hist.length){h+=`<div style="margin-top:10px;padding-top:10px;border-top:1.5px solid var(--line)">`;hist.forEach(x=>{h+=`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);padding:2px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span class="num" style="color:${x.a>=0?'var(--teal)':'var(--neg)'}">${x.a>=0?'+':''}${fm(x.a)}</span></div>`;});h+=`</div>`;}
     h+=`</div>`;});
@@ -1310,19 +1323,59 @@ function delEnvHist(id,idx){const e=S.envelopes.find(x=>x.id===id);if(!e||!e.his
   e.bal=(e.bal||0)-(x.t==='in'?x.a:-x.a);e.hist.splice(idx,1);commit();}
 /* investments */
 function invModal(id){const inv=id?S.investments.find(x=>x.id===id):null;mctx={id,icon:inv?inv.icon:'trending'};
+  const isC=!!(inv&&inv.crypto);
   openModal(`<h3>${inv?'Upravit':'Nová'} investice / úspora</h3>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${inv?esc(inv.nm):''}" placeholder="např. ETF, Bitcoin, Spořák"></div>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(INV_ICONS,mctx.icon)}</div>
-    <div class="fr"><div class="fg"><span class="fl">Aktuální hodnota</span><input class="inp num" id="m_val" type="number" value="${inv?inv.val||0:''}" placeholder="0"></div>
+    <div class="fg"><span class="fl">Typ</span><select class="inp" id="m_ctype" onchange="invToggleCrypto()">
+      <option value=""${isC?'':' selected'}>Ručně</option>
+      <option value="crypto"${isC?' selected':''}>Krypto (auto kurz z CoinGecko)</option>
+    </select></div>
+    <div id="m_manual" class="fr" style="${isC?'display:none':''}">
+      <div class="fg"><span class="fl">Aktuální hodnota</span><input class="inp num" id="m_val" type="number" value="${inv&&!isC?inv.val||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Úrok % p.a. (0 = žádný)</span><input class="inp num" id="m_rate" type="number" step="0.01" value="${inv?inv.rate||0:''}" placeholder="0"></div></div>
+    <div id="m_crypto" style="${isC?'':'display:none'}">
+      <div class="fr">
+        <div class="fg"><span class="fl">Měna</span><select class="inp" id="m_coin" onchange="invCryptoPreview()">${CRYPTO_LIST.map(c=>`<option value="${c.id}"${inv&&inv.crypto===c.id?' selected':''}>${c.nm}</option>`).join('')}</select></div>
+        <div class="fg"><span class="fl">Množství</span><input class="inp num" id="m_qty" type="number" step="any" value="${inv&&inv.qty?inv.qty:''}" placeholder="0" oninput="invCryptoPreview()"></div>
+      </div>
+      <p class="mini" id="m_cpx" style="margin-top:6px">Zadej množství.</p>
+    </div>
     <p class="mini" style="margin-top:8px">Úrok se připisuje k 1. dni v měsíci, po dani ${S.tax} %.</p>
     ${inv?`<div style="text-align:right;margin-top:8px"><button class="btn dgr sm" onclick="delInv('${inv.id}')">Smazat</button></div>`:''}
-    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveInv()">${inv?'Uložit':'Vytvořit'}</button></div>`);}
-function saveInv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const val=num(document.getElementById('m_val').value),rate=num(document.getElementById('m_rate').value);
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveInv()">${inv?'Uložit':'Vytvořit'}</button></div>`);
+  if(isC)invCryptoPreview();}
+function invToggleCrypto(){const v=document.getElementById('m_ctype').value;
+  document.getElementById('m_manual').style.display=v==='crypto'?'none':'';
+  document.getElementById('m_crypto').style.display=v==='crypto'?'':'none';
+  if(v==='crypto')invCryptoPreview();}
+let _cryptoPx=null;
+async function invCryptoPreview(){const coinEl=document.getElementById('m_coin'),qtyEl=document.getElementById('m_qty'),el=document.getElementById('m_cpx');
+  if(!coinEl||!el)return;const coin=coinEl.value,qty=num(qtyEl.value);
+  if(!qty){el.textContent='Zadej množství.';_cryptoPx=null;return;}
+  el.textContent='Načítám kurz…';
+  try{const px=await fetchCryptoPrice(coin);_cryptoPx=px;
+    el.innerHTML=`Kurz <b>${fm(px)}</b> / ks · hodnota ≈ <b>${fm(Math.round(px*qty))}</b>`;
+  }catch(e){el.textContent='Kurz se nepodařilo načíst (offline?). Zkus to znovu.';_cryptoPx=null;}}
+function saveInv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}
+  const isC=document.getElementById('m_ctype').value==='crypto';
+  let val,rate=0,crypto=null,qty=null;
+  if(isC){crypto=document.getElementById('m_coin').value;qty=num(document.getElementById('m_qty').value);
+    if(!qty){toast('Zadej množství');return;}
+    if(_cryptoPx==null){toast('Počkej na načtení kurzu (nebo zkontroluj připojení)');return;}
+    val=Math.round(qty*_cryptoPx);}
+  else{val=num(document.getElementById('m_val').value);rate=num(document.getElementById('m_rate').value);}
   if(mctx.id){const inv=S.investments.find(x=>x.id===mctx.id);inv.nm=nm;inv.icon=mctx.icon;
     inv.base=(inv.base||0)+(val-(inv.val||0));   // ruční oprava hodnoty → posuň i vložené, zhodnocení zůstane
-    inv.val=val;inv.rate=rate;if(rate>0&&!inv.lastInt)inv.lastInt=iso(firstOfMonth(new Date()));}
-  else{const inv={id:uid(),nm,icon:mctx.icon,val,base:val,rate,lastInt:rate>0?iso(firstOfMonth(new Date())):null,hist:[]};S.investments.push(inv);}closeModal();commit();}
+    inv.val=val;inv.rate=rate;inv.crypto=crypto;inv.qty=qty;if(rate>0&&!inv.lastInt)inv.lastInt=iso(firstOfMonth(new Date()));}
+  else{const inv={id:uid(),nm,icon:mctx.icon,val,base:val,rate,crypto,qty,lastInt:rate>0?iso(firstOfMonth(new Date())):null,hist:[]};S.investments.push(inv);}closeModal();commit();}
+async function invRefreshPrice(id){const inv=S.investments.find(x=>x.id===id);if(!inv||!inv.crypto)return;
+  toast('Aktualizuji kurz…');
+  try{const px=await fetchCryptoPrice(inv.crypto);
+    const val=Math.round(px*(inv.qty||0)),diff=val-(inv.val||0);
+    if(diff){inv.val=val;inv.hist.push({id:uid(),d:todayISO(),a:diff,n:'Aktualizace kurzu',k:'gain'});}
+    toast(`${inv.nm}: kurz ${fm(px)} · ${diff>=0?'+':''}${fm(diff)}`);commit();
+  }catch(e){toast('Kurz se nepodařilo načíst.');}}
 /* přecenění: hodnotu určuje trh, rozdíl je zhodnocení (ne tvůj vklad) */
 function invRevalue(id){const inv=S.investments.find(x=>x.id===id);mctx={id};
   openModal(`<h3>Přecenit: ${esc(inv.nm)}</h3><div class="md">Zadej, kolik to má dnes hodnotu podle brokera. Rozdíl se zapíše jako zhodnocení — nezamíchá se ti to mezi vklady.</div>
