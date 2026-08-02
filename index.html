@@ -952,7 +952,7 @@ function vDluhy(p){
         ${pendingPrincipal>0?`<div class="mini" style="margin-top:6px">+ ${fm(pendingPrincipal)} sjednáno v dluzích, ale ještě nešlo do koupě — zaškrtni u dluhu „šlo do koupě", až se to stane</div>`:''}
         ${suggestedMortgage>0?`<div class="mini" style="margin-top:6px">${ic('percent',12)} Při hypotéce ${ltv} % z ceny: jistina by měla být ~<b class="num">${fm(suggestedMortgage)}</b></div>`:''}</div>`
         :ownPaid>0?`<div class="mini" style="margin-bottom:12px">Vlastní vklady (hotovo, mimo dluhy): <b class="num" style="color:var(--text2)">${fm(ownPaid)}</b></div>`:''}
-      ${lifetimeInterest>0?`<div class="banner warn" style="margin:0 0 12px;padding:11px 14px"><span class="bi">${ic('percent',15)}</span><div>Se současnými splátkami a úroky <b>reálně zaplatíš ~${fm(lifetimeTotal)}</b>${totalPrice>0?` — o <b>${fm(lifetimeInterest)}</b> víc než cena ${esc(g).toLowerCase()}`:` (z toho úroky ~${fm(lifetimeInterest)})`}.</div></div>`:''}
+      ${lifetimeInterest>0?`<div class="banner warn" style="margin:0 0 12px;padding:11px 14px"><span class="bi">${ic('percent',15)}</span><div>Se současnými splátkami a úroky <b>reálně zaplatíš ~${fm(lifetimeTotal)}</b>${totalPrice>0?` — o <b>${fm(lifetimeInterest)}</b> víc než cena ${esc(g).toLowerCase()}`:` (z toho úroky ~${fm(lifetimeInterest)})`}. Zatím zaplaceno <b>${fm(ownPaid+paid)}</b> (${lifetimeTotal>0?Math.round((ownPaid+paid)/lifetimeTotal*100):0} %).</div></div>`:''}
       ${contribs.length?`<div style="margin-bottom:8px"><div class="mini" style="margin-bottom:4px;font-weight:600">Vklady</div>${contribs.slice(-3).reverse().map((c,ri)=>{const oi=contribs.length-1-ri;return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:2px 0"><span class="mini">${fd(c.d)} ${esc(c.n||'Vklad')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="color:var(--teal)">+${fm(c.a)}</span><button class="ib" onclick="delContrib('${encodeURIComponent(g)}',${oi})">${ic('x',12)}</button></span></div>`;}).join('')}</div>`:''}
       ${feeList.length?`<div style="margin-bottom:12px"><div class="mini" style="margin-bottom:4px;font-weight:600">Poplatky</div>${feeList.slice(-3).reverse().map((c,ri)=>{const oi=feeList.length-1-ri;return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:2px 0"><span class="mini">${fd(c.d)} ${esc(c.n||'Poplatek')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="color:var(--gold)">+${fm(c.a)}</span><button class="ib" onclick="delFee('${encodeURIComponent(g)}',${oi})">${ic('x',12)}</button></span></div>`;}).join('')}</div>`:''}
       <div style="display:flex;gap:8px;margin-bottom:12px"><button class="btn sm" onclick="contribModal('${encodeURIComponent(g)}')">${ic('plus',14)} Přidat vklad</button><button class="btn sm" onclick="feeModal('${encodeURIComponent(g)}')">${ic('plus',14)} Přidat poplatek</button></div>
@@ -978,12 +978,14 @@ function debtCard(d,i,inGroup){
       <div class="grid3">
         <div style="text-align:center"><div class="mini">Zbývá</div><div class="num" style="font-size:22px;color:var(--blue)">${fm(rem)}</div></div>
         <div style="text-align:center"><div class="mini">Splaceno</div><div class="num" style="font-size:22px;color:var(--teal)">${fm(paid)}</div></div>
-        <div style="text-align:center"><div class="mini">${d.rate>0?'Úrok/měs.':'Celkem'}</div><div class="num" style="font-size:22px">${d.rate>0?fm(mInt):fm(d.principal||0)}</div></div></div>
+        <div style="text-align:center" title="Kolik tě úrok stojí za jeden měsíc z aktuálního zůstatku — i kdybys teď nic nesplácel."><div class="mini">${d.rate>0?'Úrok teď/měs.':'Celkem'}</div><div class="num" style="font-size:22px">${d.rate>0?fm(mInt):fm(d.principal||0)}</div></div></div>
       ${d.principal>0?`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pcol}">${pc}% splaceno</span><span class="mini">${d.rate>0?(''+d.rate).replace('.',',')+' % p.a.':'bez úroku'} · z ${fm(d.principal)}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`:''}`;
     if((d.paid0||0)>0)h+=`<div class="mini" style="margin-top:10px">Dříve splaceno (bez data): <b>${fm(d.paid0)}</b></div>`;
     if(d.fixDate)h+=`<div class="mini" style="margin-top:8px">${ic('percent',12)} Fixace do ${fdFull(d.fixDate)}, pak úrok ${(''+(d.rateAfter||0)).replace('.',',')} % p.a.</div>`;
-    const po=debtPayoff(d);
-    if(d.monthly>0&&po)h+=`<div class="mini" style="margin-top:8px">${po.done?'Doplaceno':po.never?`Splátka ${fm(d.monthly)}/měs nepokryje měsíční úrok`:`Při ${fm(d.monthly)}/měs doplatíš ~<b>${po.date}</b>${po.interest>0?` · úroky celkem ~${fm(po.interest)}`:''}`}</div>`;
+    const po=debtPayoff(d),lc=debtLifetimeCost(d);
+    if(d.monthly>0&&po)h+=`<div class="mini" style="margin-top:8px">${po.done?'Doplaceno':po.never?`Splátka ${fm(d.monthly)}/měs nepokryje měsíční úrok`:`Při ${fm(d.monthly)}/měs doplatíš ~<b>${po.date}</b>${po.interest>0?` · zbývající úroky ~${fm(po.interest)}`:''}`}</div>`;
+    if(d.monthly>0&&!lc.unknown&&!lc.never&&lc.total>0)h+=`<div class="mini" style="margin-top:6px;font-weight:600;color:var(--text2)">${ic('percent',12)} Na tomhle dluhu od začátku do konce zaplatíš celkem ~${fm(lc.total)}${lc.interest>0?` (jistina ${fm(d.principal)} + úroky ${fm(lc.interest)})`:''}</div>`;
+    else if(!(d.monthly>0)&&d.principal>0)h+=`<div class="mini" style="margin-top:6px">Zadej měsíční splátku (nebo dobu splácení v úpravě), ať spočítám, kolik na tomhle dluhu celkem zaplatíš.</div>`;
     const pays=(d.pay||[]).slice().sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,5);
     if(pays.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Poslední splátky</div>`;pays.forEach(x=>{const oi=d.pay.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span style="display:flex;align-items:center;gap:8px"><span class="num" style="font-weight:600;color:var(--teal)">−${fm(x.a)}</span><button class="ib" onclick="delDebtPay('${d.id}',${oi})">${ic('x',13)}</button></span></div>`;});h+=`</div>`;}
     h+=`</div>`;}
@@ -1359,11 +1361,13 @@ function debtModal(id,presetGroup){const d=id?S.debts.find(x=>x.id===id):null;mc
     if(gm&&gm.ltv>0){const totalPrice=(gm.price||0)+groupFeesTotal(g);const sug=Math.round(totalPrice*gm.ltv/100);
       sugEl.innerHTML=totalPrice>0?`${ic('percent',12)} Skupina „${esc(g)}" má LTV ${gm.ltv} % → doporučená jistina ~${fm(sug)}. <a onclick="document.getElementById('m_pr').value=${sug};document.getElementById('m_pr').dispatchEvent(new Event('input'))">Použít</a>`:'';
     }else sugEl.innerHTML='';
-    // opačný směr: znám dobu splácení, spočítej mi splátku
-    const term=num(document.getElementById('m_term').value);
+    // opačný směr: znám dobu splácení, spočítej mi splátku. U hypotéky bez zadané doby zkusíme rovnou nabídnout obvyklých 30 let.
+    const termIn=num(document.getElementById('m_term').value);
+    const looksLikeMortgage=mctx.icon==='home'||/hypo/i.test(document.getElementById('m_ty').value)||/hypo/i.test(document.getElementById('m_nm').value);
+    const term=termIn>0?termIn:(looksLikeMortgage&&dm<=0?30:0);
     const termEl=document.getElementById('m_termsug');
     if(term>0&&pr>0){const sugPay=annuityPayment(pr,rate,term*12);
-      termEl.innerHTML=`Při ${term} letech${rate>0?` a ${(''+rate).replace('.',',')} % p.a.`:''} by splátka byla ~<b class="num">${fm(sugPay)}</b>/měs. <a onclick="document.getElementById('m_dm').value=${sugPay};document.getElementById('m_dm').dispatchEvent(new Event('input'))">Použít</a>`;
+      termEl.innerHTML=`${termIn>0?'Při':'Při obvyklých'} ${term} letech${rate>0?` a ${(''+rate).replace('.',',')} % p.a.`:''} by splátka byla ~<b class="num">${fm(sugPay)}</b>/měs.${termIn>0?'':' <span class="mini">(nevyplnil jsi dobu, tak zkouším typický odhad — uprav si ji výše)</span>'} <a onclick="document.getElementById('m_dm').value=${sugPay};document.getElementById('m_dm').dispatchEvent(new Event('input'))">Použít</a>`;
     }else termEl.innerHTML='';
     // živý náhled celkových nákladů
     const prev=loanPreview(pr,rate,dm,fix,ratea===''?null:num(ratea));
@@ -1373,7 +1377,8 @@ function debtModal(id,presetGroup){const d=id?S.debts.find(x=>x.id===id):null;mc
     else if(prev.never)pv.innerHTML=`<span style="color:var(--neg)">Tahle splátka nepokryje ani úrok — dluh by nikdy nesplatil.</span>`;
     else pv.innerHTML=`Při těchhle číslech <b>zaplatíš celkem ~${fm(prev.total)}</b>${prev.interest>0?` (z toho úroky ~${fm(prev.interest)})`:''} · doplatíš ~<b>${prev.date}</b>`;
   };
-  ['m_pr','m_rate','m_dm','m_gr','m_fix','m_ratea','m_term'].forEach(id=>document.getElementById(id).oninput=upd); upd();}
+  ['m_pr','m_rate','m_dm','m_gr','m_fix','m_ratea','m_term','m_nm','m_ty'].forEach(id=>document.getElementById(id).oninput=upd);
+  document.getElementById('m_ic').addEventListener('click',upd); upd();}
 function saveDebt(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const pr=num(document.getElementById('m_pr').value),rate=num(document.getElementById('m_rate').value),p0=num(document.getElementById('m_p0').value),ty=document.getElementById('m_ty').value.trim();
   const dm=num(document.getElementById('m_dm').value),gr=document.getElementById('m_gr').value.trim(),ptp=document.getElementById('m_ptp').checked;
   const fixDate=document.getElementById('m_fix').value,rateAfter=fixDate?num(document.getElementById('m_ratea').value):0;
