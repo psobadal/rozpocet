@@ -151,3 +151,33 @@ Pořád ale platí, že jedna služba je jedno místo:
   ti shořel počítač a zároveň zmizel Cloudflare účet.
 
 Priorita je nikdy nepřijít o data, a to znamená víc než jedno místo.
+
+### Automatická záloha mimo počítač (Disk Google)
+
+Ruční posílání záloh mailem má tu vadu, že kopie je vždycky jen ke dni,
+kdy sis ji poslal. Když ji chceš **vždy aktuální a bez práce**, dá se
+datový soubor připojit do složky, kterou už něco synchronizuje.
+
+S Gmailem stačí nainstalovat **Disk Google pro počítač** — udělá na PC
+složku (typicky disk `G:`) a co do ní přijde, samo nahraje nahoru.
+V Nastavení pak dej *Připojit datový soubor* a vyber soubor **uvnitř té
+složky**. Řetěz je pak:
+
+```
+změna v appce → appka zapíše do souboru → Disk Google to nahraje
+```
+
+Výsledek: vždy čerstvá kopie mimo zařízení i mimo Cloudflare, a k tomu
+historie verzí souboru přímo v Disku. Soubor má pár set kilobajtů, takže
+se do 15 GB zdarma vejde bez řešení.
+
+**Pozor při více počítačích:** kdyby dva počítače připojily ten *samý*
+soubor v Disku, budou do něj zapisovat dvě appky nezávisle a Disk začne
+dělat konfliktní kopie. Buď to udělej jen na jednom počítači, nebo dej
+každému vlastní název (`rozpocet-pc1.json`, `rozpocet-pc2.json`).
+Synchronizaci mezi zařízeními řeší Worker — tenhle soubor je jen záloha,
+nemá sloužit k přenosu dat.
+
+Nemusí to být zrovna Disk Google, funguje jakákoliv synchronizovaná
+složka (Dropbox, OneDrive…). Jde jen o to, aby soubor někdo průběžně
+odnášel z počítače pryč.
