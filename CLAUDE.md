@@ -217,14 +217,23 @@ S.tax            — daň z úroků (výchozí 15 %)
 
 ## Co zbývá / další nápady (odsouhlaseno uživatelem, zatím neuděláno)
 
-- **Dávka 2:** graf vývoje čistého jmění/investic v čase, investiční
-  kalkulačka (složené úročení).
-- **Vypnout registrace v Supabase** (aby si cizí lidi nemohli zakládat účty
-  v projektu) — uživatel má obě zařízení už přihlášená, nedotkne se ho to.
+- **Dávka 2 — jediná otevřená položka, odsouhlasená a nezačatá:**
+  1. **graf vývoje čistého jmění/investic v čase** — data na to už existují:
+     `S.investments[].hist[]` (vklady vs. `k:'gain'`), `S.envelopes[].hist[]`
+     a `S.debts[].pay[]` mají datumy, takže jde jmění dopočítat zpětně bez
+     nového ukládání. Pozor na `adj:true` a `src` záznamy (viz pravidla výš).
+  2. **investiční kalkulačka se složeným úročením** — samostatný nástroj
+     „co kdybych odkládal X měsíčně na Y let při Z %", nemá měnit data.
+  Zatím se o tom jen mluvilo, žádný kód ani návrh UI neexistuje.
 - Uživatel má rád: teplý/klidný design (ne tmavý), SVG ikony (ne emoji),
   věci co nejvíc automatické ale transparentní (vidět PROČ se číslo počítá).
-- Priorita #1 napříč celým projektem: **nikdy neztratit data** (proto
-  Supabase sync + GitHub zálohy + export/import v appce).
+- Priorita #1 napříč celým projektem: **nikdy neztratit data** — dnes to
+  stojí na Cloudflare Workeru (+ denní verze), kopiích ve třech
+  prohlížečích, GitHubu pro kód a export/importu v appce.
+  **Hotové, nevracet se k tomu:** krypto s auto kurzem, přesun sync ze
+  Supabase na Cloudflare, pojistka proti přepsání prázdným stavem,
+  hlasitý banner při výpadku cloudu, denní verze s obnovením.
+  **Odpadlo:** „vypnout registrace v Supabase" — Supabase se už nepoužívá.
 
 ## Odkaz na soutěž (jiný projekt, mimochodem)
 
