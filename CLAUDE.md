@@ -11,8 +11,12 @@ na webu. Cílem je i „free appka pro kohokoliv" (viz README.md).
 - **Živě na webu:** https://psobadal.github.io/rozpocet/ (GitHub Pages, větev `main`, root)
 - **Synchronizace:** vlastní Worker na Cloudflare (`sync-worker.js` v repu, návod
   v `SYNC-SETUP.md`). Data v KV, přístup přes dlouhý tajný „sync kód" v hlavičce
-  `X-Sync-Code` (klíč v KV je jeho SHA-256 otisk). Worker si drží jednu předchozí
-  verzi (`prev:`) jako záchrannou brzdu. Adresa+kód žijí v localStorage pod
+  `X-Sync-Code` (klíč v KV je jeho SHA-256 otisk). Worker drží tři vrstvy:
+  `cur:` (aktuální), `prev:` (stav před posledním zápisem) a `snap:<hash>:<datum>`
+  (jedna verze za den, `expirationTtl` půl roku). V appce se z nich obnovuje přes
+  „Starší verze" (`wkVersions`/`wkRestore`) — obnovení samo dělá `pushBackup()`
+  a přepíše `prev:`, takže i chybné obnovení jde vzít zpět.
+  Adresa+kód žijí v localStorage pod
   `rozpocet-v2-sync`, **záměrně mimo `S`** — ať se tajný kód nedostane do exportu
   zálohy ani do dat nahraných do cloudu.
   **Proč ne Supabase:** free tier se po ~týdnu nečinnosti pozastaví a zmizí i

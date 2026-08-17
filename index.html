@@ -759,6 +759,21 @@ async function wkJoin(){ // další zařízení: vlož připojovací kód z prvn
   catch(e){syncState='err';syncMsg='Připojení se nepovedlo';R();}}
 function wkCopyConn(){const s=connStr();if(!s)return;
   navigator.clipboard?.writeText(s).then(()=>toast('Připojovací kód zkopírován'),()=>toast('Zkopíruj ho ručně'));}
+async function wkVersions(){ // denní verze uložené ve Workeru
+  if(!syncOn())return;
+  try{const r=await wkFetch('/list');if(!r.ok)throw new Error('list '+r.status);
+    const days=(await r.json()).days||[];
+    if(!days.length){toast('Zatím žádné starší verze');return;}
+    openModal(`<h3>Starší verze</h3><div class="md">Úložiště si každý den odloží jednu verzi (drží se půl roku). Obnovením přepíšeš současná data — ta se předtím uloží do interní zálohy.</div>
+      <div class="fg"><span class="fl">Ze dne</span><select class="inp" id="wk_day">${days.map(d=>`<option value="${d}">${fdFull(d)}</option>`).join('')}</select></div>
+      <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="wkRestore()">Obnovit</button></div>`);
+  }catch(e){toast(netErr(e)?'Úložiště neodpovídá':'Nepovedlo se načíst starší verze');}}
+async function wkRestore(){const d=document.getElementById('wk_day').value;closeModal();
+  try{const r=await wkFetch('/snap/'+d);if(!r.ok)throw new Error('snap '+r.status);
+    const j=await r.json();if(!j||!j.data)throw new Error('prázdná verze');
+    pushBackup();S=migrate(j.data);S.mt=Date.now();saveLS();applyTheme();
+    await doPush();toast('Obnoveno ze dne '+fdFull(d));R();
+  }catch(e){toast('Obnovení se nepovedlo');}}
 function wkDisconnect(){if(!wconfirmSimple('Odpojit tohle zařízení od synchronizace? Data v cloudu ani tady se nesmažou.'))return;
   sync=null;saveSync();syncState='off';syncMsg='';toast('Odpojeno');R();}
 
@@ -1250,6 +1265,7 @@ function vNastaveni(p){
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
         <button class="btn fill" onclick="syncNow()">${ic('repeat',15)} Synchronizovat teď</button>
         <button class="btn" onclick="wkCopyConn()">Zkopírovat kód</button>
+        <button class="btn" onclick="wkVersions()">${ic('calendar',15)} Starší verze</button>
         <button class="btn gho" onclick="wkDisconnect()">Odpojit zařízení</button></div>`;
   }else{
     h+=`${errBan}<p class="mini" style="margin:0 0 14px">Vlastní malé úložiště na Cloudflare — zdarma a hlavně se <b>nepozastavuje za nečinnost</b>. Postup je v souboru <a href="SYNC-SETUP.md" target="_blank" rel="noopener">SYNC-SETUP.md</a> (asi 10 minut, nic se neinstaluje).</p>

@@ -47,6 +47,17 @@ export default {
     const k = await keyFor(code);
 
     if (req.method === 'GET') {
+      // seznam dnů, ze kterých je uložená verze (nejnovější první)
+      if (url.pathname === '/list') {
+        const l = await env.ROZPOCET.list({ prefix: 'snap:' + k + ':' });
+        const days = l.keys.map(x => x.name.split(':').pop()).sort().reverse();
+        return json({ days });
+      }
+      if (url.pathname.startsWith('/snap/')) {
+        const val = await env.ROZPOCET.get('snap:' + k + ':' + url.pathname.slice(6));
+        if (!val) return json({}, 404);
+        return new Response(val, { headers: { ...CORS, 'Content-Type': 'application/json' } });
+      }
       const which = url.pathname === '/prev' ? 'prev:' : 'cur:';
       const val = await env.ROZPOCET.get(which + k);
       if (!val) return json({}, 404);
@@ -63,6 +74,13 @@ export default {
       const cur = await env.ROZPOCET.get('cur:' + k);
       if (cur) await env.ROZPOCET.put('prev:' + k, cur);   // krok zpět
       await env.ROZPOCET.put('cur:' + k, body);
+
+      // denní verze: klíč je datum, takže za den vzniká jedna (poslední uložení
+      // toho dne). Drží se půl roku, pak se sama zahodí — historie zadarmo,
+      // bez ručního zálohování a nezávisle na tomhle počítači.
+      const day = new Date().toISOString().slice(0, 10);
+      await env.ROZPOCET.put('snap:' + k + ':' + day, body, { expirationTtl: 60 * 60 * 24 * 180 });
+
       return json({ ok: true, mt: parsed.mt || null });
     }
 

@@ -77,21 +77,38 @@ připojení; staré přestane platit.
   chybějící název proměnné.
 - **Appka hlásí „chybí nebo krátký sync kód"** → připojovací kód se
   nepřenesl celý, zkopíruj ho znovu.
-- **Přepsala se data nesmyslem** → Worker si drží jednu předchozí verzi.
-  Jde stáhnout ručně, například přes konzoli prohlížeče (F12) na
-  stránce appky:
+- **Přepsala se data nesmyslem** → v appce **Nastavení → Synchronizace →
+  Starší verze**. Úložiště si každý den odloží jednu verzi a drží je půl
+  roku, takže se dá vrátit i o měsíce zpátky. Samotné obnovení jde taky
+  vzít zpět — předchozí stav zůstane v `prev`.
 
-  ```js
-  fetch('https://tvoje-adresa.workers.dev/prev',{headers:{'X-Sync-Code':'TVUJ_SYNC_KOD'}}).then(r=>r.json()).then(console.log)
-  ```
+## Verze a zálohy
+
+O historii se stará úložiště samo:
+
+| kde | co to je | jak dlouho |
+|---|---|---|
+| `cur` | aktuální data | pořád |
+| `prev` | stav těsně před posledním zápisem | do dalšího zápisu |
+| `snap:<datum>` | jedna verze za každý den | půl roku |
+
+Ručně stáhnout předchozí verzi jde i přes konzoli prohlížeče (F12) na
+stránce appky:
+
+```js
+fetch('https://tvoje-adresa.workers.dev/prev',{headers:{'X-Sync-Code':'TVUJ_SYNC_KOD'}}).then(r=>r.json()).then(console.log)
+```
 
 ## Co tohle nenahrazuje
 
-Cloud je pro pohodlí (stejná data na PC i mobilu), ne jediná kopie.
-Pořád platí:
+Cloud je pro pohodlí (stejná data na PC i mobilu) a teď i pro historii.
+Pořád ale platí, že jedna služba je jedno místo:
 
-- připoj si v Nastavení **datový soubor** — ideálně do složky OneDrive,
-  tím máš trvalou verzovanou kopii mimo jakoukoliv službu,
-- občas si dej **Stáhnout zálohu**.
+- připoj si v Nastavení **datový soubor** do běžné složky na disku
+  (třeba `Dokumenty\Rozpočet`). Chrání to hlavně proti smazání dat
+  prohlížeče — to je zdaleka nejčastější způsob, jak o ně přijít,
+- občas si dej **Stáhnout zálohu** a soubor si někam odlož (mail sám
+  sobě úplně stačí). Tohle je jediná kopie, která přežije i to, že by
+  ti shořel počítač a zároveň zmizel Cloudflare účet.
 
 Priorita je nikdy nepřijít o data, a to znamená víc než jedno místo.
