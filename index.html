@@ -644,11 +644,27 @@ async function cloudPush(state){
   const r=await apiFetch('/rest/v1/budgets',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});
   if(!r.ok)throw new Error('push '+r.status);}
 
+/* Pojistka proti ztrátě dat: „prázdný" stav (čerstvě založená appka, nebo stav
+   po nepovedeném načtení localStorage) se NIKDY nesmí nahrát přes cloud —
+   přepsalo by to dobrá data v cloudu prázdnotou. Úmyslné vynulování jde
+   pořád přes finishFirstLogin(false), které volá cloudPush() napřímo. */
+function stateEmpty(s){
+  const perHas=(s.periods||[]).some(p=>
+    (p.income||[]).some(x=>(x.pl||0)||(x.ac||0))||
+    (p.cats||[]).some(c=>(c.pl||0)||(c.it||[]).some(i=>(i.log||[]).length||(i.pl||0))));
+  const envHas=(s.envelopes||[]).some(e=>(e.bal||0)||(e.hist||[]).length);
+  const invHas=(s.investments||[]).some(i=>(i.val||0)||(i.hist||[]).length);
+  return !perHas&&!envHas&&!invHas&&!(s.debts||[]).length&&!Object.keys(s.debtGroups||{}).length;}
+const netErr=e=>/Failed to fetch|NetworkError|Load failed/i.test((e&&e.message)||'');
+const CLOUD_DOWN='Cloud je nedostupný — projekt může být pozastavený nebo offline. Data máš zatím jen v tomhle zařízení.';
+
 let pushTimer=null,pushing=false;
 function schedulePush(){if(!cloudOn()||!loggedIn())return;clearTimeout(pushTimer);pushTimer=setTimeout(doPush,1500);}
-async function doPush(){if(pushing||!loggedIn())return;pushing=true;
+async function doPush(){if(pushing||!loggedIn())return;
+  if(stateEmpty(S)){syncState='err';syncMsg='Do cloudu se nenahrává prázdný stav (pojistka proti přepsání dat).';updateSavePill();return;}
+  pushing=true;
   try{if(!await ensureToken())throw new Error('auth');S.mt=S.mt||Date.now();await cloudPush(S);syncState='ok';syncMsg='';}
-  catch(e){syncState='err';syncMsg='Nepovedlo se uložit do cloudu';}
+  catch(e){syncState='err';syncMsg=netErr(e)?CLOUD_DOWN:'Nepovedlo se uložit do cloudu';}
   pushing=false;updateSavePill();}
 
 async function syncNow(silent){ // sladí cloud a zařízení — vyhrává novější
@@ -657,14 +673,19 @@ async function syncNow(silent){ // sladí cloud a zařízení — vyhrává nov�
   try{
     if(!await ensureToken()){syncState='err';syncMsg='Přihlášení vypršelo';R();return;}
     const row=await cloudPull();
-    if(!row){ // v cloudu ještě nic není → první přihlášení
+    if(!row){ // v cloudu nic nevidíme → buď první přihlášení, nebo výpadek/RLS
       if(!silent)return firstLoginChoice();
+      // tiché nahrání jen když je co nahrát — prázdný stav by přepsal dobrá data
+      if(stateEmpty(S)){syncState='err';syncMsg='Cloud nevrátil žádná data a v tomhle zařízení nic není — radši nic nenahrávám.';updateSavePill();return;}
       await cloudPush(S);syncState='ok';updateSavePill();return;}
     const cloudMt=+row.mt||0,localMt=+S.mt||0;
     if(cloudMt>localMt){pushBackup();S=migrate(row.data);S.mt=cloudMt;saveLS();applyTheme();if(!silent)toast('Staženo z cloudu');}
-    else if(localMt>cloudMt){await cloudPush(S);if(!silent)toast('Nahráno do cloudu');}
+    else if(localMt>cloudMt){
+      if(stateEmpty(S)&&!stateEmpty(row.data||{})){ // lokálně prázdno, v cloudu data → stáhni, nepřepisuj
+        pushBackup();S=migrate(row.data);S.mt=cloudMt;saveLS();applyTheme();if(!silent)toast('Staženo z cloudu');}
+      else{await cloudPush(S);if(!silent)toast('Nahráno do cloudu');}}
     syncState='ok';syncMsg='';R();
-  }catch(e){syncState='err';syncMsg='Synchronizace se nepovedla';R();}}
+  }catch(e){syncState='err';syncMsg=netErr(e)?CLOUD_DOWN:'Synchronizace se nepovedla';R();}}
 
 function firstLoginChoice(){ // cloud je prázdný — co s daty v tomhle zařízení
   openModal(`<h3>Cloud je zatím prázdný</h3><div class="md">Přihlášení proběhlo. Co chceš udělat s daty, která máš v tomhle zařízení?</div>
@@ -733,6 +754,9 @@ function vPrehled(p){
   const elapsed=Math.max(0,Math.min(days,Math.round((new Date()-new Date(p.from))/864e5)));
   const left=Math.max(0,days-elapsed);const perDay=left>0?free/left:free;
   let h='';
+  // výpadek cloudu musí být vidět — jinak si člověk myslí, že je zálohovaný, a není
+  if(cloudOn()&&loggedIn()&&syncState==='err')
+    h+=`<div class="banner warn"><span class="bi">${ic('zap',18)}</span><div><b>Synchronizace nefunguje.</b> ${esc(syncMsg||'Nepovedlo se spojit s cloudem.')} <a onclick="exportData()">Stáhnout zálohu →</a> <a onclick="syncNow()" style="margin-left:10px">Zkusit znovu</a></div></div>`;
   if(fsaSupported()&&!fileOK)h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Ochrana dat:</b> ${fileHandle?'Klikni na „Klikni pro připojení" nahoře a potvrď přístup.':'Připoj datový soubor, ať už nikdy nepřijdeš o data.'} <a onclick="connectFile()">Připojit soubor →</a></div></div>`;
   else if(!fsaSupported()&&(!S.lastExport||Date.now()-new Date(S.lastExport+'T00:00:00').getTime()>7*864e5))
     h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Data jsou jen v tomhle zařízení.</b> Telefon a počítač mají každý svoje — nepropojí se samy. Občas si stáhni zálohu. <a onclick="exportData()">Stáhnout zálohu →</a></div></div>`;
