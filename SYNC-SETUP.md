@@ -76,6 +76,39 @@ připojení; staré přestane platit.
 
 ---
 
+## Přechod na jiný počítač
+
+Připojovací kód je **jediný klíč k datům v cloudu** a žije jen
+v localStorage prohlížeče. Do exportované zálohy se schválně nedává —
+kdo by tu zálohu získal, dostal by se i k cloudu. Proto:
+
+**Dokud máš starý počítač, ulož si připojovací kód někam mimo něj** —
+správce hesel, poznámky v telefonu, mail sám sobě. Nastavení →
+Synchronizace → *Zkopírovat kód*.
+
+Na novém počítači pak stačí:
+
+1. otevřít appku,
+2. Nastavení → Synchronizace → vložit připojovací kód → *Připojit*,
+3. data se stáhnou.
+
+Datový soubor si připoj znovu — ten je vždycky lokální pro dané zařízení.
+Na úpravy appky `git clone` repa, na úpravy Workeru `npx wrangler login`.
+
+Kdybys kód přece jen ztratil, data pryč nejsou — jsi vlastník Cloudflare
+účtu, takže se dají vytáhnout přímo z KV úložiště:
+
+```bash
+npx wrangler kv key list --namespace-id=<id> --remote
+npx wrangler kv key get "cur:<hash>" --namespace-id=<id> --remote
+```
+
+Výsledek je JSON, jehož pole `data` jde v appce načíst přes *Obnovit ze
+zálohy*. Pak si vytvoř nové připojení — staré tím přestane platit.
+
+Prázdná appka ti cloud nepřepíše: když se připojí zařízení bez dat,
+appka pozná, že lokálně nic není, a místo nahrání data stáhne.
+
 ## Když se něco pokazí
 
 - **`/ping` neodpovídá** → Worker není nasazený, vrať se ke kroku 3.
