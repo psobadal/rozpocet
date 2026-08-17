@@ -1,0 +1,16 @@
+{
+  // Nasazení synchronizačního Workeru (sync-worker.js) na Cloudflare.
+  // Ruční cesta přes web je popsaná v SYNC-SETUP.md — tohle je totéž
+  // pro příkazovou řádku: npx wrangler deploy
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rozpocet-sync",
+  "main": "sync-worker.js",
+  "compatibility_date": "2026-08-17",
+  "observability": { "enabled": true },
+  "kv_namespaces": [
+    {
+      "binding": "ROZPOCET",
+      "id": "f45ce1d702204b8aa4557bb4d5e93150"
+    }
+  ]
+}

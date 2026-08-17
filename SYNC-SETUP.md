@@ -9,6 +9,12 @@ klikne na webu Cloudflare.
 
 ---
 
+> **Zkratka pro toho, kdo umí příkazovou řádku:** v repu je `wrangler.jsonc`,
+> takže stačí `npx wrangler login` a `npx wrangler deploy` ze složky projektu.
+> KV úložiště se musí založit jednou předem:
+> `npx wrangler kv namespace create rozpocet` a jeho `id` vepsat do
+> `wrangler.jsonc`. Zbytek návodu je ruční cesta přes web.
+
 ## 1. Účet
 
 Založ si účet na [dash.cloudflare.com](https://dash.cloudflare.com) (stačí
