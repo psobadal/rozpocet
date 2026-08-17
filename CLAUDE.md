@@ -24,6 +24,38 @@ na webu. Cílem je i „free appka pro kohokoliv" (viz README.md).
   za nečinnost neusínají. Supabase kód v appce zůstal jen pro starší nastavení
   (`S.cloud`), `CONFIG.cloud` je prázdné, takže se ta sekce ani nezobrazí.
 
+## Worker na Cloudflare (wrangler)
+
+Nasazeno a živé od 17. 8. 2026:
+
+- **Adresa:** `https://rozpocet-sync.ozpo-et.workers.dev` (`/ping` vrací `{"ok":true}`)
+- **Účet:** `p.s.obadal@gmail.com`, account id `a63c016bfa6ff650a9607ba26d272999`
+- **KV úložiště:** `rozpocet`, id `f45ce1d702204b8aa4557bb4d5e93150`
+- Připojená jsou dvě PC a mobil (všechna sdílejí jeden sync kód → v KV je
+  jeden trojklíč `cur:`/`prev:`/`snap:` pod stejným hashem).
+
+Nasazení změny Workeru (konfigurace je ve `wrangler.jsonc`, KV binding `ROZPOCET`):
+```bash
+npx wrangler deploy
+```
+
+**Přihlášení je per-počítač** a na novém stroji chybí — `npx wrangler login`
+otevře OAuth v prohlížeči, kde musí uživatel kliknout Allow. Token se ukládá do
+`%APPDATA%\xdg.config\.wrangler\config\default.toml`. Pozor na dvě věci:
+`wrangler login` běží krátce a **vyprší, když uživatel neklikne hned** — spouštět
+na pozadí, z výstupu vytáhnout OAuth URL a rovnou mu ji otevřít. Autorizaci
+uživatel vědomě nechal aktivní (ruší se v Cloudflare pod My Profile → Access
+Management → **Connected Applications**, ne pod starou adresou `authorized-apps`).
+
+Nahlédnutí do dat nebo záchrana, když se ztratí sync kód:
+```bash
+npx wrangler kv key list --namespace-id=f45ce1d702204b8aa4557bb4d5e93150 --remote
+npx wrangler kv key get "cur:<hash>" --namespace-id=f45ce1d702204b8aa4557bb4d5e93150 --remote
+```
+`kv key delete` **nemá** přepínač `--force` (s ním jen vypíše nápovědu a tváří se,
+že smazal) a `kv key list` je eventuálně konzistentní, takže hned po mazání může
+ukázat starý stav. Do KV nesahat bez důvodu — jsou tam reálná data uživatele.
+
 ## Jak nasazovat změny
 
 Po každé sadě úprav v `index.html`:
