@@ -9,9 +9,16 @@ na webu. Cílem je i „free appka pro kohokoliv" (viz README.md).
 - **Lokálně:** `C:\Users\START\Downloads\Rozpočet\index.html`
 - **GitHub:** [psobadal/rozpocet](https://github.com/psobadal/rozpocet) (veřejné repo, účet uživatele)
 - **Živě na webu:** https://psobadal.github.io/rozpocet/ (GitHub Pages, větev `main`, root)
-- **Synchronizace:** Supabase projekt `rozpocet` (Frankfurt/EU), tabulka `budgets`
-  s row-level security — klíč v appce je publishable/veřejný, bezpečný do prohlížeče.
-  Uživatel je přihlášený e-mailem (magic link) na PC i mobilu.
+- **Synchronizace:** vlastní Worker na Cloudflare (`sync-worker.js` v repu, návod
+  v `SYNC-SETUP.md`). Data v KV, přístup přes dlouhý tajný „sync kód" v hlavičce
+  `X-Sync-Code` (klíč v KV je jeho SHA-256 otisk). Worker si drží jednu předchozí
+  verzi (`prev:`) jako záchrannou brzdu. Adresa+kód žijí v localStorage pod
+  `rozpocet-v2-sync`, **záměrně mimo `S`** — ať se tajný kód nedostane do exportu
+  zálohy ani do dat nahraných do cloudu.
+  **Proč ne Supabase:** free tier se po ~týdnu nečinnosti pozastaví a zmizí i
+  z DNS — reálně se to stalo, přihlášení přestalo fungovat. Cloudflare Workers
+  za nečinnost neusínají. Supabase kód v appce zůstal jen pro starší nastavení
+  (`S.cloud`), `CONFIG.cloud` je prázdné, takže se ta sekce ani nezobrazí.
 
 ## Jak nasazovat změny
 
@@ -84,6 +91,19 @@ S.tax            — daň z úroků (výchozí 15 %)
   appka měla obálky ukazovat i přímo v grafu "Podíl kategorií" (ne jen v
   Čistém jmění), řešilo by se to samostatně za cyklus — zatím nebylo
   požadováno.
+
+- **Pojistka proti přepsání dat prázdným stavem — nikdy neodstraňovat.**
+  `stateEmpty(s)` pozná prakticky prázdný stav (výchozí appka, nebo stav po
+  nepovedeném načtení localStorage). Takový se do cloudu nikdy nenahraje:
+  hlídá to `doPush()` i obě větve v `syncNow()`. Bez toho hrozily dva reálné
+  scénáře ztráty dat — (1) `remotePull()` nevrátil řádek kvůli výpadku a tichá
+  synchronizace nahrála lokální prázdno přes plný cloud, (2) prázdný lokál
+  s novějším `mt` přebil starší, ale plný cloud. Pozor: výchozí stav má dva
+  řádky příjmu s nulami, takže se testují **hodnoty**, ne délky polí.
+  Úmyslné vynulování jde pořád přes „Začít načisto" (`finishFirstLogin(false)`).
+  Výpadek cloudu musí být hlasitý — červený banner na Přehledu, ne jen tichý
+  `syncState='err'` v pilulce (tichá verze způsobila, že si uživatel týden
+  myslel, že je zálohovaný, a nebyl).
 
 - **Investice: vklad vs. zhodnocení.** `inv.base` = kolik jsi tam dal ze svého.
   Tlačítko „+ Kč" = vklad (base i val rostou). Tlačítko „Přecenit" = trh se

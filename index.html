@@ -221,12 +221,11 @@ const CONFIG={
   accent:'#c4694a',            // hlavní barva (jde měnit i v Nastavení)
   numFont:'bahnschrift',       // font čísel (klíč z NUMFONTS)
   taxRate:15,                  // srážková daň z úroků v %
-  // Synchronizace mezi zařízeními (nepovinná). Chceš vlastní? Založ si projekt
-  // na supabase.com a vlož sem jeho URL a veřejný "anon" klíč — nebo je zadej
-  // přímo v appce v Nastavení → Synchronizace.
-  // Klíč je veřejný (publishable) — je určený do prohlížeče. Data chrání
-  // řádkové zabezpečení: každý vidí jen své vlastní.
-  cloud:{url:'https://gxdeprnnhgxasilstavh.supabase.co',key:'sb_publishable_HmJT8PZ8AkDxloBy0NFlWw_k4w3QtGG'},
+  // Synchronizace mezi zařízeními se nastavuje v appce (Nastavení → Synchronizace),
+  // ne tady. Hlavní cesta je vlastní Worker na Cloudflare — nepozastavuje se za
+  // nečinnost, na rozdíl od free tieru Supabase (viz SYNC-SETUP.md).
+  // Tohle pole je jen pro starší nastavení přes Supabase; prázdné = vypnuté.
+  cloud:{url:'',key:''},
   accents:['#c4694a','#3a8a7a','#5a7fa0','#7a5a8c','#c0902f','#4a7a52','#b0583b','#2c2520'],
   categories:[   // kind: 'need' = potřeba (50 %), 'want' = přání (30 %) — pro pravidlo 50/30/20
     {nm:'Bydlení',icon:'home',kind:'need',items:['Nájem / hypotéka','Energie','Internet']},
@@ -605,6 +604,42 @@ function jwtPayload(tok){try{const p=tok.split('.')[1].replace(/-/g,'+').replace
 function setTokens(at,rt){const p=jwtPayload(at)||{};auth={access_token:at,refresh_token:rt,exp:p.exp||0,email:p.email||'',uid:p.sub||''};saveAuth();}
 const loggedIn=()=>!!(auth&&auth.access_token&&auth.uid);
 
+/* ---- Vlastní Worker na Cloudflare (hlavní způsob, nepozastavuje se) ----
+   Adresa a tajný kód žijí ve vlastním klíči v localStorage, NE v S —
+   ať se nedostanou do exportu zálohy ani do dat nahraných do cloudu.
+   Návod na zprovoznění je v SYNC-SETUP.md. */
+const SYNC_LS=LS+'-sync';
+let sync=null;              // {url, code}
+function loadSync(){try{sync=JSON.parse(localStorage.getItem(SYNC_LS)||'null');}catch(e){sync=null;}}
+function saveSync(){try{sync?localStorage.setItem(SYNC_LS,JSON.stringify(sync)):localStorage.removeItem(SYNC_LS);}catch(e){}}
+const syncOn=()=>!!(sync&&sync.url&&sync.code);
+function newSyncCode(){const a=new Uint8Array(20);crypto.getRandomValues(a);
+  return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('');}
+const b64u=s=>btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64u=s=>atob(s.replace(/-/g,'+').replace(/_/g,'/'));
+// jeden řetězec k přenesení na další zařízení (adresa + kód dohromady)
+function connStr(){return syncOn()?b64u(JSON.stringify({u:sync.url,c:sync.code})):'';}
+function parseConn(s){try{const o=JSON.parse(unb64u((s||'').trim()));
+  return o&&o.u&&o.c?{url:(''+o.u).replace(/\/+$/,''),code:''+o.c}:null;}catch(e){return null;}}
+
+async function wkFetch(path,opts={}){
+  const headers=Object.assign({'X-Sync-Code':sync.code},opts.headers||{});
+  return fetch(sync.url+path,Object.assign({},opts,{headers}));}
+async function wkPull(){const r=await wkFetch('/data');
+  if(r.status===404)return null;
+  if(!r.ok)throw new Error('pull '+r.status);
+  const j=await r.json();return j&&j.data?j:null;}
+async function wkPush(state){
+  const r=await wkFetch('/data',{method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({data:state,mt:state.mt||Date.now()})});
+  if(!r.ok){let m='';try{m=(await r.json()).error||'';}catch(e){}throw new Error('push '+r.status+(m?' – '+m:''));}}
+
+/* ---- společná vrstva: Worker má přednost, Supabase zůstává pro starší nastavení ---- */
+const remoteOn=()=>syncOn()||(cloudOn()&&loggedIn());
+const remotePull=()=>syncOn()?wkPull():cloudPull();
+const remotePush=s=>syncOn()?wkPush(s):cloudPush(s);
+const remoteReady=async()=>syncOn()?true:await ensureToken();
+
 async function apiFetch(path,opts={}){const c=cloudCfg();
   const headers=Object.assign({apikey:c.key,'Content-Type':'application/json'},opts.headers||{});
   if(auth&&auth.access_token)headers.Authorization='Bearer '+auth.access_token;
@@ -659,43 +694,43 @@ const netErr=e=>/Failed to fetch|NetworkError|Load failed/i.test((e&&e.message)|
 const CLOUD_DOWN='Cloud je nedostupný — projekt může být pozastavený nebo offline. Data máš zatím jen v tomhle zařízení.';
 
 let pushTimer=null,pushing=false;
-function schedulePush(){if(!cloudOn()||!loggedIn())return;clearTimeout(pushTimer);pushTimer=setTimeout(doPush,1500);}
-async function doPush(){if(pushing||!loggedIn())return;
+function schedulePush(){if(!remoteOn())return;clearTimeout(pushTimer);pushTimer=setTimeout(doPush,1500);}
+async function doPush(){if(pushing||!remoteOn())return;
   if(stateEmpty(S)){syncState='err';syncMsg='Do cloudu se nenahrává prázdný stav (pojistka proti přepsání dat).';updateSavePill();return;}
   pushing=true;
-  try{if(!await ensureToken())throw new Error('auth');S.mt=S.mt||Date.now();await cloudPush(S);syncState='ok';syncMsg='';}
+  try{if(!await remoteReady())throw new Error('auth');S.mt=S.mt||Date.now();await remotePush(S);syncState='ok';syncMsg='';}
   catch(e){syncState='err';syncMsg=netErr(e)?CLOUD_DOWN:'Nepovedlo se uložit do cloudu';}
   pushing=false;updateSavePill();}
 
 async function syncNow(silent){ // sladí cloud a zařízení — vyhrává novější
-  if(!cloudOn()||!loggedIn())return;
+  if(!remoteOn())return;
   syncState='syncing';if(!silent)R();else updateSavePill();
   try{
-    if(!await ensureToken()){syncState='err';syncMsg='Přihlášení vypršelo';R();return;}
-    const row=await cloudPull();
-    if(!row){ // v cloudu nic nevidíme → buď první přihlášení, nebo výpadek/RLS
+    if(!await remoteReady()){syncState='err';syncMsg='Přihlášení vypršelo';R();return;}
+    const row=await remotePull();
+    if(!row){ // v cloudu nic nevidíme → buď první připojení, nebo výpadek
       if(!silent)return firstLoginChoice();
       // tiché nahrání jen když je co nahrát — prázdný stav by přepsal dobrá data
       if(stateEmpty(S)){syncState='err';syncMsg='Cloud nevrátil žádná data a v tomhle zařízení nic není — radši nic nenahrávám.';updateSavePill();return;}
-      await cloudPush(S);syncState='ok';updateSavePill();return;}
+      await remotePush(S);syncState='ok';updateSavePill();return;}
     const cloudMt=+row.mt||0,localMt=+S.mt||0;
     if(cloudMt>localMt){pushBackup();S=migrate(row.data);S.mt=cloudMt;saveLS();applyTheme();if(!silent)toast('Staženo z cloudu');}
     else if(localMt>cloudMt){
       if(stateEmpty(S)&&!stateEmpty(row.data||{})){ // lokálně prázdno, v cloudu data → stáhni, nepřepisuj
         pushBackup();S=migrate(row.data);S.mt=cloudMt;saveLS();applyTheme();if(!silent)toast('Staženo z cloudu');}
-      else{await cloudPush(S);if(!silent)toast('Nahráno do cloudu');}}
+      else{await remotePush(S);if(!silent)toast('Nahráno do cloudu');}}
     syncState='ok';syncMsg='';R();
   }catch(e){syncState='err';syncMsg=netErr(e)?CLOUD_DOWN:'Synchronizace se nepovedla';R();}}
 
 function firstLoginChoice(){ // cloud je prázdný — co s daty v tomhle zařízení
-  openModal(`<h3>Cloud je zatím prázdný</h3><div class="md">Přihlášení proběhlo. Co chceš udělat s daty, která máš v tomhle zařízení?</div>
+  openModal(`<h3>Cloud je zatím prázdný</h3><div class="md">Připojení proběhlo. Co chceš udělat s daty, která máš v tomhle zařízení?</div>
     <div class="macts" style="flex-direction:column">
       <button class="btn fill" onclick="finishFirstLogin(true)">Nahrát je do cloudu</button>
       <button class="btn" onclick="finishFirstLogin(false)">Začít načisto</button></div>
     <p class="mini" style="margin-top:12px">Při „začít načisto" se současná data neztratí — uloží se do interní zálohy a pořád si je můžeš stáhnout.</p>`);}
 async function finishFirstLogin(keep){closeModal();
   try{if(!keep){pushBackup();const ui=S.ui;S=defState();S.ui=ui;}
-    S.mt=Date.now();saveLS();await cloudPush(S);syncState='ok';toast(keep?'Data nahrána do cloudu':'Začínáme načisto');applyTheme();R();
+    S.mt=Date.now();saveLS();await remotePush(S);syncState='ok';toast(keep?'Data nahrána do cloudu':'Začínáme načisto');applyTheme();R();
   }catch(e){syncState='err';syncMsg='Nepovedlo se uložit do cloudu';R();}}
 
 async function cloudLogout(){if(!wconfirmSimple('Odhlásit se? Data zůstanou v cloudu i v tomhle zařízení.'))return;
@@ -705,9 +740,31 @@ function wconfirmSimple(m){return confirm(m);}
 function saveCloudCfg(){const url=(document.getElementById('sy_url').value||'').trim();const key=(document.getElementById('sy_key').value||'').trim();
   S.cloud={url,key};persist();toast(url&&key?'Synchronizace nastavena':'Nastavení uloženo');R();}
 
+/* ---- připojení k vlastnímu Workeru ---- */
+async function wkCreate(){ // první zařízení: adresa + vygenerovaný tajný kód
+  const url=(document.getElementById('wk_url').value||'').trim().replace(/\/+$/,'');
+  if(!/^https:\/\/.+/.test(url)){toast('Vlož adresu Workeru (https://…)');return;}
+  syncState='syncing';syncMsg='Ověřuji Worker…';R();
+  try{const r=await fetch(url+'/ping');if(!r.ok)throw new Error('ping '+r.status);}
+  catch(e){syncState='err';syncMsg='Na téhle adrese Worker neodpovídá. Zkontroluj ji a že je nasazený (viz SYNC-SETUP.md).';R();return;}
+  sync={url,code:newSyncCode()};saveSync();
+  try{S.mt=Date.now();await wkPush(S);syncState='ok';syncMsg='';toast('Připojeno, data nahrána');R();}
+  catch(e){sync=null;saveSync();syncState='err';syncMsg='Připojení se nepovedlo: '+e.message;R();}}
+async function wkJoin(){ // další zařízení: vlož připojovací kód z prvního
+  const c=parseConn(document.getElementById('wk_conn').value);
+  if(!c){toast('Připojovací kód nevypadá správně');return;}
+  syncState='syncing';syncMsg='Připojuji…';R();
+  sync=c;saveSync();
+  try{await syncNow(false);if(syncState!=='err')toast('Připojeno');}
+  catch(e){syncState='err';syncMsg='Připojení se nepovedlo';R();}}
+function wkCopyConn(){const s=connStr();if(!s)return;
+  navigator.clipboard?.writeText(s).then(()=>toast('Připojovací kód zkopírován'),()=>toast('Zkopíruj ho ručně'));}
+function wkDisconnect(){if(!wconfirmSimple('Odpojit tohle zařízení od synchronizace? Data v cloudu ani tady se nesmažou.'))return;
+  sync=null;saveSync();syncState='off';syncMsg='';toast('Odpojeno');R();}
+
 /* ---------- save pill ---------- */
 function updateSavePill(){const el=document.getElementById('savepill');if(!el)return;
-  if(cloudOn()&&loggedIn()){
+  if(remoteOn()){
     const map={syncing:['warn','Synchronizuji…'],err:['warn','Cloud: chyba — klikni'],ok:['ok','Uloženo v cloudu'],off:['ok','Uloženo v cloudu'],out:['ok','Uloženo v cloudu']};
     const [cls,txt]=map[syncState]||map.ok;
     el.className='save-pill '+cls;el.innerHTML='<span class="d"></span> '+txt;el.onclick=()=>go('nastaveni');return;}
@@ -755,7 +812,7 @@ function vPrehled(p){
   const left=Math.max(0,days-elapsed);const perDay=left>0?free/left:free;
   let h='';
   // výpadek cloudu musí být vidět — jinak si člověk myslí, že je zálohovaný, a není
-  if(cloudOn()&&loggedIn()&&syncState==='err')
+  if(remoteOn()&&syncState==='err')
     h+=`<div class="banner warn"><span class="bi">${ic('zap',18)}</span><div><b>Synchronizace nefunguje.</b> ${esc(syncMsg||'Nepovedlo se spojit s cloudem.')} <a onclick="exportData()">Stáhnout zálohu →</a> <a onclick="syncNow()" style="margin-left:10px">Zkusit znovu</a></div></div>`;
   if(fsaSupported()&&!fileOK)h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Ochrana dat:</b> ${fileHandle?'Klikni na „Klikni pro připojení" nahoře a potvrď přístup.':'Připoj datový soubor, ať už nikdy nepřijdeš o data.'} <a onclick="connectFile()">Připojit soubor →</a></div></div>`;
   else if(!fsaSupported()&&(!S.lastExport||Date.now()-new Date(S.lastExport+'T00:00:00').getTime()>7*864e5))
@@ -1184,22 +1241,27 @@ function vNastaveni(p){
 
   // sync
   h+=`<div class="card"><div class="ct" style="margin-bottom:6px">${ic('repeat',15)} Synchronizace mezi zařízeními</div>`;
-  if(!cloudOn()){
-    h+=`<p class="mini" style="margin:0 0 12px">Chceš vidět stejná data na počítači i v mobilu — a mít je v bezpečí, i kdyby ses o zařízení připravil? Založ si zdarma projekt na <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> a vlož sem jeho údaje (najdeš je v Project Settings → API).</p>
-      <div class="fg"><span class="fl">Project URL</span><input class="inp" id="sy_url" value="${esc((S.cloud&&S.cloud.url)||'')}" placeholder="https://xxxx.supabase.co"></div>
-      <div class="fg"><span class="fl">Anon (veřejný) klíč</span><input class="inp" id="sy_key" value="${esc((S.cloud&&S.cloud.key)||'')}" placeholder="eyJhbGciOi…"></div>
-      <div style="margin-top:14px"><button class="btn fill" onclick="saveCloudCfg()">Uložit nastavení</button></div>`;
-  }else if(!loggedIn()){
-    h+=`<p class="mini" style="margin:0 0 12px">Přihlaš se e-mailem — pošleme ti odkaz, žádné heslo si pamatovat nemusíš. Pak uvidíš stejná data všude.</p>
-      <div class="fr" style="align-items:flex-end;flex-wrap:wrap"><div class="fg" style="flex:2;min-width:200px"><span class="fl">E-mail</span><input class="inp" id="sy_mail" type="email" placeholder="tvuj@email.cz" onkeydown="if(event.key==='Enter')sendMagicLink()"></div>
-        <div class="fg" style="flex:0 0 auto"><button class="btn fill" onclick="sendMagicLink()">Poslat odkaz</button></div></div>
-      ${syncMsg?`<div class="banner ${syncState==='err'?'warn':'info'}" style="margin:12px 0 0"><span class="bi">${ic(syncState==='err'?'zap':'envelope',16)}</span><div>${esc(syncMsg)}</div></div>`:''}
-      <div style="margin-top:12px"><button class="btn gho sm" onclick="S.cloud={url:'',key:''};persist();R()">Zrušit nastavení synchronizace</button></div>`;
+  const errBan=syncState==='err'&&syncMsg?`<div class="banner warn" style="margin:0 0 12px"><span class="bi">${ic('zap',16)}</span><div>${esc(syncMsg)}</div></div>`:'';
+  if(syncOn()){
+    h+=`${errBan}<div class="banner info" style="margin:0 0 12px"><span class="bi">${ic('check',16)}</span><div>Připojeno k vlastnímu úložišti <b>${esc(sync.url.replace(/^https:\/\//,''))}</b>. Data se ukládají sem a objeví se na každém zařízení, kde vložíš připojovací kód.</div></div>
+      <div class="fg"><span class="fl">Připojovací kód pro další zařízení</span>
+        <input class="inp" id="wk_show" readonly value="${esc(connStr())}" style="font-family:ui-monospace,monospace;font-size:12px" onclick="this.select()">
+        <div class="mini" style="margin-top:6px">Kdo ho má, vidí tvůj rozpočet — ber ho jako heslo.</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn fill" onclick="syncNow()">${ic('repeat',15)} Synchronizovat teď</button>
+        <button class="btn" onclick="wkCopyConn()">Zkopírovat kód</button>
+        <button class="btn gho" onclick="wkDisconnect()">Odpojit zařízení</button></div>`;
   }else{
-    h+=`<div class="banner info" style="margin:0 0 12px"><span class="bi">${ic('check',16)}</span><div>Přihlášen jako <b>${esc(auth.email||'—')}</b>. Data se ukládají do cloudu a objeví se i na dalších zařízeních — stačí se tam přihlásit stejným e-mailem.</div></div>
-      ${syncState==='err'&&syncMsg?`<div class="banner warn" style="margin:0 0 12px"><span class="bi">${ic('zap',16)}</span><div>${esc(syncMsg)}</div></div>`:''}
-      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn fill" onclick="syncNow()">${ic('repeat',15)} Synchronizovat teď</button>
-        <button class="btn" onclick="cloudLogout()">Odhlásit se</button></div>`;}
+    h+=`${errBan}<p class="mini" style="margin:0 0 14px">Vlastní malé úložiště na Cloudflare — zdarma a hlavně se <b>nepozastavuje za nečinnost</b>. Postup je v souboru <a href="SYNC-SETUP.md" target="_blank" rel="noopener">SYNC-SETUP.md</a> (asi 10 minut, nic se neinstaluje).</p>
+      <div class="fg"><span class="fl">1. zařízení — adresa Workeru</span><input class="inp" id="wk_url" placeholder="https://rozpocet-sync.tvuj-ucet.workers.dev">
+        <div style="margin-top:10px"><button class="btn fill" onclick="wkCreate()">Vytvořit připojení</button></div></div>
+      <div class="fg" style="margin-top:16px;padding-top:16px;border-top:1.5px solid var(--line)"><span class="fl">Další zařízení — připojovací kód z prvního</span>
+        <input class="inp" id="wk_conn" placeholder="vlož dlouhý kód" style="font-family:ui-monospace,monospace;font-size:12px">
+        <div style="margin-top:10px"><button class="btn" onclick="wkJoin()">Připojit</button></div></div>`;
+    // starší nastavení přes Supabase — ukáže se, jen když ho někdo má
+    if(cloudOn())h+=`<div style="margin-top:16px;padding-top:16px;border-top:1.5px solid var(--line)">
+      <div class="mini" style="margin-bottom:8px">Starší synchronizace přes Supabase ${loggedIn()?`— přihlášen jako <b>${esc(auth.email||'—')}</b>`:'je nastavená, ale nepřihlášená'}.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">${loggedIn()?`<button class="btn sm" onclick="syncNow()">Synchronizovat</button><button class="btn sm gho" onclick="cloudLogout()">Odhlásit</button>`:`<button class="btn sm gho" onclick="S.cloud={url:'',key:''};persist();R()">Zrušit</button>`}</div></div>`;}
   h+=`</div>`;
 
   // customization
@@ -1581,16 +1643,16 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 /* ---------- boot ---------- */
 (async function boot(){
   const ls=loadLS();if(ls)S=ls;
-  loadAuth();
-  const cameFromMail=readAuthHash();   // návrat z přihlašovacího odkazu
+  loadAuth();loadSync();
+  const cameFromMail=readAuthHash();   // návrat z přihlašovacího odkazu (Supabase)
   applyTheme();creditInterest();R();
   await tryReconnectFile();
   applyTheme();creditInterest();R();
-  if(cloudOn()&&loggedIn()){
+  if(remoteOn()){
     if(cameFromMail){tab='nastaveni';toast('Přihlášeno');}
     await syncNow(!cameFromMail);
     // po návratu k appce si ověř, jestli mezitím nepřišla novější data
-    window.addEventListener('focus',()=>{if(cloudOn()&&loggedIn()&&syncState!=='syncing')syncNow(true);});
+    window.addEventListener('focus',()=>{if(remoteOn()&&syncState!=='syncing')syncNow(true);});
   }
 })();
 </script>
