@@ -242,6 +242,20 @@ S.tax            — daň z úroků (výchozí 15 %)
   u každé tlačítko Zaplatit. **Po jedné, nikdy hromadně** — viz pravidlo
   o bulk operacích výš. Zaplaceno = má v cyklu aspoň jeden zápis.
 
+- **Kurz krypta se stahuje sám** (`autoCryptoRefresh`) při startu appky a
+  při návratu do okna, max jednou za 10 minut, jedním dotazem na všechny
+  mince. Bez připojení se prostě nic nestane. **Zhodnocení se sbírá do
+  jednoho `hist` záznamu za den** (`applyCryptoValue`, příznak `auto`) —
+  jinak by historie za měsíc měla stovky řádků a graf jmění z nich
+  stejně bere jen denní bod. Když se kurz vrátí zpátky, dnešní záznam se
+  vynuluje a zmizí. `inv.pxAt` drží čas posledního stažení, kvůli
+  „kurz sám před 5 min" na kartě.
+
+- **Porovnání dvou libovolných období** (`statCompare`, záložka Porovnat).
+  `cmpPrev` a `statCompare` sdílí `cmpCatRows`/`cmpRowsHtml`. Různě dlouhé
+  cykly se **nepřepočítávají na den** — jen se to napíše; u nepravidelných
+  výplat by přepočet mátl víc, než pomohl.
+
 - **Proti minulému cyklu** (`cmpPrev`) ve Statistikách u aktuálního cyklu.
   Kategorie se páruje podle názvu. Když cyklus ještě běží, je to napsané —
   půlka cyklu proti celému by jinak vypadala jako úspora.

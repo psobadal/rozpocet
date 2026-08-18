@@ -334,6 +334,8 @@ const fm=n=>czk.format(Math.round(n||0));
 // (obvyklá částka u položky), ať nevidí 329 Kč tam, kde zadal 329,35
 const czk2=new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',minimumFractionDigits:2});
 const fmEx=n=>Number.isInteger(+n||0)?fm(n):czk2.format(+n||0);
+const agoTxt=ts=>{const m=Math.round((Date.now()-ts)/60000);
+  return m<1?'právě teď':m<60?'před '+m+' min':m<1440?'před '+Math.round(m/60)+' h':'před '+Math.round(m/1440)+' dny';};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const iso=d=>d.toLocaleDateString('sv-SE');
 const todayISO=()=>iso(new Date());
@@ -1063,7 +1065,7 @@ function vInvestice(p){
     h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px">
       <div class="ic" style="background:${col(i)}22;color:${col(i)}">${ic(inv.icon,18)}</div>
       <div style="flex:1;min-width:0"><div style="font-weight:600">${esc(inv.nm)}</div>
-        ${inv.crypto?`<div class="mini">${(''+inv.qty).replace('.',',')} · auto kurz (CoinGecko)</div>`:inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
+        ${inv.crypto?`<div class="mini">${(''+inv.qty).replace('.',',')} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z CoinGecko'}</div>`:inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
         <div class="prog" style="height:6px;margin-top:5px"><i style="width:${pcw}%;background:var(--plum)"></i></div></div>
       <div style="text-align:right"><div class="num" style="font-size:17px">${fm(inv.val||0)}</div><div class="mini">${pcw}%</div></div>
       <div style="display:flex;flex-direction:column;gap:3px">${inv.crypto?'':`<button class="btn sm" onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button>`}<button class="ib" onclick="invModal('${inv.id}')">${ic('edit',15)}</button></div></div>
@@ -1316,8 +1318,8 @@ Investice: ${fm(p.inv)} · Obálky: ${fm(p.env)} · Dluhy: −${fm(p.debt)}</tit
 }
 function nwBlock(){return mrow([['Investice',fm(totalInvest()),'color:var(--plum)'],['Obálky',fm(totalEnvelopes()),'color:var(--gold)'],['Dluhy','−'+fm(totalDebt()),'color:var(--blue)']])+`<div class="card" style="text-align:center"><div class="ct" style="margin-bottom:6px">Čisté jmění</div><div class="num" style="font-size:28px;color:${netWorth()>=0?'var(--teal)':'var(--neg)'}">${fm(netWorth())}</div><div class="mini">investice + obálky − dluhy</div></div>`+nwChart();}
 function vStat(p){
-  let h=`<div class="seg" style="margin-bottom:14px"><button class="${statSub==='m'?'on':''}" onclick="setStat('m')">Tento cyklus</button><button class="${statSub==='y'?'on':''}" onclick="setStat('y')">Ročně</button><button class="${statSub==='a'?'on':''}" onclick="setStat('a')">Průměr</button></div>`;
-  h+= statSub==='y'?statYear():statSub==='a'?statAvg():statMonth(p);
+  let h=`<div class="seg" style="margin-bottom:14px"><button class="${statSub==='m'?'on':''}" onclick="setStat('m')">Tento cyklus</button><button class="${statSub==='c'?'on':''}" onclick="setStat('c')">Porovnat</button><button class="${statSub==='y'?'on':''}" onclick="setStat('y')">Ročně</button><button class="${statSub==='a'?'on':''}" onclick="setStat('a')">Průměr</button></div>`;
+  h+= statSub==='c'?statCompare():statSub==='y'?statYear():statSub==='a'?statAvg():statMonth(p);
   return h;
 }
 function statMonth(p){
@@ -1349,28 +1351,77 @@ function statMonth(p){
 function prevPeriodOf(p){
   return S.periods.filter(x=>x.id!==p.id&&x.from<p.from).sort((a,b)=>a.from.localeCompare(b.from)).pop()||null;
 }
+const pDays=p=>Math.max(1,Math.round((new Date(p.to)-new Date(p.from))/864e5));
+// rozdíl kategorií mezi dvěma obdobími, seřazený podle velikosti změny
+function cmpCatRows(pOld,pNew){
+  const was=spendByCategory(pOld),now=spendByCategory(pNew);
+  return [...new Set(Object.keys(now).concat(Object.keys(was)))]
+    .map(nm=>({nm,a:now[nm]||0,b:was[nm]||0,d:(now[nm]||0)-(was[nm]||0)}))
+    .filter(r=>r.d!==0).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
+}
+const cmpRowsHtml=rows=>rows.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;font-size:13.5px;border-top:1px solid var(--line)">
+  <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ic(catIconByName(r.nm),15)} ${esc(r.nm)}</span>
+  <span class="mini num">${fm(r.b)} → ${fm(r.a)}</span>
+  <span class="tag ${r.d>0?'bd':'ok'}" style="min-width:78px;text-align:center">${r.d>0?'+':'−'}${fm(Math.abs(r.d))}</span></div>`).join('');
 function cmpPrev(p){
   const pv=prevPeriodOf(p);if(!pv)return '';
-  const now={},was={};
-  p.cats.forEach(c=>{const a=catActualDisplay(c,p.id);if(a>0)now[c.nm]=a;});
-  pv.cats.forEach(c=>{const a=catActualDisplay(c,pv.id);if(a>0)was[c.nm]=a;});
-  const names=[...new Set(Object.keys(now).concat(Object.keys(was)))];
-  if(!names.length)return '';
-  const rows=names.map(nm=>({nm,a:now[nm]||0,b:was[nm]||0,d:(now[nm]||0)-(was[nm]||0)}))
-    .filter(r=>r.d!==0).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
-  if(!rows.length)return '';
+  const rows=cmpCatRows(pv,p);if(!rows.length)return '';
   const tot=rows.reduce((s,r)=>s+r.d,0);
-  const bezi=todayISO()<p.to;
-  const days=Math.max(1,Math.round((new Date(p.to)-new Date(p.from))/864e5));
-  const elapsed=Math.max(0,Math.min(days,Math.round((new Date()-new Date(p.from))/864e5)));
+  const days=pDays(p),elapsed=Math.max(0,Math.min(days,Math.round((new Date()-new Date(p.from))/864e5)));
   let h=`<div class="card"><div class="ch"><span class="ct">${ic('repeat',15)} Proti minulému cyklu</span><span class="mini">${esc(pv.nm)}</span></div>`;
-  if(bezi)h+=`<div class="mini" style="margin-bottom:12px">Cyklus ještě běží — ${elapsed} z ${days} dní. Do konce se to ještě srovná.</div>`;
-  rows.forEach(r=>{h+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;font-size:13.5px;border-top:1px solid var(--line)">
-    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ic(catIconByName(r.nm),15)} ${esc(r.nm)}</span>
-    <span class="mini num">${fm(r.b)} → ${fm(r.a)}</span>
-    <span class="tag ${r.d>0?'bd':'ok'}" style="min-width:78px;text-align:center">${r.d>0?'+':'−'}${fm(Math.abs(r.d))}</span></div>`;});
+  if(todayISO()<p.to)h+=`<div class="mini" style="margin-bottom:12px">Cyklus ještě běží — ${elapsed} z ${days} dní. Do konce se to ještě srovná.</div>`;
+  h+=cmpRowsHtml(rows);
   h+=`<div class="totals" style="margin-top:4px"><span style="color:var(--text3)">Celkem</span>
-    <span class="num" style="color:${tot>0?'var(--neg)':'var(--teal)'}">${tot>0?'+':'−'}${fm(Math.abs(tot))}</span></div></div>`;
+    <span class="num" style="color:${tot>0?'var(--neg)':'var(--teal)'}">${tot>0?'+':'−'}${fm(Math.abs(tot))}</span></div>
+    <div class="mini" style="margin-top:10px"><a onclick="setStat('c')">Porovnat jiná období →</a></div></div>`;
+  return h;
+}
+
+/* ---------- porovnání dvou libovolných období ----------
+   „Proti minulému" odpovídá na otázku „co se změnilo teď", tohle na
+   „jak jsem na tom proti lednu". Období se vybírají ručně, takže se dá
+   srovnat i cokoliv nesousedního.
+   Různě dlouhé cykly se nepřepočítávají na den — jen se to napíše,
+   protože přepočet by u nepravidelných výplat mátl víc, než pomohl. */
+let cmpA='',cmpB='';
+function setCmp(which,v){if(which==='a')cmpA=v;else cmpB=v;R();}
+const CMP_METRICS=[
+  {l:'Příjem',f:p=>incBase(p),up:1},
+  {l:'Výdaje',f:p=>sumActualDisplay(p),up:-1},
+  {l:'Odloženo do obálek',f:p=>savedInPeriod(p.id),up:1},
+  {l:'Investováno',f:p=>investedInPeriod(p.id),up:1},
+  {l:'Splátky dluhů',f:p=>debtPaidInPeriod(p),up:1},
+  {l:'Zbylo volných',f:p=>freeLeft(p),up:1},
+];
+function statCompare(){
+  const ps=S.periods.slice().sort((a,b)=>a.from.localeCompare(b.from));
+  if(ps.length<2)return `<div class="card"><div class="ct" style="margin-bottom:14px">${ic('repeat',15)} Porovnání období</div><div class="empty">Na porovnání potřebuješ aspoň dvě období.</div></div>`;
+  const cur=P();
+  const A=ps.find(x=>x.id===cmpA)||prevPeriodOf(cur)||ps[ps.length-2];
+  const B=ps.find(x=>x.id===cmpB)||cur;
+  cmpA=A.id;cmpB=B.id;
+  const opt=(sel)=>ps.map(x=>`<option value="${x.id}" ${x.id===sel?'selected':''}>${esc(x.nm)} · ${nwMon(x.from)}</option>`).join('');
+  let h=`<div class="card"><div class="ct" style="margin-bottom:14px">${ic('repeat',15)} Porovnání období</div>
+    <div class="fr" style="align-items:flex-end;flex-wrap:wrap">
+      <div class="fg" style="margin-top:0;min-width:150px"><span class="fl">Z období</span><select class="inp" onchange="setCmp('a',this.value)">${opt(A.id)}</select></div>
+      <div class="fg" style="margin-top:0;min-width:150px"><span class="fl">Na období</span><select class="inp" onchange="setCmp('b',this.value)">${opt(B.id)}</select></div></div>`;
+  if(A.id===B.id)return h+`<div class="empty" style="margin-top:14px">Vyber dvě různá období.</div></div>`;
+  const dA=pDays(A),dB=pDays(B);
+  if(Math.abs(dA-dB)>3)h+=`<div class="mini" style="margin-top:12px">${ic('zap',13)} Období nejsou stejně dlouhá (${dA} vs. ${dB} dní) — rozdíly ber s rezervou.</div>`;
+  if(todayISO()<B.to)h+=`<div class="mini" style="margin-top:8px">Období „${esc(B.nm)}" ještě běží, takže je zatím neúplné.</div>`;
+  h+=`</div>`;
+  h+=`<div class="card"><div class="ct" style="margin-bottom:6px">Souhrn</div>`;
+  CMP_METRICS.forEach(m=>{const a=m.f(A),b=m.f(B),d=b-a;
+    h+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;font-size:13.5px;border-top:1px solid var(--line)">
+      <span style="flex:1">${m.l}</span>
+      <span class="mini num">${fm(a)} → ${fm(b)}</span>
+      <span class="tag ${d===0?'':d*m.up>=0?'ok':'bd'}" style="min-width:86px;text-align:center">${d===0?'beze změny':(d>0?'+':'−')+fm(Math.abs(d))}</span></div>`;});
+  h+=`</div>`;
+  const rows=cmpCatRows(A,B);
+  if(rows.length){const tot=rows.reduce((s,r)=>s+r.d,0);
+    h+=`<div class="card"><div class="ct" style="margin-bottom:6px">Po kategoriích</div>${cmpRowsHtml(rows)}
+      <div class="totals" style="margin-top:4px"><span style="color:var(--text3)">Celkem</span>
+      <span class="num" style="color:${tot>0?'var(--neg)':'var(--teal)'}">${tot>0?'+':'−'}${fm(Math.abs(tot))}</span></div></div>`;}
   return h;
 }
 function statYear(){
@@ -1779,13 +1830,42 @@ function saveInv(){const nm=document.getElementById('m_nm').value.trim();if(!nm)
     inv.base=(inv.base||0)+(val-(inv.val||0));   // ruční oprava hodnoty → posuň i vložené, zhodnocení zůstane
     inv.val=val;inv.rate=rate;inv.crypto=crypto;inv.qty=qty;if(rate>0&&!inv.lastInt)inv.lastInt=iso(firstOfMonth(new Date()));}
   else{const inv={id:uid(),nm,icon:mctx.icon,val,base:val,rate,crypto,qty,lastInt:rate>0?iso(firstOfMonth(new Date())):null,hist:[]};S.investments.push(inv);}closeModal();commit();}
+/* Zhodnocení z kurzu se sbírá do JEDNOHO záznamu za den. Kdyby se
+   přidával nový při každém načtení appky, historie by za měsíc měla
+   stovky řádků a graf jmění by z nich stejně bral jen denní bod. */
+function applyCryptoValue(inv,val){
+  const diff=val-(inv.val||0);inv.pxAt=Date.now();
+  if(!diff)return 0;
+  inv.val=val;inv.hist=inv.hist||[];
+  const today=todayISO(),e=inv.hist.find(x=>x.d===today&&x.k==='gain'&&x.auto);
+  if(e){e.a=(e.a||0)+diff;if(!e.a)inv.hist=inv.hist.filter(x=>x!==e);}
+  else inv.hist.push({id:uid(),d:today,a:diff,n:'Kurz',k:'gain',auto:true});
+  return diff;
+}
 async function invRefreshPrice(id){const inv=S.investments.find(x=>x.id===id);if(!inv||!inv.crypto)return;
   toast('Aktualizuji kurz…');
   try{const px=await fetchCryptoPrice(inv.crypto);
-    const val=Math.round(px*(inv.qty||0)),diff=val-(inv.val||0);
-    if(diff){inv.val=val;inv.hist.push({id:uid(),d:todayISO(),a:diff,n:'Aktualizace kurzu',k:'gain'});}
+    const diff=applyCryptoValue(inv,Math.round(px*(inv.qty||0)));
     toast(`${inv.nm}: kurz ${fm(px)} · ${diff>=0?'+':''}${fm(diff)}`);commit();
   }catch(e){toast('Kurz se nepodařilo načíst.');}}
+
+/* Automatické stažení kurzu — jeden dotaz na všechny mince najednou.
+   Bez připojení se prostě nic nestane a appka jede dál offline. */
+let lastPxFetch=0;
+async function autoCryptoRefresh(force){
+  const list=S.investments.filter(i=>i.crypto&&i.qty>0);if(!list.length)return;
+  if(!force&&Date.now()-lastPxFetch<10*60*1000)return;   // víc než jednou za 10 min nemá smysl
+  lastPxFetch=Date.now();
+  const ids=[...new Set(list.map(i=>i.crypto))].join(',');
+  try{
+    const r=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids)}&vs_currencies=czk`);
+    if(!r.ok)return;
+    const j=await r.json();let zmena=false;
+    list.forEach(i=>{const px=j[i.crypto]&&j[i.crypto].czk;
+      if(px&&applyCryptoValue(i,Math.round(px*i.qty)))zmena=true;});
+    if(zmena)commit();else R();
+  }catch(e){}
+}
 /* přecenění: hodnotu určuje trh, rozdíl je zhodnocení (ne tvůj vklad) */
 /* ---------- investiční kalkulačka ----------
    Čistě „co kdyby" — nesahá na data, nic neukládá. Úrok se připisuje
@@ -2029,6 +2109,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
     // po návratu k appce si ověř, jestli mezitím nepřišla novější data
     window.addEventListener('focus',()=>{if(syncOn()&&syncState!=='syncing')syncNow(true);});
   }
+  // kurz krypta si appka stáhne sama — až po synchronizaci, ať nepřepisuje
+  // hodnotu, kterou za chvíli přetáhne novější stav z cloudu
+  autoCryptoRefresh(true);
+  window.addEventListener('focus',()=>autoCryptoRefresh());
 })();
 </script>
 </body>
