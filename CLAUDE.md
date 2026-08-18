@@ -199,22 +199,35 @@ S.tax            — daň z úroků (výchozí 15 %)
   Uživatel to výslovně nechce — byly odstraněny „Odložit měsíční" (u obálek)
   a „Zaplatit pravidelné" i celý koncept `it.fixed` (u výdajů). Necouvat na
   tohle bez výslovného požadavku.
-  **Pozor na záměnu:** `it.amt` („obvyklá částka", přidáno 18. 8. 2026 na
-  výslovné přání) **není** návrat `it.fixed`. Nic se nestrhává samo ani
+  **Pozor na záměnu:** `it.fixAmt` (zaškrtávátko „pevná", přidáno 18. 8. 2026
+  na výslovné přání) **není** návrat `it.fixed`. Nic se nestrhává samo ani
   hromadně — je to jen předvyplnění částky v Rychlém zadání, když si vyberu
   položku, u které se platí pořád stejně (internet 329,35). Pořád musím
   kliknout, pořád jen jedna položka. Bulk tlačítko „zaplatit všechny
   pravidelné" tam nepřidávat.
+  **Je to bool, ne číslo, a to schválně:** částka se bere z `it.pl` (plán).
+  První verze měla vlastní `it.amt`, jenže u pevné platby je plán ta samá
+  částka, takže uživatel viděl v detailu dvakrát vedle sebe 329,35 — sám to
+  nahlásil. `migrate()` staré číselné `it.amt` překlopí na `pl` + `fixAmt`.
+  Zaškrtnuté bez plánu = varování, ne tiché nic.
 
-- **Rychlé zadání vybírá položku ze seznamu, nepíše se jménem.** Dřív to byl
-  volný text porovnávaný na název — kdo se netrefil, založil duplikát vedle
-  původní položky. Zápis chodí přes `id`. Nabídka nic nepředvybírá (první
-  volba je „— vyber položku —"), aby se omylem nepřipsalo k cizí položce.
-  U obálky zůstává volný text, obálka položky nemá.
+- **Rychlé zadání nic nepředvybírá.** Kategorie i položka začínají na
+  „— vyber… —" a bez obojího to nezapíše. Dřív svítila první kategorie
+  a první položka, takže se dala částka omylem připsat úplně jinam.
+  Položka se vybírá ze seznamu (zápis přes `id`), ne psaním názvu — volný
+  text se porovnával na název a kdo se netrefil, založil duplikát vedle
+  původní položky. U obálky zůstává volný text, obálka položky nemá.
 
 - **`fm()` zaokrouhluje na celé koruny, `fmEx()` ne.** Na částky, které si
-  uživatel sám nastavil (`it.amt`), se používá `fmEx` — jinak by viděl
-  „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení vadit nemá.
+  uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —
+  jinak by viděl „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení nevadí.
+
+- **Ikona v záložce se kreslí v JS** (`faviconSVG`/`applyFavicon`), ne ze
+  souboru — je to stejná značka jako v záhlaví (kulatý čtverec, přechod
+  z akcentu do zlaté, mince) a přebarvuje se s `S.ui.accent`. Mince je
+  v ikoně tučnější a větší než v appce schválně: v 16px záložce se tenká
+  kresba slévá do skvrny. Pro iOS plochu se z SVG dělá PNG přes canvas
+  (SVG tam nefunguje). Titulek stránky se taky řídí `S.ui.appName`.
 
 - **Ikony jsou z knihovny Lucide** (lucide.dev, ISC licence), vložené přímo
   v `ICON` mapě v kódu (ne CDN). `svg.i{display:inline-block}` — POZOR, dřív
