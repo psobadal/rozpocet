@@ -972,7 +972,7 @@ function catDetail(p,c){
 
 /* ---------- OBÁLKY ---------- */
 function vObalky(p){
-  let h=`<div class="banner tip"><span class="bi">${ic('bulb',18)}</span><div>Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky. Zapisuješ starší úspory, co jsi neodkládal teď z výplaty? Uprav zůstatek přímo v ✏️ — nesrazí ti to zbytečně tenhle cyklus.</div></div>`;
+  let h=tipBan('bulb','Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky. Zapisuješ starší úspory, co jsi neodkládal teď z výplaty? Uprav zůstatek přímo v ✏️ — nesrazí ti to zbytečně tenhle cyklus.');
   h+=`<div class="grid2" style="margin-bottom:14px">
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Celkem odloženo</div><div class="num" style="font-size:24px;color:var(--gold)">${fm(totalEnvelopes())}</div></div>
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Odloženo tento cyklus</div><div class="num" style="font-size:24px">${fm(savedInPeriod(p.id))}</div></div></div>`;
@@ -1003,7 +1003,7 @@ function vInvestice(p){
   let h=`<div class="card" style="text-align:center;background:var(--plum-bg)"><div class="ct" style="margin-bottom:6px">Celková hodnota investic & úspor</div>
     <div class="num" style="font-size:30px;color:var(--plum)">${fm(ti)}</div>
     <div class="mini" style="margin-top:6px">Tento cyklus vloženo: <b style="color:var(--teal)">+${fm(investedInPeriod(p.id))}</b></div></div>`;
-  h+=`<div class="banner info"><span class="bi">${ic('percent',18)}</span><div><b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b> — zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.</div></div>`;
+  h+=tipBan('percent',`<b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b> — zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
   h+=`<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:14px"><button class="btn" onclick="invCalcModal()">${ic('percent',15)} Kalkulačka</button><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
   if(!S.investments.length)h+=`<div class="card"><div class="empty">Zatím žádné investice.</div></div>`;
   const sorted=S.investments.map((x,i)=>({x,i})).sort((a,b)=>(b.x.val||0)-(a.x.val||0));
@@ -1029,7 +1029,7 @@ function vInvestice(p){
 
 /* ---------- DLUHY ---------- */
 function vDluhy(p){
-  let h=`<div class="banner tip"><span class="bi">${ic('landmark',18)}</span><div>Přidej si libovolný dluh — půjčku, hypotéku, cokoliv. Pojmenuj si ho, nastav <b>úrok % p.a.</b> (klidně 0) a zapisuj splátky. Vidíš, kolik zbývá doplatit a kolik tě stojí úrok měsíčně.</div></div>`;
+  let h=tipBan('landmark','Přidej si libovolný dluh — půjčku, hypotéku, cokoliv. Pojmenuj si ho, nastav <b>úrok % p.a.</b> (klidně 0) a zapisuj splátky. Vidíš, kolik zbývá doplatit a kolik tě stojí úrok měsíčně.');
   h+=`<div class="grid2" style="margin-bottom:14px">
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Zbývá splatit celkem</div><div class="num" style="font-size:24px;color:var(--blue)">${fm(totalDebt())}</div></div>
     <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Splátky tento cyklus</div><div class="num" style="font-size:24px">${fm(debtPaidInPeriod(p))}</div></div></div>`;
@@ -1118,6 +1118,10 @@ function allItemsOf(p){const out=[];p.cats.forEach(c=>c.it.forEach(it=>{const a=
 function spendByCategory(p){const m={};p.cats.forEach(c=>{const a=catActualDisplay(c,p.id);if(a)m[c.nm]=a;});return m;}
 const netWorth=()=>totalInvest()+totalEnvelopes()-totalDebt();
 function catIconByName(nm){for(const pp of S.periods){const c=pp.cats.find(x=>x.nm===nm);if(c)return c.icon;}return 'dot';}
+/* Vysvětlivky u záložek jdou vypnout (Nastavení → Přizpůsobení). Jde
+   jen o tutoriálové texty — varování a stavové hlášky přes tohle NIKDY
+   neposílat, ty musí být vidět, i když si je člověk nepřeje. */
+const tipBan=(icon,html,cls)=>S.ui.hideTips?'':`<div class="banner ${cls||'tip'}"><span class="bi">${ic(icon,18)}</span><div>${html}</div></div>`;
 function mrow(arr){return `<div style="display:grid;grid-template-columns:repeat(${arr.length>3?2:arr.length},1fr);gap:10px;margin-bottom:14px">`+arr.map(t=>`<div class="tile"><div class="tl">${t[0]}</div><div class="tv" style="${t[2]||''}">${t[1]}</div></div>`).join('')+`</div>`;}
 function catShare(rows,total,label){if(!rows.length)return '';let h=`<div class="card"><div class="ct" style="margin-bottom:14px">${label}</div>`;rows.forEach(r=>{const pc=total>0?r.a/total*100:0;h+=`<div class="barrow" style="cursor:default"><div class="barinfo"><span class="n"><span style="color:${col(r.i||0)}">${ic(catIconByName(r.nm),15)}</span>${esc(r.nm)}</span><span class="v">${Math.round(pc)}% · ${fm(r.a)}</span></div><div class="track"><div class="act" style="width:${pc}%;background:${col(r.i||0)}"></div></div></div>`;});return h+`</div>`;}
 function topItems(items,n,label){if(!items.length)return '';let h=`<div class="card"><div class="ct" style="margin-bottom:14px">${label}</div>`;items.slice(0,n).forEach((it,k)=>{h+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;border-top:${k?'1px solid var(--line)':'none'}"><span style="color:var(--text4);width:18px">${k+1}.</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.n)} <span class="mini">${esc(it.cat)}</span></span><span class="num">${fm(it.a)}</span></div>`;});return h+`</div>`;}
@@ -1362,7 +1366,10 @@ function vNastaveni(p){
     <div class="fg"><span class="fl">Název aplikace</span><input class="inp" value="${esc(S.ui.appName)}" onchange="S.ui.appName=this.value.trim()||'Rozpočet';commit()"></div>
     <div class="fg"><span class="fl">Barva</span><div class="swatches">${CONFIG.accents.map(hx=>`<div class="swatch ${S.ui.accent.toLowerCase()===hx.toLowerCase()?'on':''}" style="background:${hx}" onclick="setAccent('${hx}')"></div>`).join('')}
       <label class="swatch" style="background:conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);display:grid;place-items:center;overflow:hidden"><input type="color" value="${S.ui.accent}" oninput="setAccent(this.value)" style="opacity:0;width:100%;height:100%;cursor:pointer"></label></div></div>
-    ${S.ui.hideIntro?`<div class="fg"><span class="fl">Průvodce začátkem</span><button class="btn sm" onclick="showIntro()">${ic('rocket',14)} Zobrazit znovu</button></div>`:''}
+    <div class="fg"><span class="fl">Vysvětlivky a průvodce</span>
+      <label class="mini" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${S.ui.hideTips?'':'checked'} onchange="toggleTips()" style="width:auto"> Zobrazovat vysvětlivky nahoře na záložkách</label>
+      <div class="mini" style="margin-top:6px">Varování o datech a chybách se tím neskryjou — ta uvidíš vždycky.</div>
+      <div style="margin-top:10px">${S.ui.hideIntro?`<button class="btn sm" onclick="showIntro()">${ic('rocket',14)} Zobrazit průvodce začátkem</button>`:`<span class="mini">Průvodce začátkem se ukazuje na Přehledu, dokud ho nedokončíš.</span>`}</div></div>
     <div class="fg"><span class="fl">Font čísel</span><select class="inp" onchange="setNumFont(this.value)">${Object.entries(NUMFONTS).map(([k,f])=>`<option value="${k}" ${S.ui.numFont===k?'selected':''}>${f.label}</option>`).join('')}</select>
       <div class="mini" style="margin-top:8px">Ukázka: <span class="num" style="font-size:20px;color:var(--text)">1&nbsp;234&nbsp;567&nbsp;Kč · 28&nbsp;000 · 15,5&nbsp;%</span></div></div>
     <div class="fg"><span class="fl">Záložky v menu (přejmenuj, skryj, přeřaď)</span><div style="margin-top:2px">`;
@@ -1390,7 +1397,8 @@ function vNastaveni(p){
     <p class="mini" style="margin-top:10px">Strhává se z úroku připsaného u spořáků a investic (v ČR běžně 15 %).</p></div>`;
 
   h+=`<div class="card"><div class="ct" style="margin-bottom:10px;color:var(--neg)">Nebezpečná zóna</div><p class="mini" style="margin:0 0 12px">Smaže všechna data. Jde vrátit jen ze zálohy.</p><button class="btn dgr" onclick="resetAll()">${ic('trash',15)} Smazat všechna data</button></div>`;
-  h+=`<div class="banner tip"><span class="bi">${ic('rocket',18)}</span><div><b>Mobil a synchronizace</b> jsou další krok — až budeš chtít appku i do telefonu se stejnými daty, řekni.</div></div>`;
+  // až bude synchronizace zapnutá, tahle rada je vyřízená a nemá co ukazovat
+  if(!syncOn())h+=tipBan('rocket','<b>Mobil a synchronizace</b> jsou další krok — až budeš chtít appku i do telefonu se stejnými daty, projdi si SYNC-SETUP.md.');
   return h;
 }
 
@@ -1803,6 +1811,8 @@ function delFee(gEnc,i){const g=decodeURIComponent(gEnc);const gm=S.debtGroups[g
 
 /* customization actions */
 function hideIntro(){S.ui.hideIntro=true;toast('Skryto — vrátíš v Nastavení');commit();}
+function toggleTips(){if(S.ui.hideTips)delete S.ui.hideTips;else S.ui.hideTips=true;
+  toast(S.ui.hideTips?'Vysvětlivky skryté':'Vysvětlivky zpátky');commit();}
 function showIntro(){S.ui.hideIntro=false;go('prehled');}
 function setAccent(hex){S.ui.accent=hex;applyAccent(hex);commit();}
 function renameTab(id,v){const t=S.ui.tabs.find(x=>x.id===id);if(t){t.label=v.trim()||t.label;persist();}}

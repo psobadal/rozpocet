@@ -222,6 +222,14 @@ S.tax            — daň z úroků (výchozí 15 %)
   uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —
   jinak by viděl „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení nevadí.
 
+- **Vysvětlivky jdou vypnout, varování ne.** Tutoriálové bannery nahoře na
+  záložkách (obálky, investice, dluhy, nastavení) chodí přes `tipBan()` a
+  skryje je `S.ui.hideTips` (Nastavení → Přizpůsobení). Uživateli jich přišlo
+  moc. **Přes `tipBan()` nikdy neposílat varování ani stavové hlášky** —
+  výpadek cloudu, ochrana dat, připomínka připojovacího kódu a stav úložiště
+  musí být vidět i s vypnutými vysvětlivkami. Je to oddělené od
+  `S.ui.hideIntro`, což je průvodce začátkem na Přehledu.
+
 - **Ikona v záložce se kreslí v JS** (`faviconSVG`/`applyFavicon`), ne ze
   souboru — je to stejná značka jako v záhlaví (kulatý čtverec, přechod
   z akcentu do zlaté, mince) a přebarvuje se s `S.ui.accent`. Mince je
