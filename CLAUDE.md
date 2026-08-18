@@ -199,6 +199,22 @@ S.tax            — daň z úroků (výchozí 15 %)
   Uživatel to výslovně nechce — byly odstraněny „Odložit měsíční" (u obálek)
   a „Zaplatit pravidelné" i celý koncept `it.fixed` (u výdajů). Necouvat na
   tohle bez výslovného požadavku.
+  **Pozor na záměnu:** `it.amt` („obvyklá částka", přidáno 18. 8. 2026 na
+  výslovné přání) **není** návrat `it.fixed`. Nic se nestrhává samo ani
+  hromadně — je to jen předvyplnění částky v Rychlém zadání, když si vyberu
+  položku, u které se platí pořád stejně (internet 329,35). Pořád musím
+  kliknout, pořád jen jedna položka. Bulk tlačítko „zaplatit všechny
+  pravidelné" tam nepřidávat.
+
+- **Rychlé zadání vybírá položku ze seznamu, nepíše se jménem.** Dřív to byl
+  volný text porovnávaný na název — kdo se netrefil, založil duplikát vedle
+  původní položky. Zápis chodí přes `id`. Nabídka nic nepředvybírá (první
+  volba je „— vyber položku —"), aby se omylem nepřipsalo k cizí položce.
+  U obálky zůstává volný text, obálka položky nemá.
+
+- **`fm()` zaokrouhluje na celé koruny, `fmEx()` ne.** Na částky, které si
+  uživatel sám nastavil (`it.amt`), se používá `fmEx` — jinak by viděl
+  „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení vadit nemá.
 
 - **Ikony jsou z knihovny Lucide** (lucide.dev, ISC licence), vložené přímo
   v `ICON` mapě v kódu (ne CDN). `svg.i{display:inline-block}` — POZOR, dřív

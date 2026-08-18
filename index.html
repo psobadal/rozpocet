@@ -320,6 +320,10 @@ const DEBT_ICONS=['landmark','home','key','car','card','banknote','coins','gradu
 const LS='rozpocet-v2';
 const czk=new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:0});
 const fm=n=>czk.format(Math.round(n||0));
+// přesná částka i s haléři — pro čísla, která si uživatel sám nastavil
+// (obvyklá částka u položky), ať nevidí 329 Kč tam, kde zadal 329,35
+const czk2=new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',minimumFractionDigits:2});
+const fmEx=n=>Number.isInteger(+n||0)?fm(n):czk2.format(+n||0);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const iso=d=>d.toLocaleDateString('sv-SE');
 const todayISO=()=>iso(new Date());
@@ -821,9 +825,10 @@ function vPrehled(p){
     <div class="qa-row">
       <select class="inp" id="qcat" style="flex:1.1;min-width:130px" onchange="qaSetCat(this.value)"><optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaCur(p)==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaCur(p)==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}</select>
       ${qaItemField(p)}
-      <input class="inp num" id="qamt" type="number" placeholder="Kč" style="flex:.9;min-width:100px" onkeydown="if(event.key==='Enter')quickAdd()">
+      <input class="inp num" id="qamt" type="number" placeholder="Kč" value="${qaFixAmt(p)||''}" style="flex:.9;min-width:100px" onkeydown="if(event.key==='Enter')quickAdd()">
       <input class="inp" id="qdate" type="date" value="${qaDate||todayISO()}" style="flex:0 0 148px">
-      <button class="btn fill" onclick="quickAdd()">Přidat</button></div></div>`;
+      <button class="btn fill" onclick="quickAdd()">${qaFixAmt(p)?'Zaplatit':'Přidat'}</button></div>
+    ${qaFixAmt(p)?`<div class="mini" style="margin-top:8px">${ic('check',13)} Obvyklá částka ${fmEx(qaFixAmt(p))} je předvyplněná — stačí kliknout. Přepsat ji můžeš.</div>`:''}</div>`;
   h+=`<div class="card"><div class="ch"><span class="ct">Příjmy</span><button class="btn sm" onclick="incomeModal()">${ic('edit',15)} Upravit</button></div>
     <div class="grid2"><div><div class="mini">Plánováno</div><div class="num" style="font-size:20px">${fm(incPlan(p))}</div></div>
       <div><div class="mini">Skutečně</div><div class="num" style="font-size:20px;color:${incActual(p)>0?'var(--teal)':'var(--text4)'}">${incActual(p)>0?fm(incActual(p)):'—'}</div></div></div></div>`;
@@ -905,7 +910,9 @@ function catDetail(p,c){
       <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <input class="inp" value="${esc(it.nm)}" onchange="renameItem('${c.id}','${it.id}',this.value)" style="flex:1;min-width:130px" title="Název položky" placeholder="Název">
         <input class="inp num" type="number" value="${it.pl||0}" onchange="setItemPlan('${c.id}','${it.id}',this.value)" style="flex:0 0 100px" title="Plán"><span class="mini">plán</span>
+        <input class="inp num" type="number" step="0.01" value="${it.amt||''}" placeholder="—" onchange="setItemAmt('${c.id}','${it.id}',this.value)" style="flex:0 0 100px" title="Obvyklá částka — předvyplní se v rychlém zadání, ať ji nemusíš psát"><span class="mini">obvyklá</span>
         <button class="ib" onclick="delItem('${c.id}','${it.id}')" title="Smazat položku">${ic('trash',15)}</button></div>
+      ${it.amt?`<div class="mini" style="margin-top:6px">${ic('check',13)} V rychlém zadání se předvyplní ${fmEx(it.amt)} — zapíšeš to jedním kliknutím.</div>`:''}
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <span class="mini" style="flex:0 0 auto">Propsat platbu do</span>
         <select class="inp" onchange="setItemLink('${c.id}','${it.id}',this.value)" style="flex:1;min-width:150px;padding:7px 10px;font-size:13px">
@@ -1376,19 +1383,30 @@ function qaKeepAmt(fn){ // překreslení nesmí sebrat už napsanou částku
 }
 function qaSetCat(v){qaKeepAmt(()=>{qaSel=v;qaItem='';});}
 function qaBackToList(){qaKeepAmt(()=>{qaItem='';});}
-function qaSetItem(v){
-  if(v!=='__new'){qaItem=v;return;}   // běžná položka nepotřebuje překreslit
-  qaKeepAmt(()=>{qaItem='__new';});
-  setTimeout(()=>document.getElementById('qname')?.focus(),40);
+function qaSetItem(v){ // překreslit se musí — jiná položka může mít jinou obvyklou částku
+  qaItem=v;R();
+  setTimeout(()=>{
+    if(v==='__new')return document.getElementById('qname')?.focus();
+    const a=document.getElementById('qamt');if(a&&!a.value)a.focus();
+  },40);
 }
+// vybraná položka rychlého zadání (jen u kategorie; obálka položky nemá)
+function qaSelItem(p){
+  const cur=qaCur(p);if(!cur.startsWith('cat:')||!qaItem||qaItem==='__new')return null;
+  const c=p.cats.find(x=>'cat:'+x.id===cur);
+  return (c&&c.it.find(it=>it.id===qaItem))||null;
+}
+const qaFixAmt=p=>{const it=qaSelItem(p);return it&&it.amt?it.amt:0;};
 function qaItemField(p){
   const cur=qaCur(p),txt=ph=>`<input class="inp" id="qname" placeholder="${ph}" style="flex:1.4;min-width:140px" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`;
   if(!cur.startsWith('cat:'))return txt('Poznámka (nepovinné)');
   const c=p.cats.find(x=>'cat:'+x.id===cur),its=(c&&c.it)||[];
   if(!its.length)return txt('Za co?');
   if(qaItem==='__new')return txt('Název nové položky')+`<button class="btn gho" onclick="qaBackToList()" title="Zpět na výběr" style="flex:0 0 auto">${ic('cleft',15)}</button>`;
-  const sel=its.some(it=>it.id===qaItem)?qaItem:its[0].id;
-  return `<select class="inp" id="qitem" style="flex:1.4;min-width:140px" onchange="qaSetItem(this.value)">${its.map(it=>`<option value="${it.id}" ${sel===it.id?'selected':''}>${esc(it.nm)}</option>`).join('')}<option value="__new">+ nová položka…</option></select>`;
+  const sel=its.some(it=>it.id===qaItem)?qaItem:'';   // nic nepředvybírej, ať se omylem nepřipíše jinam
+  return `<select class="inp" id="qitem" style="flex:1.4;min-width:140px" onchange="qaSetItem(this.value)">
+    <option value="" ${sel?'':'selected'}>— vyber položku —</option>
+    ${its.map(it=>`<option value="${it.id}" ${sel===it.id?'selected':''}>${esc(it.nm)}${it.amt?' · '+fmEx(it.amt):''}</option>`).join('')}<option value="__new">+ nová položka…</option></select>`;
 }
 function quickAdd(){const p=P();const val=document.getElementById('qcat').value;const amt=Math.abs(num(document.getElementById('qamt').value));if(!amt){toast('Zadej částku');return;}
   const nmEl=document.getElementById('qname'),nm=nmEl?nmEl.value.trim():'';
@@ -1397,6 +1415,7 @@ function quickAdd(){const p=P();const val=document.getElementById('qcat').value;
   if(val.startsWith('env:')){const e=S.envelopes.find(x=>x.id===val.slice(4));if(!e)return;e.bal=(e.bal||0)+amt;e.hist.push({d:date,t:'in',a:amt,n:nm||'',pid:S.curId});toast(`Odloženo ${fm(amt)} → ${e.nm}`);}
   else{const cid=val.startsWith('cat:')?val.slice(4):val;const c=p.cats.find(x=>x.id===cid);if(!c)return;
     const selEl=document.getElementById('qitem');
+    if(selEl&&!selEl.value){toast('Vyber položku');return;}
     let it=selEl&&selEl.value&&selEl.value!=='__new'?c.it.find(x=>x.id===selEl.value):null;
     if(!it){const itNm=nm||'Ostatní';it=c.it.find(x=>x.nm.toLowerCase()===itNm.toLowerCase());
       if(!it){it={id:uid(),nm:itNm,pl:0,log:[]};c.it.push(it);}}
@@ -1417,6 +1436,10 @@ function delItem(cid,iid){if(!confirm('Smazat položku?'))return;const c=P().cat
 function setItemLink(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;it.link=v||'';openItem=iid;toast(v?('Propojeno — '+linkLabel(it)):'Propojení zrušeno');commit();}
 function setItemKind(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;if(v)it.kind=v;else delete it.kind;openItem=iid;commit();}
 function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
+/* Obvyklá částka u položky: jen předvyplnění v rychlém zadání, nic se
+   nestrhává samo. Bulk „zaplatit všechny pravidelné" tu schválně není. */
+function setItemAmt(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;
+  const a=Math.abs(num(v));if(a)it.amt=a;else delete it.amt;openItem=iid;commit();}
 function renameItem(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);const nm=(v||'').trim();if(!it)return;if(!nm){toast('Název nesmí být prázdný');R();return;}it.nm=nm;openItem=iid;commit();}
 
 /* modal infra */
