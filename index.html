@@ -1009,7 +1009,7 @@ function vInvestice(p){
     <div class="num" style="font-size:30px;color:var(--plum)">${fm(ti)}</div>
     <div class="mini" style="margin-top:6px">Tento cyklus vloženo: <b style="color:var(--teal)">+${fm(investedInPeriod(p.id))}</b></div></div>`;
   h+=`<div class="banner info"><span class="bi">${ic('percent',18)}</span><div><b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b> — zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.</div></div>`;
-  h+=`<div style="text-align:right;margin-bottom:14px"><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
+  h+=`<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:14px"><button class="btn" onclick="invCalcModal()">${ic('percent',15)} Kalkulačka</button><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
   if(!S.investments.length)h+=`<div class="card"><div class="empty">Zatím žádné investice.</div></div>`;
   const sorted=S.investments.map((x,i)=>({x,i})).sort((a,b)=>(b.x.val||0)-(a.x.val||0));
   sorted.forEach(({x:inv,i})=>{const pcw=ti>0?Math.round(inv.val/ti*100):0;const mInt=inv.rate>0?Math.round((inv.val||0)*inv.rate/100/12*(1-(S.tax||0)/100)):0;
@@ -1565,6 +1565,54 @@ async function invRefreshPrice(id){const inv=S.investments.find(x=>x.id===id);if
     toast(`${inv.nm}: kurz ${fm(px)} · ${diff>=0?'+':''}${fm(diff)}`);commit();
   }catch(e){toast('Kurz se nepodařilo načíst.');}}
 /* přecenění: hodnotu určuje trh, rozdíl je zhodnocení (ne tvůj vklad) */
+/* ---------- investiční kalkulačka ----------
+   Čistě „co kdyby" — nesahá na data, nic neukládá. Úrok se připisuje
+   měsíčně a vklad chodí na konci měsíce, stejně jako to appka dělá
+   u spořáků. Daň se strhává průběžně z úroku (ne až z výnosu na konci),
+   protože tak to funguje i v creditInterest(). */
+const invCalcAvg=()=>{const ps=S.periods.filter(p=>investedInPeriod(p.id)>0);
+  return ps.length?Math.round(ps.reduce((s,p)=>s+investedInPeriod(p.id),0)/ps.length/100)*100:0;};
+function invCalc(p0,pm,yr,rate,taxOn){
+  const r=rate/100*(1-(taxOn?(S.tax||0)/100:0))/12,n=Math.max(1,Math.round(yr*12));
+  const pts=[{m:0,val:p0,put:p0}];let v=p0;
+  for(let m=1;m<=n;m++){v=v*(1+r)+pm;pts.push({m,val:v,put:p0+pm*m});}
+  const put=p0+pm*n;return {pts,val:v,put,gain:v-put,r,n};
+}
+function invCalcModal(){
+  openModal(`<h3>Investiční kalkulačka</h3><div class="md">Co z peněz bude, když je necháš pracovat. Nic se neukládá — je to jen počítadlo.</div>
+    <div class="fr"><div class="fg"><span class="fl">Mám teď</span><input class="inp num" id="c_p0" type="number" value="${totalInvest()}" oninput="invCalcRun()"></div>
+      <div class="fg"><span class="fl">Měsíčně přidám</span><input class="inp num" id="c_pm" type="number" value="${invCalcAvg()}" oninput="invCalcRun()"></div></div>
+    <div class="fr"><div class="fg"><span class="fl">Na kolik let</span><input class="inp num" id="c_yr" type="number" value="10" min="1" max="60" oninput="invCalcRun()"></div>
+      <div class="fg"><span class="fl">Výnos % ročně</span><input class="inp num" id="c_rate" type="number" value="7" step="0.5" oninput="invCalcRun()"></div></div>
+    <label class="mini" style="display:flex;align-items:center;gap:8px;margin-top:13px;cursor:pointer"><input type="checkbox" id="c_tax" checked onchange="invCalcRun()" style="width:auto"> Strhávat daň z výnosu (${S.tax||0} %)</label>
+    <div id="c_out" style="margin-top:16px"></div>
+    <div class="macts"><button class="btn fill" onclick="closeModal()">Zavřít</button></div>`);
+  invCalcRun();
+}
+function invCalcRun(){
+  const out=document.getElementById('c_out');if(!out)return;
+  const p0=num(document.getElementById('c_p0').value),pm=num(document.getElementById('c_pm').value);
+  const yr=Math.max(1,Math.min(60,num(document.getElementById('c_yr').value)||1));
+  const rate=num(document.getElementById('c_rate').value),taxOn=document.getElementById('c_tax').checked;
+  const c=invCalc(p0,pm,yr,rate,taxOn);
+  const yearly=c.pts.filter(x=>x.m%12===0||x.m===c.n);
+  const W=560,H=120,PL=2,PR=2,PT=8,PB=2,mx=Math.max(c.val,c.put,1);
+  const X=i=>PL+i*(W-PL-PR)/Math.max(1,yearly.length-1),Y=v=>PT+(1-v/mx)*(H-PT-PB);
+  const p=(f)=>yearly.map((x,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(f(x)).toFixed(1)).join(' ');
+  const valP=p(x=>x.val),putP=p(x=>x.put);
+  out.innerHTML=`<div style="text-align:center;padding:14px 0;background:var(--plum-bg);border-radius:var(--rs)">
+      <div class="mini">Za ${yr} ${yr===1?'rok':yr<5?'roky':'let'} budeš mít</div>
+      <div class="num" style="font-size:26px;color:var(--plum)">${fm(c.val)}</div></div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;margin-top:12px">
+      <path d="${valP} L ${X(yearly.length-1).toFixed(1)} ${H-PB} L ${X(0).toFixed(1)} ${H-PB} Z" fill="var(--plum)" opacity=".12"/>
+      <path d="${putP} L ${X(yearly.length-1).toFixed(1)} ${H-PB} L ${X(0).toFixed(1)} ${H-PB} Z" fill="var(--text3)" opacity=".12"/>
+      <path d="${putP}" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <path d="${valP}" fill="none" stroke="var(--plum)" stroke-width="2.5" stroke-linejoin="round"/></svg>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <div class="tile" style="flex:1"><div class="tl">Vložil jsi</div><div class="tv" style="font-size:15px">${fm(c.put)}</div></div>
+      <div class="tile" style="flex:1"><div class="tl">Vydělaly peníze</div><div class="tv" style="font-size:15px;color:${c.gain>=0?'var(--teal)':'var(--neg)'}">${c.gain>=0?'+':'−'}${fm(Math.abs(c.gain))}</div></div></div>
+    <div class="mini" style="margin-top:12px">Plná čára je hodnota, čárkovaná to, co jsi tam sám dal — mezera mezi nimi je výnos.${taxOn?` Počítá se s čistým výnosem po dani, tedy ${(''+Math.round(rate*(1-(S.tax||0)/100)*100)/100).replace('.',',')} % ročně.`:' Bez daně — reálně si stát část výnosu vezme.'} Je to odhad při stálém výnosu; trh takhle hladký nikdy není.</div>`;
+}
 function invRevalue(id){const inv=S.investments.find(x=>x.id===id);mctx={id};
   openModal(`<h3>Přecenit: ${esc(inv.nm)}</h3><div class="md">Zadej, kolik to má dnes hodnotu podle brokera. Rozdíl se zapíše jako zhodnocení — nezamíchá se ti to mezi vklady.</div>
     <div class="fg"><span class="fl">Aktuální hodnota</span><input class="inp num" id="m_v" type="number" value="${inv.val||0}" onkeydown="if(event.key==='Enter')doInvRevalue()"></div>
