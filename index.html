@@ -108,7 +108,12 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .qa-t{font-size:11.5px;font-weight:600;color:var(--accent-d);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;display:flex;align-items:center;gap:7px}
 .qa-row{display:flex;gap:8px;flex-wrap:wrap}
 .qa-row>select,.qa-row>input{flex:1;min-width:110px}
-@media(max-width:640px){.qa-row>*{flex:1 1 100%!important}}
+/* Na mobilu byla každá věc na vlastní řádek a rychlé zadání zabíralo
+   přes třetinu obrazovky. Po dvou vedle sebe: kategorie+položka,
+   částka+datum, tlačítko přes celou šířku (dobře se trefuje palcem). */
+@media(max-width:640px){
+  .qa-row>*{flex:1 1 calc(50% - 4px)!important;min-width:0!important}
+  .qa-row>#qadd{flex:1 1 100%!important}}
 
 .inp{width:100%;background:var(--white);border:1.5px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s}
 .inp:focus{border-color:var(--accent)}
@@ -833,6 +838,31 @@ function R(){
   updateSavePill();
 }
 
+/* ---------- pevné platby ----------
+   Položky s `fixAmt` se platí každý cyklus stejně, takže appka umí
+   ukázat, co už je odbyté a co ne. Odklikává se **po jedné** — žádné
+   „zaplatit všechny", to uživatel výslovně nechce (viz CLAUDE.md).
+   Zaplaceno = má v tomhle cyklu aspoň jeden zápis. */
+function fixedRows(p){const r=[];p.cats.forEach(c=>c.it.forEach(it=>{if(it.fixAmt&&it.pl>0)r.push({c,it,a:itemActual(it)});}));return r;}
+function fixedBlock(p){
+  const rows=fixedRows(p);if(!rows.length)return '';
+  const done=rows.filter(r=>r.a>0).length,zbyva=rows.filter(r=>!r.a).reduce((s,r)=>s+r.it.pl,0);
+  let h=`<div class="card"><div class="ch"><span class="ct">${ic('repeat',15)} Pevné platby</span>
+    <span class="mini">${done}/${rows.length} zaplaceno${zbyva>0?` · zbývá ${fm(zbyva)}`:''}</span></div>`;
+  rows.forEach(({c,it,a})=>{h+=`<div class="row" style="cursor:default">
+    <div class="ic" style="background:${a>0?'var(--teal-bg)':'var(--bg2)'};color:${a>0?'var(--teal)':'var(--text3)'}">${ic(a>0?'check':c.icon,18)}</div>
+    <div class="m"><div class="t1"${a>0?' style="color:var(--text3)"':''}>${esc(it.nm)}</div><div class="t2">${esc(c.nm)} · ${fmEx(it.pl)}${linkTarget(it)?' → '+esc(linkTarget(it).obj.nm):''}</div></div>
+    ${a>0?`<span class="tag ok">${fm(a)}</span>`
+         :`<button class="btn sm fill" onclick="payFixed('${c.id}','${it.id}')">Zaplatit</button>`}</div>`;});
+  return h+`</div>`;
+}
+function payFixed(cid,iid){
+  const c=P().cats.find(x=>x.id===cid),it=c&&c.it.find(x=>x.id===iid);if(!it||!(it.pl>0))return;
+  const r=logToDate(c,it,{id:uid(),d:todayISO(),a:it.pl,n:''});
+  const lt=linkTarget(it);
+  toast(`${it.nm}: ${fmEx(it.pl)}`+(lt?` → ${lt.obj.nm}`:'')+(r.jinam?` · ${r.period.nm}`:''));commit();
+}
+
 /* ---------- PŘEHLED ---------- */
 function vPrehled(p){
   const base=incBase(p),exp=sumActual(p),saved=savedInPeriod(p.id),inv=investedInPeriod(p.id),debt=debtPaidInPeriod(p);
@@ -896,8 +926,9 @@ function vPrehled(p){
       ${qaItemField(p)}
       <input class="inp num" id="qamt" type="number" placeholder="Kč" value="${qaFixAmt(p)||''}" style="flex:.9;min-width:100px" onkeydown="if(event.key==='Enter')quickAdd()">
       <input class="inp" id="qdate" type="date" value="${qaDate||todayISO()}" style="flex:0 0 148px">
-      <button class="btn fill" onclick="quickAdd()">${qaFixAmt(p)?'Zaplatit':'Přidat'}</button></div>
+      <button class="btn fill" id="qadd" onclick="quickAdd()">${qaFixAmt(p)?'Zaplatit':'Přidat'}</button></div>
     ${qaFixAmt(p)?`<div class="mini" style="margin-top:8px">${ic('check',13)} Pevná částka ${fmEx(qaFixAmt(p))} je předvyplněná z plánu — stačí kliknout. Přepsat ji můžeš.</div>`:''}</div>`;
+  h+=fixedBlock(p);
   h+=`<div class="card"><div class="ch"><span class="ct">Příjmy</span><button class="btn sm" onclick="incomeModal()">${ic('edit',15)} Upravit</button></div>
     <div class="grid2"><div><div class="mini">Plánováno</div><div class="num" style="font-size:20px">${fm(incPlan(p))}</div></div>
       <div><div class="mini">Skutečně</div><div class="num" style="font-size:20px;color:${incActual(p)>0?'var(--teal)':'var(--text4)'}">${incActual(p)>0?fm(incActual(p)):'—'}</div></div></div></div>`;
@@ -1306,7 +1337,40 @@ function statMonth(p){
   h+=catShare(cats,fullExp,'Podíl kategorií'+(fullExp>exp?' (vč. obálek)':''));
   h+=topItems(items,8,'Největší položky');
   h+=overUnder(over,under);
+  h+=cmpPrev(p);
   h+=nwBlock();
+  return h;
+}
+/* ---------- srovnání s minulým cyklem ----------
+   Kategorie se páruje podle názvu, protože id je v každém období jiné.
+   Když cyklus ještě běží, je srovnání z podstaty neúplné (půlka měsíce
+   proti celému) — appka to radši řekne, než aby tvářila, že jsi zhubl
+   na výdajích. */
+function prevPeriodOf(p){
+  return S.periods.filter(x=>x.id!==p.id&&x.from<p.from).sort((a,b)=>a.from.localeCompare(b.from)).pop()||null;
+}
+function cmpPrev(p){
+  const pv=prevPeriodOf(p);if(!pv)return '';
+  const now={},was={};
+  p.cats.forEach(c=>{const a=catActualDisplay(c,p.id);if(a>0)now[c.nm]=a;});
+  pv.cats.forEach(c=>{const a=catActualDisplay(c,pv.id);if(a>0)was[c.nm]=a;});
+  const names=[...new Set(Object.keys(now).concat(Object.keys(was)))];
+  if(!names.length)return '';
+  const rows=names.map(nm=>({nm,a:now[nm]||0,b:was[nm]||0,d:(now[nm]||0)-(was[nm]||0)}))
+    .filter(r=>r.d!==0).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
+  if(!rows.length)return '';
+  const tot=rows.reduce((s,r)=>s+r.d,0);
+  const bezi=todayISO()<p.to;
+  const days=Math.max(1,Math.round((new Date(p.to)-new Date(p.from))/864e5));
+  const elapsed=Math.max(0,Math.min(days,Math.round((new Date()-new Date(p.from))/864e5)));
+  let h=`<div class="card"><div class="ch"><span class="ct">${ic('repeat',15)} Proti minulému cyklu</span><span class="mini">${esc(pv.nm)}</span></div>`;
+  if(bezi)h+=`<div class="mini" style="margin-bottom:12px">Cyklus ještě běží — ${elapsed} z ${days} dní. Do konce se to ještě srovná.</div>`;
+  rows.forEach(r=>{h+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;font-size:13.5px;border-top:1px solid var(--line)">
+    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ic(catIconByName(r.nm),15)} ${esc(r.nm)}</span>
+    <span class="mini num">${fm(r.b)} → ${fm(r.a)}</span>
+    <span class="tag ${r.d>0?'bd':'ok'}" style="min-width:78px;text-align:center">${r.d>0?'+':'−'}${fm(Math.abs(r.d))}</span></div>`;});
+  h+=`<div class="totals" style="margin-top:4px"><span style="color:var(--text3)">Celkem</span>
+    <span class="num" style="color:${tot>0?'var(--neg)':'var(--teal)'}">${tot>0?'+':'−'}${fm(Math.abs(tot))}</span></div></div>`;
   return h;
 }
 function statYear(){

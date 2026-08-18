@@ -222,6 +222,30 @@ S.tax            — daň z úroků (výchozí 15 %)
   uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —
   jinak by viděl „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení nevadí.
 
+- **Výdaj patří do období podle svého data, ne podle otevřeného cyklu.**
+  `periodForDate()` + `logToDate()` — používá to `quickAdd`, `addLog`,
+  `payFixed` i `saveLog`. Když datum spadá do jiného období, kategorie a
+  položka se tam najdou **podle názvu** (id je v každém období jiné) a
+  případně založí; přenese se `link`, `kind` i `fixAmt`. Konec období je
+  výlučný (`from<=d<to`), protože nové období začíná dnem `to` toho
+  předchozího. Datum mimo všechna období → zůstane v otevřeném.
+  Tím je sjednocené i to, že splátky dluhů se řadily podle data, ale
+  obálky a investice podle `pid` — `pushLinked` dostává `pid` cílového
+  období.
+
+- **Zápis jde opravit, ne jen smazat** (`logModal`/`saveLog`). U propojené
+  položky se starý záznam odebere (`removeLinked`) a založí nový, jinak by
+  v dluhu zůstala stará částka. Změna data zápis rovnou přesune do
+  správného období.
+
+- **Pevné platby** (`fixedBlock`) na Přehledu: seznam položek s `fixAmt`,
+  u každé tlačítko Zaplatit. **Po jedné, nikdy hromadně** — viz pravidlo
+  o bulk operacích výš. Zaplaceno = má v cyklu aspoň jeden zápis.
+
+- **Proti minulému cyklu** (`cmpPrev`) ve Statistikách u aktuálního cyklu.
+  Kategorie se páruje podle názvu. Když cyklus ještě běží, je to napsané —
+  půlka cyklu proti celému by jinak vypadala jako úspora.
+
 - **Rozbalená položka je na zapisování, ne na nastavování.** Uvnitř zůstává
   jen historie a řádek datum/poznámka/částka/+. Název, plán, pevná částka,
   propojení a 50/30/20 jsou v `itemModal()` pod tlačítkem „Nastavení
