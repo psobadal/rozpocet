@@ -250,6 +250,12 @@ S.tax            — daň z úroků (výchozí 15 %)
   stejně bere jen denní bod. Když se kurz vrátí zpátky, dnešní záznam se
   vynuluje a zmizí. `inv.pxAt` drží čas posledního stažení, kvůli
   „kurz sám před 5 min" na kartě.
+  **Denní kurzové záznamy se v seznamu historie na kartě neukazují**
+  (filtr na `!x.auto`) — jsou jen podklad pro graf jmění, který by bez
+  nich ukazoval dnešní hodnotu i do minulosti. Místo nich je na kartě
+  `invTrend()`: o kolik s tím hnul trh za 30 dní a za rok, počítané jen
+  ze záznamů `k:'gain'` (vlastní vklady výsledek nezkreslí). Okno se
+  schová, když investici tak dlouho ještě nemáš.
 
 - **Porovnání dvou libovolných období** (`statCompare`, záložka Porovnat).
   `cmpPrev` a `statCompare` sdílí `cmpCatRows`/`cmpRowsHtml`. Různě dlouhé

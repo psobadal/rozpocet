@@ -498,6 +498,25 @@ const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pi
 const investedInPeriod=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid&&!h.src&&!h.k).reduce((ss,h)=>ss+h.a,0),0);
 const invIn=inv=>(inv.base||0)+(inv.hist||[]).filter(h=>!h.k).reduce((s,h)=>s+h.a,0);
 const invGain=inv=>(inv.val||0)-invIn(inv);
+/* Kolik s tím pohnul trh za poslední období. Počítá se jen ze záznamů
+   `k:'gain'`, takže vlastní vklady výsledek nezkreslí. Hodnota k datu se
+   dopočítá zpětně stejně jako u grafu jmění. */
+const invGainSince=(inv,t)=>(inv.hist||[]).filter(x=>x.k==='gain'&&x.d>t).reduce((s,x)=>s+(x.a||0),0);
+const invValAt=(inv,t)=>{let v=inv.val||0;(inv.hist||[]).forEach(x=>{if(x.d&&x.d>t)v-=(x.a||0);});return v;};
+function invTrend(inv){
+  const all=(inv.hist||[]).filter(x=>x.d);
+  if(!all.some(x=>x.k==='gain'))return '';      // bez kurzu není co ukazovat
+  // okno se schová, když tak dlouho investici ještě nemáš — jinak by
+  // „za rok +50 %" znamenalo ve skutečnosti „za deset dní, co ji mám"
+  const first=all.reduce((a,b)=>a.d<b.d?a:b).d;
+  return [{d:30,l:'30 dní'},{d:365,l:'rok'}].map(w=>{
+    const t=iso(new Date(Date.now()-w.d*864e5));
+    if(first>t)return null;                       // tak daleko historie nesahá, nelži
+    const g=invGainSince(inv,t),base=invValAt(inv,t);
+    const pc=base>0?Math.round(g/base*1000)/10:0;
+    return `<span class="mini">${w.l} <b style="color:${g>=0?'var(--teal)':'var(--neg)'}">${g>=0?'+':'−'}${fm(Math.abs(g))}${base>0?` (${g>=0?'+':'−'}${(''+Math.abs(pc)).replace('.',',')} %)`:''}</b></span>`;
+  }).filter(Boolean).join('<span class="mini" style="opacity:.35">·</span>');
+}
 const CRYPTO_LIST=[
   {id:'bitcoin',nm:'Bitcoin (BTC)'},{id:'ethereum',nm:'Ethereum (ETH)'},{id:'solana',nm:'Solana (SOL)'},
   {id:'cardano',nm:'Cardano (ADA)'},{id:'litecoin',nm:'Litecoin (LTC)'},{id:'dogecoin',nm:'Dogecoin (DOGE)'},
@@ -1074,7 +1093,11 @@ function vInvestice(p){
         <span class="mini">Zhodnocení <b class="num" style="color:${gain>0?'var(--teal)':gain<0?'var(--neg)':'var(--text3)'}">${gain>0?'+':''}${fm(gain)}${put>0?` (${gain>0?'+':''}${(''+gpc).replace('.',',')} %)`:''}</b></span>
         <div style="flex:1"></div>
         ${inv.crypto?`<button class="btn sm" onclick="invRefreshPrice('${inv.id}')">${ic('trending',14)} Aktualizovat kurz</button>`:`<button class="btn sm" onclick="invRevalue('${inv.id}')">${ic('trending',14)} Přecenit</button>`}</div>`;
-    const hist=(inv.hist||[]).slice(-3).reverse();
+    const tr=invTrend(inv);
+    if(tr)h+=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px">${ic('trending',13)}${tr}</div>`;
+    // denní záznamy z kurzu se sem netahají — je jich moc a nic neříkají;
+    // co s penězi udělal trh, je vidět v `invTrend` nad tím
+    const hist=(inv.hist||[]).filter(x=>!x.auto).slice(-3).reverse();
     if(hist.length){h+=`<div style="margin-top:10px;padding-top:10px;border-top:1.5px solid var(--line)">`;hist.forEach(x=>{h+=`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);padding:2px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span class="num" style="color:${x.a>=0?'var(--teal)':'var(--neg)'}">${x.a>=0?'+':''}${fm(x.a)}</span></div>`;});h+=`</div>`;}
     h+=`</div>`;});
   return h;
