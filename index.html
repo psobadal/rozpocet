@@ -374,7 +374,7 @@ function defState(){
 
 /* ---------- state ---------- */
 let S=defState();
-let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='';
+let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='', qaItem='';
 let fileHandle=null, fileOK=false;
 
 function loadLS(){try{const r=localStorage.getItem(LS);if(r)return migrate(JSON.parse(r));}catch(e){}return null;}
@@ -685,6 +685,7 @@ async function wkCreate(){ // první zařízení: adresa + vygenerovaný tajný 
   try{const r=await fetch(url+'/ping');if(!r.ok)throw new Error('ping '+r.status);}
   catch(e){syncState='err';syncMsg='Na téhle adrese Worker neodpovídá. Zkontroluj ji a že je nasazený (viz SYNC-SETUP.md).';R();return;}
   sync={url,code:newSyncCode()};saveSync();
+  S.ui.codeSaved=false;   // čerstvý kód nikdo nikde nemá — připomeň ho uložit
   try{S.mt=Date.now();await wkPush(S);syncState='ok';syncMsg='';toast('Připojeno, data nahrána');R();}
   catch(e){sync=null;saveSync();syncState='err';syncMsg='Připojení se nepovedlo: '+e.message;R();}}
 async function wkJoin(){ // další zařízení: vlož připojovací kód z prvního
@@ -692,10 +693,16 @@ async function wkJoin(){ // další zařízení: vlož připojovací kód z prvn
   if(!c){toast('Připojovací kód nevypadá správně');return;}
   syncState='syncing';syncMsg='Připojuji…';R();
   sync=c;saveSync();
+  S.ui.codeSaved=true;    // kód jsi sem odněkud vložil, takže ho někde máš
   try{await syncNow(false);if(syncState!=='err')toast('Připojeno');}
   catch(e){syncState='err';syncMsg='Připojení se nepovedlo';R();}}
 function wkCopyConn(){const s=connStr();if(!s)return;
   navigator.clipboard?.writeText(s).then(()=>toast('Připojovací kód zkopírován'),()=>toast('Zkopíruj ho ručně'));}
+function markCodeSaved(){S.ui.codeSaved=true;toast('Díky — víc už to připomínat nebudu');commit();}
+function codeSavePrompt(){if(!syncOn())return;
+  openModal(`<h3>Připojovací kód</h3><div class="md">Tohle je jediný klíč k datům v cloudu a žije jen v tomhle prohlížeči. Ulož si ho někam mimo počítač — do správce hesel, poznámek v telefonu, nebo si ho pošli mailem. <b>Kdo ho má, vidí tvůj rozpočet</b>, ber ho jako heslo.</div>
+    <div class="fg"><input class="inp" readonly value="${esc(connStr())}" style="font-family:ui-monospace,monospace;font-size:12px" onclick="this.select()"></div>
+    <div class="macts"><button class="btn" onclick="wkCopyConn()">Zkopírovat</button><button class="btn fill" onclick="markCodeSaved();closeModal()">Mám uloženo</button></div>`);}
 async function wkVersions(){ // denní verze uložené ve Workeru
   if(!syncOn())return;
   try{const r=await wkFetch('/list');if(!r.ok)throw new Error('list '+r.status);
@@ -766,13 +773,21 @@ function vPrehled(p){
   // výpadek cloudu musí být vidět — jinak si člověk myslí, že je zálohovaný, a není
   if(syncOn()&&syncState==='err')
     h+=`<div class="banner warn"><span class="bi">${ic('zap',18)}</span><div><b>Synchronizace nefunguje.</b> ${esc(syncMsg||'Nepovedlo se spojit s cloudem.')} <a onclick="exportData()">Stáhnout zálohu →</a> <a onclick="syncNow()" style="margin-left:10px">Zkusit znovu</a></div></div>`;
-  if(fsaSupported()&&!fileOK)h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Ochrana dat:</b> ${fileHandle?'Klikni na „Klikni pro připojení" nahoře a potvrď přístup.':'Připoj datový soubor, ať už nikdy nepřijdeš o data.'} <a onclick="connectFile()">Připojit soubor →</a></div></div>`;
+  // Se zapnutou synchronizací už data nedrží jen prohlížeč, takže strašit
+  // souborem nemá smysl. Reálná díra je jinde: připojovací kód žije taky
+  // jen v localStorage, takže smazání dat webu odstřihne appku od cloudu.
+  if(syncOn()){
+    if(!S.ui.codeSaved)h+=`<div class="banner tip"><span class="bi">${ic('shield',18)}</span><div><b>Ulož si připojovací kód mimo tenhle počítač.</b> Data máš i v cloudu, ale klíč k nim žije jen tady v prohlížeči — kdyby smazal data webu, vezme to i kód a appka se k cloudu sama nedostane. Stačí mail sám sobě nebo správce hesel. <a onclick="codeSavePrompt()">Ukázat kód →</a> <a onclick="markCodeSaved()" style="margin-left:10px">Mám uloženo</a></div></div>`;
+  }
+  else if(fsaSupported()&&!fileOK)h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Ochrana dat:</b> ${fileHandle?'Klikni na „Klikni pro připojení" nahoře a potvrď přístup.':'Připoj datový soubor, ať už nikdy nepřijdeš o data.'} <a onclick="connectFile()">Připojit soubor →</a></div></div>`;
   else if(!fsaSupported()&&(!S.lastExport||Date.now()-new Date(S.lastExport+'T00:00:00').getTime()>7*864e5))
     h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Data jsou jen v tomhle zařízení.</b> Telefon a počítač mají každý svoje — nepropojí se samy. Občas si stáhni zálohu. <a onclick="exportData()">Stáhnout zálohu →</a></div></div>`;
   const steps=[
     {ok:base>0,t:'Nastav si příjem',s:'kolik čekáš / kolik přišlo tenhle cyklus',fn:'incomeModal()',c:'var(--accent-bg)',fg:'var(--accent-d)'},
     {ok:sumPlan(p)>0,t:'Naplánuj měsíční výdaje',s:'kolik chceš utratit v každé kategorii',fn:'plansModal()',c:'var(--teal-bg)',fg:'var(--teal)'},
-    fsaSupported()
+    syncOn()
+      ? {ok:!!S.ui.codeSaved,t:'Ulož si připojovací kód',s:'mimo tenhle počítač — je to klíč k datům v cloudu',fn:'codeSavePrompt()',c:'var(--plum-bg)',fg:'var(--plum)'}
+      : fsaSupported()
       ? {ok:fileOK,t:'Připoj datový soubor',s:'ať se všechno samo ukládá na disk',fn:'connectFile()',c:'var(--plum-bg)',fg:'var(--plum)'}
       : {ok:!!S.lastExport,t:'Stáhni si zálohu',s:'ať o data nikdy nepřijdeš',fn:'exportData()',c:'var(--plum-bg)',fg:'var(--plum)'},
   ];
@@ -804,8 +819,8 @@ function vPrehled(p){
     <div class="tile"><div class="tl">Z plánu utraceno</div><div class="tv">${Math.round(exp/plan*100)} %</div></div></div>`;
   h+=`<div class="qa"><div class="qa-t">${ic('plus',15)} Rychlé zadání</div>
     <div class="qa-row">
-      <select class="inp" id="qcat" style="flex:1.1;min-width:130px"><optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaSel==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaSel==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}</select>
-      <input class="inp" id="qname" placeholder="Za co? (nepovinné)" style="flex:1.4;min-width:140px" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">
+      <select class="inp" id="qcat" style="flex:1.1;min-width:130px" onchange="qaSetCat(this.value)"><optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaCur(p)==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaCur(p)==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}</select>
+      ${qaItemField(p)}
       <input class="inp num" id="qamt" type="number" placeholder="Kč" style="flex:.9;min-width:100px" onkeydown="if(event.key==='Enter')quickAdd()">
       <input class="inp" id="qdate" type="date" value="${qaDate||todayISO()}" style="flex:0 0 148px">
       <button class="btn fill" onclick="quickAdd()">Přidat</button></div></div>`;
@@ -1269,7 +1284,7 @@ function statAvg(){
 /* ---------- NASTAVENÍ ---------- */
 function vNastaveni(p){
   let h=`<div class="card"><div class="ct" style="margin-bottom:6px">${ic('shield',15)} Ochrana dat (nejdůležitější)</div>
-    <p class="mini" style="margin:0 0 14px">${fileOK?'Data se automaticky ukládají do souboru na disku. Přežije to i smazání historie prohlížeče.':fsaSupported()?'Data jsou zatím jen v prohlížeči. Připoj soubor na disku, ať o ně nepřijdeš.':'Data se ukládají v prohlížeči tohoto zařízení.'}</p>`;
+    <p class="mini" style="margin:0 0 14px">${fileOK?('Data se automaticky ukládají do souboru na disku'+(syncOn()?' a zároveň do cloudu':'')+'. Přežije to i smazání historie prohlížeče.'):syncOn()?'Data se ukládají do cloudu, takže nedrží jen na tomhle prohlížeči. Připojovací kód k nim ale žije jen tady — měj ho uložený i jinde.':fsaSupported()?'Data jsou zatím jen v prohlížeči. Připoj soubor na disku, ať o ně nepřijdeš.':'Data se ukládají v prohlížeči tohoto zařízení.'}</p>`;
   if(fsaSupported()){if(fileOK)h+=`<div class="banner info" style="margin:0 0 12px"><span class="bi">${ic('coins',16)}</span><div>Ukládá se do připojeného souboru.</div></div>`;
     h+=`<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn fill" onclick="connectFile()">${fileOK?'Připojit jiný soubor':'Připojit datový soubor'}</button>`;
     if(fileHandle&&!fileOK)h+=`<button class="btn" onclick="regrantFile()">Znovu povolit přístup</button>`;
@@ -1345,12 +1360,47 @@ function openCat(id){tab='vydaje';detailCat=id;openItem=null;R();window.scrollTo
 function closeCat(){detailCat=null;openItem=null;R();}
 function toggleItem(id){openItem=openItem===id?null:id;R();}
 
+/* ---- rychlé zadání: druhé pole nabízí položky vybrané kategorie ----
+   Psát „za co" ručně znamenalo trefit se do názvu, jinak vznikla nová
+   položka jako duplikát. Vybírá se tedy ze seznamu a nová položka je
+   samostatná volba. U obálky zůstává volný text — obálka položky nemá. */
+function qaCur(p){ // po smazání kategorie/obálky spadne výběr na první možnost
+  if(qaSel.startsWith('cat:')&&p.cats.some(c=>'cat:'+c.id===qaSel))return qaSel;
+  if(qaSel.startsWith('env:')&&S.envelopes.some(e=>'env:'+e.id===qaSel))return qaSel;
+  return p.cats.length?'cat:'+p.cats[0].id:(S.envelopes.length?'env:'+S.envelopes[0].id:'');
+}
+function qaKeepAmt(fn){ // překreslení nesmí sebrat už napsanou částku
+  const a=document.getElementById('qamt'),keep=a?a.value:'';
+  fn();R();
+  const a2=document.getElementById('qamt');if(a2)a2.value=keep;
+}
+function qaSetCat(v){qaKeepAmt(()=>{qaSel=v;qaItem='';});}
+function qaBackToList(){qaKeepAmt(()=>{qaItem='';});}
+function qaSetItem(v){
+  if(v!=='__new'){qaItem=v;return;}   // běžná položka nepotřebuje překreslit
+  qaKeepAmt(()=>{qaItem='__new';});
+  setTimeout(()=>document.getElementById('qname')?.focus(),40);
+}
+function qaItemField(p){
+  const cur=qaCur(p),txt=ph=>`<input class="inp" id="qname" placeholder="${ph}" style="flex:1.4;min-width:140px" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`;
+  if(!cur.startsWith('cat:'))return txt('Poznámka (nepovinné)');
+  const c=p.cats.find(x=>'cat:'+x.id===cur),its=(c&&c.it)||[];
+  if(!its.length)return txt('Za co?');
+  if(qaItem==='__new')return txt('Název nové položky')+`<button class="btn gho" onclick="qaBackToList()" title="Zpět na výběr" style="flex:0 0 auto">${ic('cleft',15)}</button>`;
+  const sel=its.some(it=>it.id===qaItem)?qaItem:its[0].id;
+  return `<select class="inp" id="qitem" style="flex:1.4;min-width:140px" onchange="qaSetItem(this.value)">${its.map(it=>`<option value="${it.id}" ${sel===it.id?'selected':''}>${esc(it.nm)}</option>`).join('')}<option value="__new">+ nová položka…</option></select>`;
+}
 function quickAdd(){const p=P();const val=document.getElementById('qcat').value;const amt=Math.abs(num(document.getElementById('qamt').value));if(!amt){toast('Zadej částku');return;}
-  const nm=document.getElementById('qname').value.trim();const date=document.getElementById('qdate').value||todayISO();
+  const nmEl=document.getElementById('qname'),nm=nmEl?nmEl.value.trim():'';
+  const date=document.getElementById('qdate').value||todayISO();
   qaSel=val;qaDate=date; // zapamatuj výběr pro další rychlé zadání
   if(val.startsWith('env:')){const e=S.envelopes.find(x=>x.id===val.slice(4));if(!e)return;e.bal=(e.bal||0)+amt;e.hist.push({d:date,t:'in',a:amt,n:nm||'',pid:S.curId});toast(`Odloženo ${fm(amt)} → ${e.nm}`);}
   else{const cid=val.startsWith('cat:')?val.slice(4):val;const c=p.cats.find(x=>x.id===cid);if(!c)return;
-    const itNm=nm||'Ostatní';let it=c.it.find(x=>x.nm.toLowerCase()===itNm.toLowerCase());if(!it){it={id:uid(),nm:itNm,pl:0,log:[]};c.it.push(it);}
+    const selEl=document.getElementById('qitem');
+    let it=selEl&&selEl.value&&selEl.value!=='__new'?c.it.find(x=>x.id===selEl.value):null;
+    if(!it){const itNm=nm||'Ostatní';it=c.it.find(x=>x.nm.toLowerCase()===itNm.toLowerCase());
+      if(!it){it={id:uid(),nm:itNm,pl:0,log:[]};c.it.push(it);}}
+    qaItem=it.id;   // ať zůstane vybraná i pro další zápis
     const le={id:uid(),d:date,a:amt,n:''};it.log.push(le);pushLinked(it,le);
     const lt=linkTarget(it);toast(`${c.nm}: ${fm(amt)}`+(lt?` → ${lt.obj.nm}`:''));}
   commit();setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.focus();},60);}
