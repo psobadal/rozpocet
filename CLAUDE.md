@@ -222,6 +222,14 @@ S.tax            — daň z úroků (výchozí 15 %)
   uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —
   jinak by viděl „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení nevadí.
 
+- **Rozbalená položka je na zapisování, ne na nastavování.** Uvnitř zůstává
+  jen historie a řádek datum/poznámka/částka/+. Název, plán, pevná částka,
+  propojení a 50/30/20 jsou v `itemModal()` pod tlačítkem „Nastavení
+  položky". Dřív to bylo všechno nasypané pod sebou a uživatel nahlásil, že
+  se v tom ztrácí a bojí se, že omylem přepíše něco jiného. **Nevracet
+  nastavovací prvky mezi zápisy.** Modal navíc ukládá až na Uložit
+  (`saveItemCfg`), ne po každém poli — právě proto, aby šlo couvnout.
+
 - **Vysvětlivky jdou vypnout, varování ne.** Tutoriálové bannery nahoře na
   záložkách (obálky, investice, dluhy, nastavení) chodí přes `tipBan()` a
   skryje je `S.ui.hideTips` (Nastavení → Přizpůsobení). Uživateli jich přišlo

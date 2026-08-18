@@ -941,30 +941,15 @@ function catDetail(p,c){
         <input class="inp" id="ln-${it.id}" placeholder="Poznámka" style="flex:1;min-width:80px">
         <input class="inp num" id="la-${it.id}" type="number" placeholder="Kč" style="flex:0 0 90px" onkeydown="if(event.key==='Enter')addLog('${c.id}','${it.id}')">
         <button class="btn fill sm" onclick="addLog('${c.id}','${it.id}')">${ic('plus',15)}</button></div>
-      <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
-        <input class="inp" value="${esc(it.nm)}" onchange="renameItem('${c.id}','${it.id}',this.value)" style="flex:1;min-width:130px" title="Název položky" placeholder="Název">
-        <input class="inp num" type="number" step="0.01" value="${it.pl||0}" onchange="setItemPlan('${c.id}','${it.id}',this.value)" style="flex:0 0 100px" title="Plán"><span class="mini">plán</span>
-        <label class="mini" style="display:flex;align-items:center;gap:5px;cursor:pointer;flex:0 0 auto" title="Platí se pořád stejně — v rychlém zadání se částka předvyplní z plánu"><input type="checkbox" ${it.fixAmt?'checked':''} onchange="setItemFix('${c.id}','${it.id}',this.checked)" style="width:auto"> pevná</label>
-        <button class="ib" onclick="delItem('${c.id}','${it.id}')" title="Smazat položku">${ic('trash',15)}</button></div>
-      ${it.fixAmt?(it.pl>0
-        ?`<div class="mini" style="margin-top:6px">${ic('check',13)} V rychlém zadání se předvyplní ${fmEx(it.pl)} z plánu — zapíšeš to jedním kliknutím.</div>`
-        :`<div class="mini" style="margin-top:6px;color:var(--gold)">${ic('zap',13)} Nastav plán, jinak není co předvyplnit.</div>`):''}
-      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
-        <span class="mini" style="flex:0 0 auto">Propsat platbu do</span>
-        <select class="inp" onchange="setItemLink('${c.id}','${it.id}',this.value)" style="flex:1;min-width:150px;padding:7px 10px;font-size:13px">
-          <option value="">— nikam —</option>
-          ${S.debts.length?`<optgroup label="Dluhy">${S.debts.map(d=>`<option value="debt:${d.id}" ${it.link==='debt:'+d.id?'selected':''}>${esc(d.nm)}</option>`).join('')}</optgroup>`:''}
-          ${S.envelopes.length?`<optgroup label="Obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${it.link==='env:'+e.id?'selected':''}>${esc(e.nm)}</option>`).join('')}</optgroup>`:''}
-          ${S.investments.length?`<optgroup label="Investice">${S.investments.map(v=>`<option value="inv:${v.id}" ${it.link==='inv:'+v.id?'selected':''}>${esc(v.nm)}</option>`).join('')}</optgroup>`:''}
-        </select>
-        <span class="mini" style="flex:0 0 auto">50/30/20</span>
-        <select class="inp" onchange="setItemKind('${c.id}','${it.id}',this.value)" style="flex:0 0 165px;padding:7px 10px;font-size:13px">
-          <option value="" ${!it.kind?'selected':''}>${it.link?'automaticky (úspora)':'jako kategorie'}</option>
-          <option value="need" ${it.kind==='need'?'selected':''}>Potřeba</option>
-          <option value="want" ${it.kind==='want'?'selected':''}>Přání</option>
-          <option value="save" ${it.kind==='save'?'selected':''}>Úspora či splátka</option>
-        </select></div>
-      ${linkTarget(it)?`<div class="mini" style="margin-top:6px;color:var(--teal)">${ic('check',13)} Zápisy se rovnou propíšou do „${esc(linkTarget(it).obj.nm)}" a nepočítají se dvakrát.</div>`:''}</div>`;}
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn gho sm" onclick="itemModal('${c.id}','${it.id}')">${ic('edit',14)} Nastavení položky</button>
+        <div class="mini" style="flex:1;min-width:120px">${[
+          'plán '+fm(it.pl||0),
+          it.fixAmt?'pevná částka':'',
+          linkTarget(it)?'→ '+esc(linkTarget(it).obj.nm):'',
+          it.kind?KIND_LABEL[it.kind]:''
+        ].filter(Boolean).join(' · ')}</div></div>
+      ${it.fixAmt&&!(it.pl>0)?`<div class="mini" style="margin-top:6px;color:var(--gold)">${ic('zap',13)} Pevná částka bez plánu — není co předvyplnit.</div>`:''}</div>`;}
     h+=`</div>`;});
   h+=`<div class="logadd" style="border-top:1.5px dashed var(--line2);margin-top:10px;padding-top:14px"><input class="inp" id="nit-${c.id}" placeholder="Nová položka" style="flex:2"><input class="inp num" id="nitp-${c.id}" type="number" placeholder="Plán" style="flex:1"><button class="btn fill sm" onclick="addItem('${c.id}')">${ic('plus',15)} Položka</button></div></div>`;
   return h;
@@ -1481,9 +1466,54 @@ function addLog(cid,iid){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id=
 function delLog(cid,iid,li){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;const le=it.log[li];if(le&&le.id)removeLinked(le.id);it.log.splice(li,1);openItem=iid;commit();}
 function setItemPlan(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(it){it.pl=num(v);openItem=iid;commit();}}
 function addItem(cid){const c=P().cats.find(x=>x.id===cid);if(!c)return;const nm=document.getElementById('nit-'+cid).value.trim();if(!nm){toast('Zadej název');return;}c.it.push({id:uid(),nm,pl:num(document.getElementById('nitp-'+cid).value),log:[]});commit();}
-function delItem(cid,iid){if(!confirm('Smazat položku?'))return;const c=P().cats.find(x=>x.id===cid);const it=c.it.find(x=>x.id===iid);if(it)(it.log||[]).forEach(le=>removeLinked(le.id));c.it=c.it.filter(x=>x.id!==iid);openItem=null;commit();}
+function delItem(cid,iid){if(!confirm('Smazat položku?'))return;const c=P().cats.find(x=>x.id===cid);const it=c.it.find(x=>x.id===iid);if(it)(it.log||[]).forEach(le=>removeLinked(le.id));c.it=c.it.filter(x=>x.id!==iid);openItem=null;closeModal();commit();}
 function setItemLink(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;it.link=v||'';openItem=iid;toast(v?('Propojeno — '+linkLabel(it)):'Propojení zrušeno');commit();}
 function setItemKind(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;if(v)it.kind=v;else delete it.kind;openItem=iid;commit();}
+/* ---------- nastavení položky ----------
+   Nastavování je schválně pryč z rozbalené položky. Tam se zapisují
+   výdaje — a když vedle pole na částku svítí název, plán, propojení
+   a 50/30/20, dá se omylem přepsat něco, co člověk měnit nechtěl.
+   Tady se nic nemění, dokud nedáš Uložit. */
+function itemModal(cid,iid){
+  const c=P().cats.find(x=>x.id===cid),it=c&&c.it.find(x=>x.id===iid);if(!it)return;
+  mctx={cid,iid};
+  openModal(`<h3>${esc(it.nm)}</h3><div class="md">Nastavení položky v kategorii ${esc(c.nm)}. Zapisování výdajů zůstává venku v seznamu.</div>
+    <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${esc(it.nm)}"></div>
+    <div class="fg"><span class="fl">Měsíční plán</span><input class="inp num" id="m_pl" type="number" step="0.01" value="${it.pl||0}"></div>
+    <label class="mini" style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer"><input type="checkbox" id="m_fix" ${it.fixAmt?'checked':''} style="width:auto"> Platí se pořád stejně (pevná částka)</label>
+    <div class="mini" style="margin-top:5px">V rychlém zadání se pak částka předvyplní z plánu a stačí kliknout. Hodí se na internet nebo předplatné, ne na potraviny.</div>
+    <div class="fg"><span class="fl">Propsat platbu do</span>
+      <select class="inp" id="m_link">
+        <option value="">— nikam —</option>
+        ${S.debts.length?`<optgroup label="Dluhy">${S.debts.map(d=>`<option value="debt:${d.id}" ${it.link==='debt:'+d.id?'selected':''}>${esc(d.nm)}</option>`).join('')}</optgroup>`:''}
+        ${S.envelopes.length?`<optgroup label="Obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${it.link==='env:'+e.id?'selected':''}>${esc(e.nm)}</option>`).join('')}</optgroup>`:''}
+        ${S.investments.length?`<optgroup label="Investice">${S.investments.map(v=>`<option value="inv:${v.id}" ${it.link==='inv:'+v.id?'selected':''}>${esc(v.nm)}</option>`).join('')}</optgroup>`:''}
+      </select>
+      <div class="mini" style="margin-top:5px">${linkTarget(it)?`Zápisy se rovnou propíšou do „${esc(linkTarget(it).obj.nm)}" a nepočítají se dvakrát.`:'Splátka dluhu nebo vklad do obálky se zapíše rovnou i tam.'}</div></div>
+    <div class="fg"><span class="fl">50/30/20</span>
+      <select class="inp" id="m_kind">
+        <option value="" ${!it.kind?'selected':''}>${it.link?'automaticky (úspora)':'jako kategorie'}</option>
+        <option value="need" ${it.kind==='need'?'selected':''}>Potřeba</option>
+        <option value="want" ${it.kind==='want'?'selected':''}>Přání</option>
+        <option value="save" ${it.kind==='save'?'selected':''}>Úspora či splátka</option>
+      </select></div>
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveItemCfg()">Uložit</button></div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)">
+      <button class="btn dgr sm" onclick="delItem('${cid}','${iid}')">${ic('trash',14)} Smazat položku</button>
+      <span class="mini" style="margin-left:8px">Smaže i ${(it.log||[]).length} ${(it.log||[]).length===1?'zápis':(it.log||[]).length<5?'zápisy':'zápisů'}.</span></div>`);
+  setTimeout(()=>document.getElementById('m_nm')?.focus(),50);
+}
+function saveItemCfg(){
+  const c=P().cats.find(x=>x.id===mctx.cid),it=c&&c.it.find(x=>x.id===mctx.iid);if(!it)return;
+  const nm=document.getElementById('m_nm').value.trim();
+  if(!nm){toast('Název nesmí být prázdný');return;}
+  const link=document.getElementById('m_link').value,kind=document.getElementById('m_kind').value;
+  it.nm=nm;it.pl=num(document.getElementById('m_pl').value);
+  if(document.getElementById('m_fix').checked)it.fixAmt=true;else delete it.fixAmt;
+  it.link=link||'';
+  if(kind)it.kind=kind;else delete it.kind;
+  openItem=mctx.iid;closeModal();toast('Uloženo');commit();
+}
 function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
 /* Pevná částka u položky: jen předvyplnění v rychlém zadání z plánu,
    nic se nestrhává samo. Bulk „zaplatit všechny pravidelné" tu schválně
