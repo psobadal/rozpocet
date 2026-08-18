@@ -1178,7 +1178,93 @@ function rule503020(p){
   h+=`<div class="mini" style="margin-top:10px">Svislá čárka = cíl. Úspory zahrnují obálky (měsíční odkládání), investice a splátky dluhů.${hasPlan?'':' Nastav si plány a uvidíš dopředu, jestli ti rozpočet sedí.'}</div></div>`;
   return h;
 }
-function nwBlock(){return mrow([['Investice',fm(totalInvest()),'color:var(--plum)'],['Obálky',fm(totalEnvelopes()),'color:var(--gold)'],['Dluhy','−'+fm(totalDebt()),'color:var(--blue)']])+`<div class="card" style="text-align:center"><div class="ct" style="margin-bottom:6px">Čisté jmění</div><div class="num" style="font-size:28px;color:${netWorth()>=0?'var(--teal)':'var(--neg)'}">${fm(netWorth())}</div><div class="mini">investice + obálky − dluhy</div></div>`;}
+/* ---------- vývoj jmění v čase ----------
+   Jmění se nikam neukládá a ani nemusí. Dnešek je známý přesně
+   (totalInvest / totalEnvelopes / debtRemaining) a minulost se z něj
+   dopočítá odečtením pohybů, které přišly potom. Graf tak vždycky sedí
+   s čísly nad ním, i když se historie dodatečně opraví.
+   Do zůstatků patří i záznamy s adj:true (oprava zůstatku) a se src
+   (zápis přes propojenou položku): do rozpočtu cyklu se schválně
+   nepočítají, ale zůstatek opravdu změnily, takže do jmění patří. */
+function nwAt(t){
+  // Dvě ošklivá data se musí ohnout, jinak by poslední bod grafu neseděl
+  // s dlaždicemi nad ním: pohyb s budoucím datem se počítá jako dnešní
+  // a pohyb úplně bez data patří do počátečního zůstatku (odjakživa).
+  const now=todayISO(),cl=d=>d<now?d:now;
+  const aft=d=>!!d&&cl(d)>t, upto=d=>!d||cl(d)<=t;
+  let inv=totalInvest(),env=totalEnvelopes();
+  S.investments.forEach(v=>(v.hist||[]).forEach(x=>{if(aft(x.d))inv-=(x.a||0);}));
+  S.envelopes.forEach(e=>(e.hist||[]).forEach(x=>{if(aft(x.d))env-=(x.t==='out'?-(x.a||0):(x.a||0));}));
+  const debt=S.debts.reduce((s,d)=>s+Math.max(0,(d.principal||0)-(d.paid0||0)
+    -(d.pay||[]).reduce((ss,x)=>ss+(upto(x.d)?(x.a||0):0),0)),0);
+  return {d:t,inv,env,debt,nw:inv+env-debt};
+}
+// jeden bod na konec každého měsíce, poslední bod je vždycky dnešek
+function nwSeries(){
+  const ds=[];
+  S.investments.forEach(v=>(v.hist||[]).forEach(x=>{if(x.d)ds.push(x.d);}));
+  S.envelopes.forEach(e=>(e.hist||[]).forEach(x=>{if(x.d)ds.push(x.d);}));
+  S.debts.forEach(d=>(d.pay||[]).forEach(x=>{if(x.d)ds.push(x.d);}));
+  S.periods.forEach(p=>{if(p.from)ds.push(p.from);});
+  if(!ds.length)return [];
+  const today=todayISO(),start=ds.reduce((a,b)=>a<b?a:b,ds[0]);
+  if(start>today)return [];
+  const pts=[],c=new Date(start+'T12:00:00');c.setDate(1);
+  for(let i=0;i<360;i++){
+    const last=iso(new Date(c.getFullYear(),c.getMonth()+1,0));
+    pts.push(nwAt(last>today?today:last));
+    if(last>=today)break;
+    c.setMonth(c.getMonth()+1);
+  }
+  if(pts.length&&pts[pts.length-1].d!==today)pts.push(nwAt(today));
+  return pts;
+}
+const nwMon=s=>{const p=s.split('-');return +p[1]+'/'+p[0].slice(2);};
+/* Každá složka má vlastní měřítko a kreslí se zvlášť. Dohromady to nejde:
+   s hypotékou v milionech by se pohyb investic v desetitisících srovnal
+   do rovné čáry a graf by neukázal nic. */
+let nwSub='nw';
+function setNwSub(k){nwSub=k;R();}
+const NW_SER={
+  nw:  {label:'Čisté jmění',col:'var(--teal)',get:p=>p.nw,  up:1},
+  inv: {label:'Investice',  col:'var(--plum)',get:p=>p.inv, up:1},
+  env: {label:'Obálky',     col:'var(--gold)',get:p=>p.env, up:1},
+  debt:{label:'Dluhy',      col:'var(--blue)',get:p=>p.debt,up:-1},
+};
+function nwChart(){
+  const pts=nwSeries();
+  const head=`<div class="ct" style="margin-bottom:14px">${ic('trending',15)} Vývoj v čase</div>`;
+  if(pts.length<2)return `<div class="card">${head}<div class="empty">Graf se objeví, až budou aspoň dva měsíce, které jde porovnat.</div></div>`;
+  const s=NW_SER[nwSub]||NW_SER.nw,n=pts.length,vals=pts.map(s.get);
+  const W=640,H=180,PL=6,PR=6,PT=14,PB=14;
+  let mn=Math.min(...vals),mx=Math.max(...vals);
+  const pad=(mx-mn)*.12||Math.abs(mx)*.12||1;      // vzduch nad a pod křivkou
+  mn-=pad;mx+=pad;
+  const X=i=>PL+i*(W-PL-PR)/(n-1),Y=v=>PT+(mx-v)/(mx-mn)*(H-PT-PB);
+  const line=pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(s.get(p)).toFixed(1)).join(' ');
+  const base=Y(mn).toFixed(1),first=vals[0],last=vals[n-1],diff=last-first;
+  const good=diff*s.up>=0;                          // u dluhu je pokles dobrá zpráva
+  let h=`<div class="card">${head}
+    <div class="seg" style="margin-bottom:16px">${Object.entries(NW_SER).map(([k,v])=>`<button class="${nwSub===k?'on':''}" onclick="setNwSub('${k}')">${v.label}</button>`).join('')}</div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+      ${mn<0&&mx>0?`<line x1="${PL}" y1="${Y(0).toFixed(1)}" x2="${W-PR}" y2="${Y(0).toFixed(1)}" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="4 4"/>`:''}
+      <path d="${line} L ${X(n-1).toFixed(1)} ${base} L ${X(0).toFixed(1)} ${base} Z" fill="${s.col}" opacity=".10"/>
+      <path d="${line}" fill="none" stroke="${s.col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${X(n-1).toFixed(1)}" cy="${Y(last).toFixed(1)}" r="4" fill="${s.col}"/>`;
+  pts.forEach((p,i)=>{h+=`<rect x="${(X(i)-(W-PL-PR)/(n-1)/2).toFixed(1)}" y="0" width="${((W-PL-PR)/(n-1)).toFixed(1)}" height="${H}" fill="transparent"><title>${fdFull(p.d)}
+Čisté jmění: ${fm(p.nw)}
+Investice: ${fm(p.inv)} · Obálky: ${fm(p.env)} · Dluhy: −${fm(p.debt)}</title></rect>`;});
+  h+=`</svg>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:8px">
+      <div><div class="mini">${nwMon(pts[0].d)}</div><div class="num" style="font-size:14px;color:var(--text2)">${fm(first)}</div></div>
+      <div style="text-align:right"><div class="mini">${nwMon(pts[n-1].d)}</div><div class="num" style="font-size:14px;color:${s.col}">${fm(last)}</div></div></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1.5px solid var(--line)">
+      <span class="mini">Za ${n-1} ${n-1===1?'měsíc':n-1<5?'měsíce':'měsíců'}</span><div style="flex:1"></div>
+      <span class="tag ${good?'ok':'bd'}">${diff>=0?'+':'−'}${fm(Math.abs(diff))}</span></div>
+    <div class="mini" style="margin-top:10px">Minulost se dopočítá zpětně ze zapsaných pohybů — vkladů, čerpání z obálek a splátek dluhů. Každá složka má vlastní měřítko, proto se přepíná. Najetím na graf uvidíš celý rozpad k danému dni.</div></div>`;
+  return h;
+}
+function nwBlock(){return mrow([['Investice',fm(totalInvest()),'color:var(--plum)'],['Obálky',fm(totalEnvelopes()),'color:var(--gold)'],['Dluhy','−'+fm(totalDebt()),'color:var(--blue)']])+`<div class="card" style="text-align:center"><div class="ct" style="margin-bottom:6px">Čisté jmění</div><div class="num" style="font-size:28px;color:${netWorth()>=0?'var(--teal)':'var(--neg)'}">${fm(netWorth())}</div><div class="mini">investice + obálky − dluhy</div></div>`+nwChart();}
 function vStat(p){
   let h=`<div class="seg" style="margin-bottom:14px"><button class="${statSub==='m'?'on':''}" onclick="setStat('m')">Tento cyklus</button><button class="${statSub==='y'?'on':''}" onclick="setStat('y')">Ročně</button><button class="${statSub==='a'?'on':''}" onclick="setStat('a')">Průměr</button></div>`;
   h+= statSub==='y'?statYear():statSub==='a'?statAvg():statMonth(p);
