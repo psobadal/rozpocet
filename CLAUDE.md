@@ -6,7 +6,10 @@ na webu. Cílem je i „free appka pro kohokoliv" (viz README.md).
 
 ## Kde to žije
 
-- **Lokálně:** `C:\Users\START\Downloads\Rozpočet\index.html`
+- **Lokálně (Mac, aktuální):** `~/Documents/GitHub/rozpocet/` — plný `git clone`.
+  Pozor: na Ploše bývá i `~/Desktop/Claude/rozpocet-main/`, což je jen rozbalený
+  ZIP bez `.git` a **zastaralý** — needituj ho, změny se odtamtud nikam nedostanou.
+- **Lokálně (starý Windows):** `C:\Users\START\Downloads\Rozpočet\index.html`
 - **GitHub:** [psobadal/rozpocet](https://github.com/psobadal/rozpocet) (veřejné repo, účet uživatele)
 - **Živě na webu:** https://psobadal.github.io/rozpocet/ (GitHub Pages, větev `main`, root)
 - **Synchronizace:** vlastní Worker na Cloudflare (`sync-worker.js` v repu, návod
@@ -21,8 +24,10 @@ na webu. Cílem je i „free appka pro kohokoliv" (viz README.md).
   zálohy ani do dat nahraných do cloudu.
   **Proč ne Supabase:** free tier se po ~týdnu nečinnosti pozastaví a zmizí i
   z DNS — reálně se to stalo, přihlášení přestalo fungovat. Cloudflare Workers
-  za nečinnost neusínají. Supabase kód v appce zůstal jen pro starší nastavení
-  (`S.cloud`), `CONFIG.cloud` je prázdné, takže se ta sekce ani nezobrazí.
+  za nečinnost neusínají. Zbytky Supabase kódu (auth tokeny, magic link,
+  `cloudPull`/`cloudPush`, `CONFIG.cloud`, mezivrstva `remote*`) jsou od
+  18. 8. 2026 **úplně pryč** — appka žádné přihlašování e-mailem nemá a
+  nikdy mít nebude, přístup k datům je jen přes připojovací kód.
 
 ## Worker na Cloudflare (wrangler)
 
@@ -59,20 +64,25 @@ ukázat starý stav. Do KV nesahat bez důvodu — jsou tam reálná data uživa
 ## Jak nasazovat změny
 
 Po každé sadě úprav v `index.html`:
-```powershell
-git add index.html
-git -c user.name='Patrik' -c user.email='obadal@aqe.cz' commit -F <soubor_se_zpravou>
-$env:GIT_TERMINAL_PROMPT='1'; git push
+```bash
+git -C ~/Documents/GitHub/rozpocet add index.html
+git -C ~/Documents/GitHub/rozpocet -c user.name='Patrik' -c user.email='obadal@aqe.cz' commit -F <soubor_se_zpravou>
+git -C ~/Documents/GitHub/rozpocet push
 ```
-Commit zprávu piš do dočasného souboru (heredoc/multi-line `-m` v PowerShellu
-přes Bash tool dělá potíže s diakritikou) a commituj přes `-F`. Push spouštěj
-na pozadí (`run_in_background: true`) — `git push` bez tohle prostředí hlásí
-"terminal prompts disabled", proto `GIT_TERMINAL_PROMPT=1` a běh na pozadí.
-GitHub Pages se aktualizuje samo do ~30 s po pushi.
+Používej `git -C <cesta>` — pracovní adresář Bash toolu se mezi voláními vrací
+jinam a `git` pak hlásí „not a git repository". Commit zprávu piš do dočasného
+souboru a commituj přes `-F` (multi-line `-m` dělá potíže s diakritikou).
+Na Windows se navíc push pouštěl na pozadí s `GIT_TERMINAL_PROMPT=1`, na Macu
+to není potřeba. GitHub Pages se aktualizuje samo do ~30 s po pushi.
 
-**Vždy nejdřív otestuj v prohlížeči** (Browser tool, `javascript_exec` proti
-otevřenému `index.html`) — appku lze celou ovládat/testovat přímo přes JS
-konzoli (`S`, `go()`, `commit()`, všechny funkce jsou globální). Teprve po
+**Vždy nejdřív otestuj v prohlížeči.** `file://` snapshot v Browser panelu
+nedává živý JS kontext — spusť `python3 -m http.server 8765` ve složce repa
+a otevři přes `preview_start` na `http://localhost:8765/index.html`
+(`navigate` na `127.0.0.1` je blokované politikou, `localhost` projde).
+Appku lze celou ovládat/testovat přímo přes JS konzoli (`S`, `go()`,
+`commit()`, všechny funkce jsou globální; render jde do `#app`). Synchronizaci
+testuj podvržením `window.fetch` jako falešný Worker — projde tím push, pull,
+připojení druhého zařízení i pojistky. Teprve po
 zeleném testu commitovat a pushnout.
 
 ## Datový model (proměnná `S`)
@@ -217,14 +227,8 @@ S.tax            — daň z úroků (výchozí 15 %)
 
 ## Co zbývá / další nápady (odsouhlaseno uživatelem, zatím neuděláno)
 
-- **Dávka 2 — jediná otevřená položka, odsouhlasená a nezačatá:**
-  1. **graf vývoje čistého jmění/investic v čase** — data na to už existují:
-     `S.investments[].hist[]` (vklady vs. `k:'gain'`), `S.envelopes[].hist[]`
-     a `S.debts[].pay[]` mají datumy, takže jde jmění dopočítat zpětně bez
-     nového ukládání. Pozor na `adj:true` a `src` záznamy (viz pravidla výš).
-  2. **investiční kalkulačka se složeným úročením** — samostatný nástroj
-     „co kdybych odkládal X měsíčně na Y let při Z %", nemá měnit data.
-  Zatím se o tom jen mluvilo, žádný kód ani návrh UI neexistuje.
+- **Dávka 2 je hotová (18. 8. 2026), nic otevřeného nezbývá.** Zbytek
+  sekce je jen kontext pro další nápady.
 - Uživatel má rád: teplý/klidný design (ne tmavý), SVG ikony (ne emoji),
   věci co nejvíc automatické ale transparentní (vidět PROČ se číslo počítá).
 - Priorita #1 napříč celým projektem: **nikdy neztratit data** — dnes to
@@ -232,8 +236,35 @@ S.tax            — daň z úroků (výchozí 15 %)
   prohlížečích, GitHubu pro kód a export/importu v appce.
   **Hotové, nevracet se k tomu:** krypto s auto kurzem, přesun sync ze
   Supabase na Cloudflare, pojistka proti přepsání prázdným stavem,
-  hlasitý banner při výpadku cloudu, denní verze s obnovením.
+  hlasitý banner při výpadku cloudu, denní verze s obnovením,
+  graf vývoje jmění, investiční kalkulačka, odstranění Supabase kódu.
   **Odpadlo:** „vypnout registrace v Supabase" — Supabase se už nepoužívá.
+
+## Graf vývoje jmění (`nwAt` / `nwSeries` / `nwChart`)
+
+Na Statistikách pod Čistým jměním, oba podpohledy. **Nic se neukládá** —
+minulost se dopočítá zpětně: dnešek je známý přesně z `totalInvest()` /
+`totalEnvelopes()` / `debtRemaining()` a od něj se odečtou pohyby, které
+přišly potom. Díky tomu poslední bod grafu **vždycky** sedí s dlaždicemi
+nad ním; to je invariant, na kterém stojí důvěryhodnost grafu, a je
+otestovaný. Kdo bude sahat do `nwAt`, musí ho udržet.
+
+Do zůstatků patří i `adj:true` a `src` záznamy — do rozpočtu cyklu se
+schválně nepočítají, ale zůstatek fakt změnily, takže do jmění patří.
+Dvě ošklivá data se ohýbají, jinak by poslední bod nesedl: pohyb
+s **budoucím datem** se počítá jako dnešní, pohyb **bez data** patří do
+počátečního zůstatku.
+
+Přepínač Čisté jmění / Investice / Obálky / Dluhy, každá složka má
+**vlastní měřítko** — s hypotékou v milionech by se pohyb investic
+v desetitisících srovnal do rovné čáry. Neslučovat do jedné osy.
+
+## Investiční kalkulačka (`invCalc` / `invCalcModal`)
+
+Na Investicích vedle Nové položky. Čistě „co kdyby", **nesahá na data**.
+Úrok měsíčně, vklad na konci měsíce, daň průběžně z úroku — schválně
+stejně jako `creditInterest()`, ať appka nepočítá dvěma způsoby.
+Ověřeno proti uzavřenému vzorci pro anuitu.
 
 ## Odkaz na soutěž (jiný projekt, mimochodem)
 
