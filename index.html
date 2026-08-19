@@ -334,6 +334,9 @@ const fm=n=>czk.format(Math.round(n||0));
 // (obvyklá částka u položky), ať nevidí 329 Kč tam, kde zadal 329,35
 const czk2=new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',minimumFractionDigits:2});
 const fmEx=n=>Number.isInteger(+n||0)?fm(n):czk2.format(+n||0);
+// číslo bez měny — na kurzy v cizí měně, kde by „Kč“ lhalo
+const nfx=new Intl.NumberFormat('cs-CZ',{maximumFractionDigits:2});
+const fmCcy=(n,c)=>nfx.format(+n||0)+(c&&c!=='CZK'?' '+c:' Kč');
 const agoTxt=ts=>{const m=Math.round((Date.now()-ts)/60000);
   return m<1?'právě teď':m<60?'před '+m+' min':m<1440?'před '+Math.round(m/60)+' h':'před '+Math.round(m/1440)+' dny';};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -529,6 +532,48 @@ async function fetchCryptoPrice(coinId){
   const px=j[coinId]&&j[coinId].czk;
   if(!px)throw new Error('no price');
   return px;
+}
+
+/* ---------- kurzy akcií a ETF ----------
+   Krypto umí CoinGecko bez klíče, akcie takový zdroj nemají — Twelve Data
+   chce vlastní klíč, ale je zdarma a dá 800 dotazů denně (appka jich
+   udělá pár). Klíč žije v S, na rozdíl od sync kódu: je to jen čtení
+   burzovních dat, ne přístup k penězům, a takhle se propíše i do mobilu.
+   Ceny chodí v měně burzy, proto se přepočítávají přes ECB kurz
+   (frankfurter.dev, taky bez klíče). */
+const stockKey=()=>(''+(S.stockKey||'')).trim();
+let _fx={},_fxAt=0;
+async function fetchFx(ccy){
+  ccy=(ccy||'CZK').toUpperCase();
+  if(ccy==='CZK')return 1;
+  if(_fx[ccy]&&Date.now()-_fxAt<36e5)return _fx[ccy];
+  const r=await fetch(`https://api.frankfurter.dev/v1/latest?base=${encodeURIComponent(ccy)}&symbols=CZK`);
+  if(!r.ok)throw new Error('kurz měny se nepodařilo načíst');
+  const j=await r.json(),v=j&&j.rates&&j.rates.CZK;
+  if(!v)throw new Error(`kurz ${ccy}→CZK chybí`);
+  _fx[ccy]=v;_fxAt=Date.now();return v;
+}
+async function fetchStockQuotes(symbols){
+  const key=stockKey();
+  if(!key)throw new Error('chybí klíč (Nastavení → Kurzy akcií)');
+  const r=await fetch(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbols.join(','))}&apikey=${encodeURIComponent(key)}`);
+  const j=await r.json();
+  if(j&&j.status==='error')throw new Error(j.message||'data se nepodařilo načíst');
+  // jeden symbol vrací rovnou objekt, víc symbolů objekt klíčovaný symbolem
+  const raw=(j&&j.symbol)?{[j.symbol]:j}:j;
+  const out={};
+  symbols.forEach(sym=>{const q=raw&&raw[sym];
+    if(!q||q.status==='error')return;
+    const px=parseFloat(q.close);
+    if(!isFinite(px)||px<=0)return;
+    out[sym]={px,ccy:(q.currency||'USD').toUpperCase(),nm:q.name||''};});
+  return out;
+}
+// cena jednoho papíru přepočtená do korun
+async function stockPriceCzk(sym){
+  const q=(await fetchStockQuotes([sym]))[sym];
+  if(!q)throw new Error('symbol nenalezen');
+  return {czk:q.px*(await fetchFx(q.ccy)),px:q.px,ccy:q.ccy,nm:q.nm};
 }
 const debtPaidInPeriod=p=>S.debts.reduce((s,d)=>s+(d.pay||[]).filter(x=>x.d>=p.from&&x.d<p.to&&!x.src).reduce((ss,x)=>ss+x.a,0),0);
 function freeLeft(p){return incBase(p)-sumActual(p)-savedInPeriod(p.id)-investedInPeriod(p.id)-debtPaidInPeriod(p);}
@@ -1084,15 +1129,15 @@ function vInvestice(p){
     h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px">
       <div class="ic" style="background:${col(i)}22;color:${col(i)}">${ic(inv.icon,18)}</div>
       <div style="flex:1;min-width:0"><div style="font-weight:600">${esc(inv.nm)}</div>
-        ${inv.crypto?`<div class="mini">${(''+inv.qty).replace('.',',')} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z CoinGecko'}</div>`:inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
+        ${inv.crypto?`<div class="mini">${(''+inv.qty).replace('.',',')} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z CoinGecko'}</div>`:inv.stock?`<div class="mini">${(''+inv.qty).replace('.',',')} ks ${esc(inv.stock)}${inv.ccy&&inv.ccy!=='CZK'?' · '+inv.ccy:''} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z burzy'}</div>`:inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
         <div class="prog" style="height:6px;margin-top:5px"><i style="width:${pcw}%;background:var(--plum)"></i></div></div>
       <div style="text-align:right"><div class="num" style="font-size:17px">${fm(inv.val||0)}</div><div class="mini">${pcw}%</div></div>
-      <div style="display:flex;flex-direction:column;gap:3px">${inv.crypto?'':`<button class="btn sm" onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button>`}<button class="ib" onclick="invModal('${inv.id}')">${ic('edit',15)}</button></div></div>
+      <div style="display:flex;flex-direction:column;gap:3px">${inv.crypto||inv.stock?'':`<button class="btn sm" onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button>`}<button class="ib" onclick="invModal('${inv.id}')">${ic('edit',15)}</button></div></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1.5px solid var(--line)">
         <span class="mini">Vloženo <b class="num" style="color:var(--text2)">${fm(put)}</b></span>
         <span class="mini">Zhodnocení <b class="num" style="color:${gain>0?'var(--teal)':gain<0?'var(--neg)':'var(--text3)'}">${gain>0?'+':''}${fm(gain)}${put>0?` (${gain>0?'+':''}${(''+gpc).replace('.',',')} %)`:''}</b></span>
         <div style="flex:1"></div>
-        ${inv.crypto?`<button class="btn sm" onclick="invRefreshPrice('${inv.id}')">${ic('trending',14)} Aktualizovat kurz</button>`:`<button class="btn sm" onclick="invRevalue('${inv.id}')">${ic('trending',14)} Přecenit</button>`}</div>`;
+        ${inv.crypto||inv.stock?`<button class="btn sm" onclick="invRefreshPrice('${inv.id}')">${ic('trending',14)} Aktualizovat kurz</button>`:`<button class="btn sm" onclick="invRevalue('${inv.id}')">${ic('trending',14)} Přecenit</button>`}</div>`;
     const tr=invTrend(inv);
     if(tr)h+=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px">${ic('trending',13)}${tr}</div>`;
     // denní záznamy z kurzu se sem netahají — je jich moc a nic neříkají;
@@ -1554,6 +1599,14 @@ function vNastaveni(p){
     <div style="max-width:200px"><div class="fg"><span class="fl">Sazba %</span><input class="inp num" type="number" value="${S.tax}" onchange="S.tax=+this.value;commit()"></div></div>
     <p class="mini" style="margin-top:10px">Strhává se z úroku připsaného u spořáků a investic (v ČR běžně 15 %).</p></div>`;
 
+  // klíč ke kurzům akcií — na rozdíl od sync kódu smí být v S (jen čtení burzovních dat)
+  h+=`<div class="card"><div class="ct" style="margin-bottom:6px">${ic('trending',15)} Kurzy akcií a ETF</div>
+    <p class="mini" style="margin:0 0 12px">Krypto se stahuje samo a zadarmo. Akcie a ETF potřebují vlastní klíč — zdarma a bez karty na <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener">twelvedata.com</a>, 800 dotazů denně (appka jich udělá pár).</p>
+    <div class="fg"><span class="fl">Klíč</span><input class="inp" id="st_key" value="${esc(S.stockKey||'')}" placeholder="zatím nenastaveno" style="font-family:ui-monospace,monospace;font-size:12px"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn fill" onclick="saveStockKey()">Uložit klíč</button>
+      ${S.stockKey?`<button class="btn gho" onclick="S.stockKey='';persist();toast('Klíč smazán');R()">Smazat</button>`:''}</div>
+    ${S.stockKey?`<p class="mini" style="margin-top:10px">${ic('check',13)} Nastaveno. Kurzy se stahují samy při otevření appky, max jednou za 10 minut.</p>`:''}</div>`;
+
   h+=`<div class="card"><div class="ct" style="margin-bottom:10px;color:var(--neg)">Nebezpečná zóna</div><p class="mini" style="margin:0 0 12px">Smaže všechna data. Jde vrátit jen ze zálohy.</p><button class="btn dgr" onclick="resetAll()">${ic('trash',15)} Smazat všechna data</button></div>`;
   // až bude synchronizace zapnutá, tahle rada je vyřízená a nemá co ukazovat
   if(!syncOn())h+=tipBan('rocket','<b>Mobil a synchronizace</b> jsou další krok — až budeš chtít appku i do telefonu se stejnými daty, projdi si SYNC-SETUP.md.');
@@ -1807,32 +1860,48 @@ function delEnvHist(id,idx){const e=S.envelopes.find(x=>x.id===id);if(!e||!e.his
   e.bal=(e.bal||0)-(x.t==='in'?x.a:-x.a);e.hist.splice(idx,1);commit();}
 /* investments */
 function invModal(id){const inv=id?S.investments.find(x=>x.id===id):null;mctx={id,icon:inv?inv.icon:'trending'};
-  const isC=!!(inv&&inv.crypto);
+  const isC=!!(inv&&inv.crypto),isS=!!(inv&&inv.stock);
+  _cryptoPx=null;_stockPx=null;
   openModal(`<h3>${inv?'Upravit':'Nová'} investice / úspora</h3>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${inv?esc(inv.nm):''}" placeholder="např. ETF, Bitcoin, Spořák"></div>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(INV_ICONS,mctx.icon)}</div>
-    <div class="fg"><span class="fl">Typ</span><select class="inp" id="m_ctype" onchange="invToggleCrypto()">
-      <option value=""${isC?'':' selected'}>Ručně</option>
+    <div class="fg"><span class="fl">Typ</span><select class="inp" id="m_ctype" onchange="invTypeToggle()">
+      <option value=""${isC||isS?'':' selected'}>Ručně</option>
       <option value="crypto"${isC?' selected':''}>Krypto (auto kurz z CoinGecko)</option>
+      <option value="stock"${isS?' selected':''}>Akcie / ETF (auto kurz z burzy)</option>
     </select></div>
-    <div id="m_manual" class="fr" style="${isC?'display:none':''}">
-      <div class="fg"><span class="fl">Aktuální hodnota</span><input class="inp num" id="m_val" type="number" value="${inv&&!isC?inv.val||0:''}" placeholder="0"></div>
+    <div id="m_manual" class="fr" style="${isC||isS?'display:none':''}">
+      <div class="fg"><span class="fl">Aktuální hodnota</span><input class="inp num" id="m_val" type="number" value="${inv&&!isC&&!isS?inv.val||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Úrok % p.a. (0 = žádný)</span><input class="inp num" id="m_rate" type="number" step="0.01" value="${inv?inv.rate||0:''}" placeholder="0"></div></div>
     <div id="m_crypto" style="${isC?'':'display:none'}">
       <div class="fr">
         <div class="fg"><span class="fl">Měna</span><select class="inp" id="m_coin" onchange="invCryptoPreview()">${CRYPTO_LIST.map(c=>`<option value="${c.id}"${inv&&inv.crypto===c.id?' selected':''}>${c.nm}</option>`).join('')}</select></div>
-        <div class="fg"><span class="fl">Množství</span><input class="inp num" id="m_qty" type="number" step="any" value="${inv&&inv.qty?inv.qty:''}" placeholder="0" oninput="invCryptoPreview()"></div>
+        <div class="fg"><span class="fl">Množství</span><input class="inp num" id="m_qty" type="number" step="any" value="${inv&&inv.crypto&&inv.qty?inv.qty:''}" placeholder="0" oninput="invCryptoPreview()"></div>
       </div>
       <p class="mini" id="m_cpx" style="margin-top:6px">Zadej množství.</p>
+    </div>
+    <div id="m_stockbox" style="${isS?'':'display:none'}">
+      ${stockKey()?'':`<div class="fg"><span class="fl">Klíč k datům o kurzech</span>
+        <input class="inp" id="m_skey" placeholder="vlož klíč z twelvedata.com" style="font-family:ui-monospace,monospace;font-size:12px">
+        <div class="mini" style="margin-top:6px">Zdarma a bez karty na <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener">twelvedata.com</a> — registrace na mail a klíč máš hned. Uloží se a příště už se ptát nebudu.</div></div>`}
+      <div class="fr">
+        <div class="fg"><span class="fl">Symbol</span><input class="inp" id="m_sym" value="${inv&&inv.stock?esc(inv.stock):''}" placeholder="AAPL" onchange="invStockPreview(true)" style="text-transform:uppercase"></div>
+        <div class="fg"><span class="fl">Počet kusů</span><input class="inp num" id="m_sqty" type="number" step="any" value="${inv&&inv.stock&&inv.qty?inv.qty:''}" placeholder="0" oninput="invStockPreview(false)"></div>
+      </div>
+      <p class="mini" id="m_spx" style="margin-top:6px">Zadej symbol a počet kusů.</p>
+      <div class="mini" style="margin-top:6px">Americké akcie jsou prostý symbol (<b>AAPL</b>, <b>MSFT</b>). Evropské ETF potřebují i burzu, třeba <b>VWCE:XETR</b>. Cena se přepočte do korun denním kurzem ECB sama.</div>
     </div>
     <p class="mini" style="margin-top:8px">Úrok se připisuje k 1. dni v měsíci, po dani ${S.tax} %.</p>
     ${inv?`<div style="text-align:right;margin-top:8px"><button class="btn dgr sm" onclick="delInv('${inv.id}')">Smazat</button></div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveInv()">${inv?'Uložit':'Vytvořit'}</button></div>`);
-  if(isC)invCryptoPreview();}
-function invToggleCrypto(){const v=document.getElementById('m_ctype').value;
-  document.getElementById('m_manual').style.display=v==='crypto'?'none':'';
+  if(isC)invCryptoPreview();
+  if(isS)invStockPreview(true);}
+function invTypeToggle(){const v=document.getElementById('m_ctype').value;
+  document.getElementById('m_manual').style.display=v?'none':'';
   document.getElementById('m_crypto').style.display=v==='crypto'?'':'none';
-  if(v==='crypto')invCryptoPreview();}
+  document.getElementById('m_stockbox').style.display=v==='stock'?'':'none';
+  if(v==='crypto')invCryptoPreview();
+  if(v==='stock')invStockPreview(true);}
 let _cryptoPx=null;
 async function invCryptoPreview(){const coinEl=document.getElementById('m_coin'),qtyEl=document.getElementById('m_qty'),el=document.getElementById('m_cpx');
   if(!coinEl||!el)return;const coin=coinEl.value,qty=num(qtyEl.value);
@@ -1841,22 +1910,52 @@ async function invCryptoPreview(){const coinEl=document.getElementById('m_coin')
   try{const px=await fetchCryptoPrice(coin);_cryptoPx=px;
     el.innerHTML=`Kurz <b>${fm(px)}</b> / ks · hodnota ≈ <b>${fm(Math.round(px*qty))}</b>`;
   }catch(e){el.textContent='Kurz se nepodařilo načíst (offline?). Zkus to znovu.';_cryptoPx=null;}}
+/* Kurz akcie stojí dotaz z denního limitu, takže se stahuje jen při změně
+   symbolu — přepsání počtu kusů si vystačí s tím, co už máme. */
+let _stockPx=null,_stockCcy='';
+async function invStockPreview(refetch){
+  const symEl=document.getElementById('m_sym'),qtyEl=document.getElementById('m_sqty'),el=document.getElementById('m_spx');
+  if(!symEl||!el)return;
+  const sym=(symEl.value||'').trim().toUpperCase();symEl.value=sym;
+  const qty=num(qtyEl.value);
+  const keyEl=document.getElementById('m_skey');
+  if(keyEl&&keyEl.value.trim()&&!stockKey()){S.stockKey=keyEl.value.trim();saveLS();}
+  if(!sym){el.textContent='Zadej symbol a počet kusů.';_stockPx=null;return;}
+  if(!stockKey()){el.textContent='Nejdřív vlož klíč, jinak kurz nestáhnu.';_stockPx=null;return;}
+  if(!refetch&&_stockPx!=null){
+    el.innerHTML=`Kurz <b>${fmCcy(_stockPx.px,_stockCcy)}</b> · v korunách <b>${fm(Math.round(_stockPx.czk))}</b> / ks`+(qty?` · hodnota ≈ <b>${fm(Math.round(_stockPx.czk*qty))}</b>`:'');
+    return;}
+  el.textContent='Načítám kurz…';
+  try{const q=await stockPriceCzk(sym);_stockPx=q;_stockCcy=q.ccy;
+    el.innerHTML=`${q.nm?esc(q.nm)+' · ':''}kurz <b>${fmCcy(q.px,q.ccy)}</b> · v korunách <b>${fm(Math.round(q.czk))}</b> / ks`+(qty?` · hodnota ≈ <b>${fm(Math.round(q.czk*qty))}</b>`:'');
+  }catch(e){el.textContent='Nepovedlo se: '+(e.message||'zkus to znovu');_stockPx=null;}}
 function saveInv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}
-  const isC=document.getElementById('m_ctype').value==='crypto';
-  let val,rate=0,crypto=null,qty=null;
-  if(isC){crypto=document.getElementById('m_coin').value;qty=num(document.getElementById('m_qty').value);
+  const typ=document.getElementById('m_ctype').value;
+  let val,rate=0,crypto=null,stock=null,qty=null,ccy=null;
+  if(typ==='crypto'){crypto=document.getElementById('m_coin').value;qty=num(document.getElementById('m_qty').value);
     if(!qty){toast('Zadej množství');return;}
     if(_cryptoPx==null){toast('Počkej na načtení kurzu (nebo zkontroluj připojení)');return;}
     val=Math.round(qty*_cryptoPx);}
+  else if(typ==='stock'){
+    const keyEl=document.getElementById('m_skey');
+    if(keyEl&&keyEl.value.trim())S.stockKey=keyEl.value.trim();
+    stock=(document.getElementById('m_sym').value||'').trim().toUpperCase();
+    qty=num(document.getElementById('m_sqty').value);
+    if(!stock){toast('Zadej symbol');return;}
+    if(!qty){toast('Zadej počet kusů');return;}
+    if(_stockPx==null){toast('Počkej na načtení kurzu (nebo zkontroluj symbol)');return;}
+    ccy=_stockCcy;val=Math.round(qty*_stockPx.czk);}
   else{val=num(document.getElementById('m_val').value);rate=num(document.getElementById('m_rate').value);}
   if(mctx.id){const inv=S.investments.find(x=>x.id===mctx.id);inv.nm=nm;inv.icon=mctx.icon;
     inv.base=(inv.base||0)+(val-(inv.val||0));   // ruční oprava hodnoty → posuň i vložené, zhodnocení zůstane
-    inv.val=val;inv.rate=rate;inv.crypto=crypto;inv.qty=qty;if(rate>0&&!inv.lastInt)inv.lastInt=iso(firstOfMonth(new Date()));}
-  else{const inv={id:uid(),nm,icon:mctx.icon,val,base:val,rate,crypto,qty,lastInt:rate>0?iso(firstOfMonth(new Date())):null,hist:[]};S.investments.push(inv);}closeModal();commit();}
+    inv.val=val;inv.rate=rate;inv.crypto=crypto;inv.stock=stock;inv.qty=qty;inv.ccy=ccy;
+    if(rate>0&&!inv.lastInt)inv.lastInt=iso(firstOfMonth(new Date()));}
+  else{const inv={id:uid(),nm,icon:mctx.icon,val,base:val,rate,crypto,stock,qty,ccy,lastInt:rate>0?iso(firstOfMonth(new Date())):null,hist:[]};S.investments.push(inv);}closeModal();commit();}
 /* Zhodnocení z kurzu se sbírá do JEDNOHO záznamu za den. Kdyby se
    přidával nový při každém načtení appky, historie by za měsíc měla
-   stovky řádků a graf jmění by z nich stejně bral jen denní bod. */
-function applyCryptoValue(inv,val){
+   stovky řádků a graf jmění by z nich stejně bral jen denní bod.
+   Platí pro krypto i akcie — obojí se přeceňuje trhem, ne tvým vkladem. */
+function applyMarketValue(inv,val){
   const diff=val-(inv.val||0);inv.pxAt=Date.now();
   if(!diff)return 0;
   inv.val=val;inv.hist=inv.hist||[];
@@ -1865,29 +1964,46 @@ function applyCryptoValue(inv,val){
   else inv.hist.push({id:uid(),d:today,a:diff,n:'Kurz',k:'gain',auto:true});
   return diff;
 }
-async function invRefreshPrice(id){const inv=S.investments.find(x=>x.id===id);if(!inv||!inv.crypto)return;
+async function invRefreshPrice(id){const inv=S.investments.find(x=>x.id===id);
+  if(!inv||!(inv.crypto||inv.stock))return;
   toast('Aktualizuji kurz…');
-  try{const px=await fetchCryptoPrice(inv.crypto);
-    const diff=applyCryptoValue(inv,Math.round(px*(inv.qty||0)));
-    toast(`${inv.nm}: kurz ${fm(px)} · ${diff>=0?'+':''}${fm(diff)}`);commit();
-  }catch(e){toast('Kurz se nepodařilo načíst.');}}
+  try{
+    if(inv.crypto){const px=await fetchCryptoPrice(inv.crypto);
+      const diff=applyMarketValue(inv,Math.round(px*(inv.qty||0)));
+      toast(`${inv.nm}: kurz ${fm(px)} · ${diff>=0?'+':''}${fm(diff)}`);}
+    else{const q=await stockPriceCzk(inv.stock);inv.ccy=q.ccy;
+      const diff=applyMarketValue(inv,Math.round(q.czk*(inv.qty||0)));
+      toast(`${inv.nm}: ${fmCcy(q.px,q.ccy)} · ${diff>=0?'+':''}${fm(diff)}`);}
+    commit();
+  }catch(e){toast('Kurz se nepodařilo načíst: '+(e.message||''));}}
 
-/* Automatické stažení kurzu — jeden dotaz na všechny mince najednou.
-   Bez připojení se prostě nic nestane a appka jede dál offline. */
+/* Automatické stažení kurzů — jeden dotaz na všechny mince a jeden na
+   všechny papíry, ne dotaz na položku. Bez připojení (nebo bez klíče
+   k akciím) se prostě nic nestane a appka jede dál offline. */
 let lastPxFetch=0;
-async function autoCryptoRefresh(force){
-  const list=S.investments.filter(i=>i.crypto&&i.qty>0);if(!list.length)return;
+async function autoPriceRefresh(force){
+  const coins=S.investments.filter(i=>i.crypto&&i.qty>0);
+  const stocks=S.investments.filter(i=>i.stock&&i.qty>0);
+  if(!coins.length&&!stocks.length)return;
   if(!force&&Date.now()-lastPxFetch<10*60*1000)return;   // víc než jednou za 10 min nemá smysl
   lastPxFetch=Date.now();
-  const ids=[...new Set(list.map(i=>i.crypto))].join(',');
-  try{
+  let zmena=false;
+  if(coins.length)try{
+    const ids=[...new Set(coins.map(i=>i.crypto))].join(',');
     const r=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids)}&vs_currencies=czk`);
-    if(!r.ok)return;
-    const j=await r.json();let zmena=false;
-    list.forEach(i=>{const px=j[i.crypto]&&j[i.crypto].czk;
-      if(px&&applyCryptoValue(i,Math.round(px*i.qty)))zmena=true;});
-    if(zmena)commit();else R();
+    if(r.ok){const j=await r.json();
+      coins.forEach(i=>{const px=j[i.crypto]&&j[i.crypto].czk;
+        if(px&&applyMarketValue(i,Math.round(px*i.qty)))zmena=true;});}
   }catch(e){}
+  if(stocks.length&&stockKey())try{
+    const q=await fetchStockQuotes([...new Set(stocks.map(i=>i.stock))]);
+    const fx={};
+    for(const c of [...new Set(Object.values(q).map(x=>x.ccy))]){
+      try{fx[c]=await fetchFx(c);}catch(e){}}
+    stocks.forEach(i=>{const x=q[i.stock],f=x&&fx[x.ccy];
+      if(x&&f){i.ccy=x.ccy;if(applyMarketValue(i,Math.round(x.px*f*i.qty)))zmena=true;}});
+  }catch(e){}
+  if(zmena)commit();else R();
 }
 /* přecenění: hodnotu určuje trh, rozdíl je zhodnocení (ne tvůj vklad) */
 /* ---------- investiční kalkulačka ----------
@@ -2079,6 +2195,9 @@ function delFee(gEnc,i){const g=decodeURIComponent(gEnc);const gm=S.debtGroups[g
 
 /* customization actions */
 function hideIntro(){S.ui.hideIntro=true;toast('Skryto — vrátíš v Nastavení');commit();}
+function saveStockKey(){const v=(document.getElementById('st_key').value||'').trim();
+  S.stockKey=v;persist();toast(v?'Klíč uložen':'Klíč smazán');R();
+  if(v)autoPriceRefresh(true);}
 function toggleTips(){if(S.ui.hideTips)delete S.ui.hideTips;else S.ui.hideTips=true;
   toast(S.ui.hideTips?'Vysvětlivky skryté':'Vysvětlivky zpátky');commit();}
 function showIntro(){S.ui.hideIntro=false;go('prehled');}
@@ -2134,8 +2253,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
   }
   // kurz krypta si appka stáhne sama — až po synchronizaci, ať nepřepisuje
   // hodnotu, kterou za chvíli přetáhne novější stav z cloudu
-  autoCryptoRefresh(true);
-  window.addEventListener('focus',()=>autoCryptoRefresh());
+  autoPriceRefresh(true);
+  window.addEventListener('focus',()=>autoPriceRefresh());
 })();
 </script>
 </body>

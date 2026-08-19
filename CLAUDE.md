@@ -172,6 +172,20 @@ S.tax            — daň z úroků (výchozí 15 %)
   připojení `invCryptoPreview`/`invRefreshPrice` jen ohlásí chybu a
   neprovedou žádnou změnu dat.
 
+- **Akcie a ETF — auto kurz z burzy.** Stejný princip jako krypto, jen
+  jiný zdroj: `inv.stock` (symbol, např. `AAPL` nebo `VWCE:XETR`),
+  `inv.qty` (kusy) a `inv.ccy` (měna burzy, doplní se ze zdroje).
+  Data jdou z Twelve Data — na rozdíl od CoinGecko **chce klíč**, zdarma
+  a bez karty, 800 dotazů denně. Klíč žije v `S.stockKey`, tedy
+  **schválně v `S`** (na rozdíl od sync kódu): je to jen čtení
+  burzovních dat, ne přístup k penězům, a takhle se propíše i do mobilu.
+  Ceny chodí v měně burzy, přepočet dělá `fetchFx()` přes
+  frankfurter.dev (ECB, taky bez klíče, hodinová cache). CZK papíry se
+  nepřepočítávají vůbec. `fmCcy(n,ccy)` je formát bez „Kč" — `fmEx` by
+  k cizí měně lepilo koruny a vznikalo „300 Kč USD" (nahlášeno a
+  opraveno). **Kurz se stahuje jen při změně symbolu**, ne při přepsání
+  počtu kusů — každý dotaz jde z denního limitu.
+
 - **Dluhy — skupiny/projekty (Byt, Auto...).** `S.debtGroups[jméno]` může
   existovat BEZ jediného dluhu (založíš projekt dřív, dluhy přidáváš postupně).
   `price` = čistá kupní cena. `fees[]` a `contrib[]` (vlastní vklady) jsou
@@ -242,10 +256,10 @@ S.tax            — daň z úroků (výchozí 15 %)
   u každé tlačítko Zaplatit. **Po jedné, nikdy hromadně** — viz pravidlo
   o bulk operacích výš. Zaplaceno = má v cyklu aspoň jeden zápis.
 
-- **Kurz krypta se stahuje sám** (`autoCryptoRefresh`) při startu appky a
+- **Kurz krypta se stahuje sám** (`autoPriceRefresh`) při startu appky a
   při návratu do okna, max jednou za 10 minut, jedním dotazem na všechny
   mince. Bez připojení se prostě nic nestane. **Zhodnocení se sbírá do
-  jednoho `hist` záznamu za den** (`applyCryptoValue`, příznak `auto`) —
+  jednoho `hist` záznamu za den** (`applyMarketValue`, příznak `auto`) —
   jinak by historie za měsíc měla stovky řádků a graf jmění z nich
   stejně bere jen denní bod. Když se kurz vrátí zpátky, dnešní záznam se
   vynuluje a zmizí. `inv.pxAt` drží čas posledního stažení, kvůli
