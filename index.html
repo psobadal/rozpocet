@@ -345,7 +345,6 @@ const todayISO=()=>iso(new Date());
 const fd=s=>{if(!s)return'—';const p=s.split('-');return +p[2]+'. '+ +p[1]+'.';};
 const fdFull=s=>{if(!s)return'—';const p=s.split('-');return +p[2]+'. '+ +p[1]+'. '+p[0];};
 const esc=s=>(s==null?'':''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 const num=v=>parseFloat((''+(v==null?'':v)).replace(',','.'))||0;
 function shade(hex,p){let n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;const f=t=>Math.round(p<0?t*(1+p/100):t+(255-t)*p/100);r=Math.max(0,Math.min(255,f(r)));g=Math.max(0,Math.min(255,f(g)));b=Math.max(0,Math.min(255,f(b)));return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);}
 function applyAccent(hex){const rs=document.documentElement.style;rs.setProperty('--accent',hex);rs.setProperty('--accent-d',shade(hex,-14));rs.setProperty('--accent-bg',shade(hex,90));rs.setProperty('--accent-bg2',shade(hex,72));applyFavicon(hex);}
@@ -1726,11 +1725,8 @@ function saveLog(){
   const r=logToDate(c,it,{id:le.id,d,a,n});
   openItem=mctx.iid;closeModal();toast('Upraveno'+(r.jinam?` · přesunuto do „${r.period.nm}"`:''));commit();
 }
-function setItemPlan(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(it){it.pl=num(v);openItem=iid;commit();}}
 function addItem(cid){const c=P().cats.find(x=>x.id===cid);if(!c)return;const nm=document.getElementById('nit-'+cid).value.trim();if(!nm){toast('Zadej název');return;}c.it.push({id:uid(),nm,pl:num(document.getElementById('nitp-'+cid).value),log:[]});commit();}
 function delItem(cid,iid){if(!confirm('Smazat položku?'))return;const c=P().cats.find(x=>x.id===cid);const it=c.it.find(x=>x.id===iid);if(it)(it.log||[]).forEach(le=>removeLinked(le.id));c.it=c.it.filter(x=>x.id!==iid);openItem=null;closeModal();commit();}
-function setItemLink(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;it.link=v||'';openItem=iid;toast(v?('Propojeno — '+linkLabel(it)):'Propojení zrušeno');commit();}
-function setItemKind(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;if(v)it.kind=v;else delete it.kind;openItem=iid;commit();}
 /* ---------- nastavení položky ----------
    Nastavování je schválně pryč z rozbalené položky. Tam se zapisují
    výdaje — a když vedle pole na částku svítí název, plán, propojení
@@ -1770,20 +1766,26 @@ function saveItemCfg(){
   const nm=document.getElementById('m_nm').value.trim();
   if(!nm){toast('Název nesmí být prázdný');return;}
   const link=document.getElementById('m_link').value,kind=document.getElementById('m_kind').value;
+  const linkPred=it.link||'';
   it.nm=nm;it.pl=num(document.getElementById('m_pl').value);
   if(document.getElementById('m_fix').checked)it.fixAmt=true;else delete it.fixAmt;
   it.link=link||'';
   if(kind)it.kind=kind;else delete it.kind;
-  openItem=mctx.iid;closeModal();toast('Uloženo');commit();
+  /* Změna propojení musí přerovnat i to, co je zapsané. Bez tohohle
+     zůstaly staré splátky viset u původního dluhu a k novému se
+     nepřidaly — dluh pak ukazoval špatný zůstatek napořád. */
+  let presunuto=0;
+  if((it.link||'')!==linkPred){
+    (it.log||[]).forEach(le=>{
+      removeLinked(le.id);
+      if(it.link)pushLinked(it,le,(periodForDate(le.d)||{}).id||S.curId);
+      presunuto++;});
+  }
+  openItem=mctx.iid;closeModal();
+  toast(presunuto?`Uloženo · ${presunuto} ${presunuto===1?'zápis přesunut':presunuto<5?'zápisy přesunuty':'zápisů přesunuto'}`:'Uloženo');
+  commit();
 }
 function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
-/* Pevná částka u položky: jen předvyplnění v rychlém zadání z plánu,
-   nic se nestrhává samo. Bulk „zaplatit všechny pravidelné" tu schválně
-   není. Vlastní číslo to schválně nemá — u pevné platby je plán ta
-   částka, dvě políčka vedle sebe se stejným číslem nedávají smysl. */
-function setItemFix(cid,iid,on){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;
-  if(on)it.fixAmt=true;else delete it.fixAmt;openItem=iid;commit();}
-function renameItem(cid,iid,v){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);const nm=(v||'').trim();if(!it)return;if(!nm){toast('Název nesmí být prázdný');R();return;}it.nm=nm;openItem=iid;commit();}
 
 /* modal infra */
 function openModal(html){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov';ov.id='ov';ov.innerHTML=`<div class="modal">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);}

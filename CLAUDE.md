@@ -247,6 +247,15 @@ S.tax            — daň z úroků (výchozí 15 %)
   obálky a investice podle `pid` — `pushLinked` dostává `pid` cílového
   období.
 
+- **Změna propojení musí přerovnat i to, co je zapsané** (`saveItemCfg`).
+  Když se u položky přepne `link` z jednoho dluhu na druhý, projdou se
+  všechny její zápisy: `removeLinked(le.id)` je sundá ze starého cíle a
+  `pushLinked` je nasype do nového. Bez toho splátky zůstaly viset u
+  původního dluhu a k novému se nepřidaly — oba dluhy pak ukazovaly
+  špatný zůstatek napořád (nalezeno a opraveno 19. 8. 2026 při kontrole
+  kódu). Platí i pro zapnutí propojení u položky, co už zápisy má, a pro
+  jeho zrušení. Uložení bez změny propojení nesmí nic duplikovat.
+
 - **Zápis jde opravit, ne jen smazat** (`logModal`/`saveLog`). U propojené
   položky se starý záznam odebere (`removeLinked`) a založí nový, jinak by
   v dluhu zůstala stará částka. Změna data zápis rovnou přesune do
