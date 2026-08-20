@@ -2059,41 +2059,33 @@ function applyMarketValue(inv,val){
 function pxOverviewModal(){
   const akcie=S.investments.filter(i=>i.stock),krypto=S.investments.filter(i=>i.crypto);
   if(!akcie.length&&!krypto.length){toast('Nemáš žádnou položku s automatickým kurzem');return;}
+  /* Původně to byla tabulka o šesti sloupcích, jenže na mobilu z ní byl
+     vidět jen levý kus a Hodnota — to jediné číslo, kvůli kterému to
+     člověk otevírá — zůstala za okrajem. Řádek s výpočtem v podtitulku
+     se zalomí jako text a vejde se na jakoukoliv šířku. */
   const radek=i=>{
-    const kcKs=i.qty>0?(i.val||0)/i.qty:0;
-    const cizi=i.stock&&i.ccy&&i.ccy!=='CZK';
-    return `<tr style="border-top:1px solid var(--line)">
-      <td style="padding:8px 10px 8px 0;white-space:nowrap">
-        <div style="font-weight:600">${esc(i.nm)}</div>
-        <div class="mini">${esc(i.stock||i.crypto||'')}${i.pxBad?` <span style="color:var(--gold)">· nenačten</span>`:''}</div></td>
-      <td class="num" style="text-align:right;padding:8px 6px;white-space:nowrap">${(''+(i.qty||0)).replace('.',',')}</td>
-      <td class="num" style="text-align:right;padding:8px 6px;white-space:nowrap">${i.px?fmCcy(i.px,i.stock?i.ccy:'CZK'):'—'}</td>
-      <td class="num mini" style="text-align:right;padding:8px 6px;white-space:nowrap">${cizi&&i.fx?(''+Math.round(i.fx*1000)/1000).replace('.',','):'—'}</td>
-      <td class="num" style="text-align:right;padding:8px 6px;white-space:nowrap">${kcKs?fmEx(Math.round(kcKs*100)/100):'—'}</td>
-      <td class="num" style="text-align:right;padding:8px 0 8px 6px;font-weight:600;white-space:nowrap">${fm(i.val||0)}</td></tr>`;};
-  const nadpis=t=>`<tr><td colspan="6" class="mini" style="padding:14px 0 2px;font-weight:600;color:var(--accent-d);text-transform:uppercase;letter-spacing:.5px">${t}</td></tr>`;
-  const soucet=(t,v)=>`<tr style="border-top:1.5px solid var(--line2)"><td colspan="5" style="padding:9px 6px 9px 0;font-weight:600">${t}</td>
-    <td class="num" style="text-align:right;padding:9px 0 9px 6px;font-weight:600;white-space:nowrap">${fm(v)}</td></tr>`;
+    const q=(''+(i.qty||0)).replace('.',',');
+    const kurz=i.px?fmCcy(i.px,i.stock?i.ccy:'CZK'):'kurz nenačten';
+    const fx=(i.stock&&i.ccy&&i.ccy!=='CZK'&&i.fx)?` × ${(''+Math.round(i.fx*1000)/1000).replace('.',',')}`:'';
+    return `<div class="row" style="cursor:default;align-items:flex-start">
+      <div class="m"><div class="t1">${esc(i.nm)}${i.pxBad?` <span class="mini" style="color:var(--gold)">· kurz nenačten</span>`:''}</div>
+        <div class="t2" style="white-space:normal;overflow:visible;text-overflow:clip"><b>${esc(i.stock||i.crypto||'')}</b> · ${q} ks × ${kurz}${fx}</div></div>
+      <div class="num" style="font-weight:600;white-space:nowrap">${fm(i.val||0)}</div></div>`;};
   const sumA=akcie.reduce((s2,i)=>s2+(i.val||0),0),sumK=krypto.reduce((s2,i)=>s2+(i.val||0),0);
   const kdy=[...akcie,...krypto].map(i=>i.pxAt).filter(Boolean).sort().pop();
-  const hlava=`<tr class="mini" style="text-align:right">
-    <th style="text-align:left;padding-bottom:4px">Papír</th><th style="padding-bottom:4px">Kusů</th>
-    <th style="padding-bottom:4px">Kurz</th><th style="padding-bottom:4px">Měna→Kč</th>
-    <th style="padding-bottom:4px">Kč/ks</th><th style="padding-bottom:4px">Hodnota</th></tr>`;
+  const sekce=(t,list,sum)=>list.length?`<div class="ch" style="margin:16px 0 4px"><span class="ct">${t}</span>
+      <span class="num" style="font-weight:600">${fm(sum)}</span></div>${list.map(radek).join('')}`:'';
   openModal(`<h3>Kurzy k porovnání s brokerem</h3>
     ${akcie.length?`<div style="background:var(--accent-bg);border-radius:var(--r);padding:14px;text-align:center;margin-bottom:6px">
       <div class="mini">Akcie a ETF celkem</div>
       <div class="num" style="font-size:26px;color:var(--accent-d)">${fm(sumA)}</div>
       ${krypto.length?`<div class="mini" style="margin-top:4px">Krypto (${fm(sumK)}) se schválně nepočítá — v XTB ho nemáš.</div>`:''}</div>`:''}
-    <div class="md">Rozpad po papírech, ať poznáš, kde se to případně rozešlo: kusy × kurz × měna.</div>
-    <div style="overflow-x:auto;margin-top:6px">
-    <table style="width:100%;min-width:480px;border-collapse:collapse;font-size:13px">
-      ${hlava}
-      ${akcie.length?nadpis('Akcie a ETF')+akcie.map(radek).join('')+soucet('Celkem akcie a ETF',sumA):''}
-      ${krypto.length?nadpis('Krypto')+krypto.map(radek).join('')+soucet('Celkem krypto',sumK):''}
-      ${akcie.length&&krypto.length?soucet('Vše dohromady',sumA+sumK):''}
-    </table></div>
-    <p class="mini" style="margin-top:10px">${kdy?`Kurzy stažené ${agoTxt(kdy)}.`:''}<span style="opacity:.8"> Tabulku jde na úzké obrazovce posunout do stran.</span></p>
+    <div class="md">U každého papíru je celý výpočet: kusů × kurz × přepočet měny.</div>
+    ${sekce('Akcie a ETF',akcie,sumA)}
+    ${sekce('Krypto',krypto,sumK)}
+    ${akcie.length&&krypto.length?`<div class="totals" style="margin-top:10px"><span style="color:var(--text3)">Vše dohromady</span>
+      <span class="num">${fm(sumA+sumK)}</span></div>`:''}
+    <p class="mini" style="margin-top:10px">${kdy?`Kurzy stažené ${agoTxt(kdy)}.`:''}</p>
     <div class="banner tip" style="margin-top:12px"><span class="bi">${ic('bulb',16)}</span><div><b>Drobný rozdíl proti brokerovi je normální.</b> Appka přepočítává denním kurzem ECB, broker si účtuje vlastní kurz s marží — to samo dělá zhruba procento. K tomu se liší okamžik, kdy byla cena stažená. <b>Rozdíl do pár procent neřeš.</b> Když je hodnota o desítky procent jinde nebo skoro dvojnásobná, je špatně symbol — nejspíš jiná třída akcie nebo jiná burza.</div></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zavřít</button><button class="btn fill" onclick="pxRefreshAll()">${ic('repeat',15)} Aktualizovat vše</button></div>`);
 }

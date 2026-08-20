@@ -226,7 +226,15 @@ S.tax            — daň z úroků (výchozí 15 %)
 - **Přehled kurzů k porovnání s brokerem** (`pxOverviewModal`), tlačítko
   „Kurzy" na Investicích. Ukazuje **celý řetěz výpočtu** — kusy × kurz ×
   měna = hodnota — protože když číslo nesedí s brokerem, je potřeba
-  vidět, ve kterém kroku se to rozešlo, ne jen výsledek. Kvůli tomu se
+  vidět, ve kterém kroku se to rozešlo, ne jen výsledek.
+  **Není to tabulka, a to schválně:** první verze měla šest sloupců
+  a na mobilu z ní byla vidět jen levá půlka — Hodnota, tedy jediné
+  číslo, kvůli kterému to člověk otevírá, zůstala za okrajem (nahlásil
+  uživatel). Teď je to seznam řádků, kde je výpočet v podtitulku a
+  zalomí se jako text. Podtitul má `white-space:normal`, protože `.t2`
+  má v appce zákaz zalomení a ořezávalo to výpočet třemi tečkami.
+  Akcie a krypto mají **oddělené součty** — krypto v brokerovi není,
+  takže společný součet by proti němu nikdy neseděl. Kvůli tomu se
   při každém stažení ukládá `inv.px` (kurz v měně burzy) a `inv.fx`
   (přepočet na Kč); bez nich by šlo dopočítat jen Kč/ks. Drobný rozdíl
   proti brokerovi je normální (ECB kurz vs. kurz brokera s marží, jiný
