@@ -573,6 +573,19 @@ async function fetchStockQuotes(symbols){
    zkusí se tentýž základ na obvyklých burzách — jedním dotazem — a
    nabídne se, co existuje. Běží to jen při neúspěchu. */
 const BURZY=['','.PR','.AS','.DE','.L','.PA','.MI','.SW','.VI','.F','.ST','.BR'];
+/* Brokeři značí burzu podle ZEMĚ (XTB: IMAE.NL), burzovní data podle
+   BURZY (IMAE.AS). Uživatel opíše symbol z brokera a nefunguje mu —
+   tak ho přeložíme sami, místo abychom po něm chtěli, ať si to najde. */
+const BURZA_MAP={NL:'AS',UK:'L',GB:'L',FR:'PA',IT:'MI',ES:'MC',CH:'SW',AT:'VI',
+  BE:'BR',PT:'LS',CZ:'PR',SE:'ST',DK:'CO',NO:'OL',FI:'HE',PL:'WA',IE:'IR',US:''};
+function mapSymbol(sym){
+  const m=/^(.+)\.([A-Za-z]{2})$/.exec(sym||'');
+  if(!m)return null;
+  const cil=BURZA_MAP[m[2].toUpperCase()];
+  if(cil===undefined)return null;
+  const out=cil?m[1]+'.'+cil:m[1];
+  return out===sym?null:out;
+}
 async function suggestSymbols(sym){
   const base=(sym||'').split('.')[0];
   if(!base)return [];
@@ -1956,28 +1969,39 @@ async function invStockPreview(refetch){
   const qty=num(qtyEl.value);
   if(!sym){el.textContent='Zadej symbol a počet kusů.';_stockPx=null;return;}
   if(!syncOn()){el.textContent='Bez zapnuté synchronizace kurz nestáhnu.';_stockPx=null;return;}
-  if(!refetch&&_stockPx!=null){
-    el.innerHTML=`Kurz <b>${fmCcy(_stockPx.px,_stockCcy)}</b> · v korunách <b>${fm(Math.round(_stockPx.czk))}</b> / ks`+(qty?` · hodnota ≈ <b>${fm(Math.round(_stockPx.czk*qty))}</b>`:'');
-    return;}
+  if(!refetch&&_stockPx!=null){el.innerHTML=stockPxHtml(_stockPx,qty);return;}
   // starou cenu zahoď HNED — jinak by ji Vytvořit stihlo spárovat s novým
   // symbolem dřív, než dorazí odpověď, a uložilo cizí hodnotu
   _stockPx=null;_stockCcy='';
   el.textContent='Načítám kurz…';
+  const porad=()=>(symEl.value||'').trim().toUpperCase()===sym;   // nepřepisuj nález k jinému symbolu
   try{const q=await stockPriceCzk(sym);_stockPx=q;_stockCcy=q.ccy;
-    el.innerHTML=`${q.nm?esc(q.nm)+' · ':''}kurz <b>${fmCcy(q.px,q.ccy)}</b> · v korunách <b>${fm(Math.round(q.czk))}</b> / ks`+(qty?` · hodnota ≈ <b>${fm(Math.round(q.czk*qty))}</b>`:'');
+    el.innerHTML=stockPxHtml(q,qty);
   }catch(e){
     _stockPx=null;
-    el.textContent='Nepovedlo se: '+(e.message||'zkus to znovu');
-    if(/nenalezen/.test(e.message||'')){
-      el.textContent='Symbol '+sym+' burza nezná, zkouším jiné…';
-      const tipy=await suggestSymbols(sym);
-      // mezitím mohl uživatel psát dál — nepřepisuj nález k jinému symbolu
-      if((symEl.value||'').trim().toUpperCase()!==sym)return;
-      el.innerHTML=tipy.length
-        ? `Symbol <b>${esc(sym)}</b> burza nezná. Nemyslel jsi ${tipy.map(t=>`<a onclick="useSym('${esc(t)}')"><b>${esc(t)}</b></a>`).join(' nebo ')}?`
-        : `Symbol <b>${esc(sym)}</b> burza nezná a nic podobného jsem nenašel. Zkontroluj ho u brokera — evropské papíry mají za tečkou burzu (.AS, .DE, .L, .PR).`;
+    if(!/nenalezen/.test(e.message||'')){el.textContent='Nepovedlo se: '+(e.message||'zkus to znovu');return;}
+    // 1) překlad značení brokera — nejčastější případ, tak ho zkus první
+    const alt=mapSymbol(sym);
+    if(alt){
+      el.textContent=`Symbol ${sym} burza nezná, zkouším ${alt}…`;
+      try{const q=await stockPriceCzk(alt);
+        if(!porad())return;
+        symEl.value=alt;_stockPx=q;_stockCcy=q.ccy;
+        el.innerHTML=stockPxHtml(q,qty)+`<br><span style="color:var(--teal)">${ic('check',12)} Broker píše <b>${esc(sym)}</b>, burza to zná jako <b>${esc(alt)}</b> — přepsal jsem to za tebe.</span>`;
+        return;
+      }catch(e2){}
     }
+    // 2) když ani to, zkus tentýž základ na obvyklých burzách
+    if(!porad())return;
+    el.textContent=`Symbol ${sym} burza nezná, hledám podobné…`;
+    const tipy=await suggestSymbols(sym);
+    if(!porad())return;
+    el.innerHTML=tipy.length
+      ? `Symbol <b>${esc(sym)}</b> burza nezná. Nemyslel jsi ${tipy.map(t=>`<a onclick="useSym('${esc(t)}')"><b>${esc(t)}</b></a>`).join(' nebo ')}?`
+      : `Symbol <b>${esc(sym)}</b> burza nezná a nic podobného jsem nenašel. Zkontroluj ho u brokera — evropské papíry mají za tečkou burzu (.AS, .DE, .L, .PR).`;
   }}
+const stockPxHtml=(q,qty)=>`${q.nm?esc(q.nm)+' · ':''}kurz <b>${fmCcy(q.px,q.ccy)}</b> · v korunách <b>${fm(Math.round(q.czk))}</b> / ks`
+  +(qty?` · hodnota ≈ <b>${fm(Math.round(q.czk*qty))}</b>`:'');
 function saveInv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}
   const typ=document.getElementById('m_ctype').value;
   let val,rate=0,crypto=null,stock=null,qty=null,ccy=null;

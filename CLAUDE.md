@@ -204,11 +204,22 @@ S.tax            — daň z úroků (výchozí 15 %)
   obálky (přes Rychlé zadání) se schválně NEmažou — nejsou odrazem
   položky, ty peníze v obálce fakt jsou.
 
-- **Neznámý symbol napoví burzu** (`suggestSymbols`/`useSym`). Přípony se
-  pamatují blbě — Amsterdam je `.AS`, ne `.NL`, a uživatel na to reálně
-  narazil. Při „symbol nenalezen" se jedním dotazem zkusí tentýž základ
-  na obvyklých burzách (`BURZY`) a nabídnou se ty, co existují, rovnou
-  jako odkaz. Běží to jen při neúspěchu, takže to nic nestojí navíc.
+- **Symbol z brokera se přeloží sám** (`mapSymbol`/`BURZA_MAP`). Brokeři
+  značí burzu podle **země** (XTB: `IMAE.NL`), burzovní data podle
+  **burzy** (`IMAE.AS`). Uživatel opsal symbol z XTB, appka řekla
+  „nenalezen" a vypadalo to jako chyba appky — přitom oba měli pravdu,
+  jen každý mluvil jinou řečí. Při neúspěchu se proto nejdřív zkusí
+  překlad (NL→AS, UK→L, FR→PA, CZ→PR, US→bez přípony…) a když projde,
+  symbol se přepíše sám a **napíše se proč**. Teprve pak přijde na řadu
+  `suggestSymbols`, který zkusí tentýž základ na obvyklých burzách
+  (`BURZY`) a nabídne existující jako odkaz. Obojí běží jen při
+  neúspěchu, takže to nic nestojí navíc.
+
+- **Londýn kotuje v pencích, ne librách.** Yahoo vrací `GBp` (a `ZAc`,
+  `ILA`), což by po `toUpperCase()` splynulo s `GBP` a hodnota by vyšla
+  **stokrát vyšší**. Worker to proto dělí stem a měnu normalizuje ještě
+  před odesláním do appky (nalezeno 20. 8. 2026 při ověřování převodní
+  tabulky, než na to stihl narazit uživatel).
 
 - **Dluhy — skupiny/projekty (Byt, Auto...).** `S.debtGroups[jméno]` může
   existovat BEZ jediného dluhu (založíš projekt dřív, dluhy přidáváš postupně).

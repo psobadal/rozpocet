@@ -69,9 +69,16 @@ export default {
             if (!r.ok) return;
             const m = (((await r.json()).chart || {}).result || [{}])[0] || {};
             const meta = m.meta || {};
-            const px = meta.regularMarketPrice;
+            let px = meta.regularMarketPrice;
+            let ccy = meta.currency || 'USD';
+            /* Londýn kotuje v pencích (GBp/GBX), ne v librách. Bez tohohle
+               by se 118 pencí bralo jako 118 liber a hodnota by vyšla
+               stokrát vyšší. Totéž ZAc v Johannesburgu a ILA v Tel Avivu. */
+            const drobne = { GBp: ['GBP', 100], GBX: ['GBP', 100],
+                             ZAc: ['ZAR', 100], ILA: ['ILS', 100] };
+            if (drobne[ccy]) { px = px / drobne[ccy][1]; ccy = drobne[ccy][0]; }
             if (typeof px === 'number' && px > 0)
-              out[sym] = { px, ccy: (meta.currency || 'USD').toUpperCase(),
+              out[sym] = { px, ccy: ccy.toUpperCase(),
                            nm: meta.longName || meta.shortName || '',
                            ex: meta.fullExchangeName || meta.exchangeName || '' };
           } catch (e) { /* jeden nedostupný papír nesmí shodit ostatní */ }
