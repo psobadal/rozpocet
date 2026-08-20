@@ -195,6 +195,21 @@ S.tax            — daň z úroků (výchozí 15 %)
   opraveno). **Kurz se stahuje jen při změně symbolu**, ne při přepsání
   počtu kusů.
 
+- **Mazání uklízí propojené zápisy.** `delItem` to dělal odjakživa,
+  `delCat` a `delPeriod` na to zapomínaly — smazané období nechávalo
+  splátky viset v dluhu, ten pak napořád tvrdil, že je splacený o víc,
+  a záznam nešlo dohledat ani smazat (nalezeno a opraveno 20. 8. 2026).
+  Společné pomocníky jsou `logIdsOf`/`countLinked`/`linkedTxt`; dialog
+  navíc předem řekne, kolik propojených záznamů zmizí. Přímé vklady do
+  obálky (přes Rychlé zadání) se schválně NEmažou — nejsou odrazem
+  položky, ty peníze v obálce fakt jsou.
+
+- **Neznámý symbol napoví burzu** (`suggestSymbols`/`useSym`). Přípony se
+  pamatují blbě — Amsterdam je `.AS`, ne `.NL`, a uživatel na to reálně
+  narazil. Při „symbol nenalezen" se jedním dotazem zkusí tentýž základ
+  na obvyklých burzách (`BURZY`) a nabídnou se ty, co existují, rovnou
+  jako odkaz. Běží to jen při neúspěchu, takže to nic nestojí navíc.
+
 - **Dluhy — skupiny/projekty (Byt, Auto...).** `S.debtGroups[jméno]` může
   existovat BEZ jediného dluhu (založíš projekt dřív, dluhy přidáváš postupně).
   `price` = čistá kupní cena. `fees[]` a `contrib[]` (vlastní vklady) jsou

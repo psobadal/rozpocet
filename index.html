@@ -568,6 +568,19 @@ async function fetchStockQuotes(symbols){
   }
   return out;
 }
+/* Přípony burz se pamatují blbě (Amsterdam je .AS, ne .NL) a samotné
+   „symbol nenalezen" člověka nikam neposune. Když se papír nenajde,
+   zkusí se tentýž základ na obvyklých burzách — jedním dotazem — a
+   nabídne se, co existuje. Běží to jen při neúspěchu. */
+const BURZY=['','.PR','.AS','.DE','.L','.PA','.MI','.SW','.VI','.F','.ST','.BR'];
+async function suggestSymbols(sym){
+  const base=(sym||'').split('.')[0];
+  if(!base)return [];
+  const kand=BURZY.map(b=>base+b).filter(x=>x!==sym);
+  try{return Object.keys(await fetchStockQuotes(kand));}catch(e){return [];}
+}
+function useSym(s){const el=document.getElementById('m_sym');if(!el)return;
+  el.value=s;invStockPreview(true);}
 // cena jednoho papíru přepočtená do korun
 async function stockPriceCzk(sym){
   const q=(await fetchStockQuotes([sym]))[sym];
@@ -639,6 +652,19 @@ function logToDate(srcCat,srcItem,le){
   ti.log.push(le);pushLinked(ti,le,tp.id);
   return {period:tp,cat:tc,item:ti,jinam:tp.id!==cur.id};
 }
+/* Propojený zápis je jen odraz položky — když zmizí položka, kategorie
+   nebo celé období, musí zmizet i splátka nebo vklad, který z něj vznikl.
+   Jinak dluh napořád tvrdí, že je splacený o víc, a ten přebytečný záznam
+   nejde ani dohledat, ani smazat: položka, na kterou je navázaný, už
+   neexistuje. delItem to dělal odjakživa, delCat a delPeriod na to
+   zapomínaly (nalezeno a opraveno 20. 8. 2026). */
+const logIdsOf=cats=>{const ids=[];(cats||[]).forEach(c=>(c.it||[]).forEach(it=>(it.log||[]).forEach(le=>ids.push(le.id))));return ids;};
+function countLinked(ids){const set=new Set(ids);let n=0;
+  S.debts.forEach(d=>(d.pay||[]).forEach(x=>{if(set.has(x.src))n++;}));
+  S.envelopes.forEach(e=>(e.hist||[]).forEach(x=>{if(set.has(x.src))n++;}));
+  S.investments.forEach(v=>(v.hist||[]).forEach(x=>{if(set.has(x.src))n++;}));
+  return n;}
+const linkedTxt=n=>`${n} ${n===1?'propojený záznam':n<5?'propojené záznamy':'propojených záznamů'}`;
 function removeLinked(logId){
   if(!logId)return;
   S.debts.forEach(d=>{d.pay=(d.pay||[]).filter(x=>x.src!==logId);});
@@ -1808,7 +1834,11 @@ function catModal(id){const c=id?P().cats.find(x=>x.id===id):null;mctx={id,icon:
       <div class="mini" style="margin-top:6px">Potřeba = nájem, jídlo, doprava… Přání = zábava, věci navíc… Úspora = splátky, odkládání, investice (peníze, které ti zůstávají).<br>Platí pro všechny položky kategorie — u jednotlivé položky to jde nastavit jinak.</div></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveCat()">${c?'Uložit':'Vytvořit'}</button></div>`);}
 function saveCat(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const p=P();if(mctx.id){const c=p.cats.find(x=>x.id===mctx.id);c.nm=nm;c.icon=mctx.icon;c.kind=mctx.kind;}else p.cats.push({id:uid(),nm,icon:mctx.icon,kind:mctx.kind,it:[]});closeModal();commit();}
-function delCat(id){if(!confirm('Smazat celou kategorii i s položkami?'))return;const p=P();p.cats=p.cats.filter(x=>x.id!==id);detailCat=null;closeModal();commit();}
+function delCat(id){const p=P(),c=p.cats.find(x=>x.id===id);if(!c)return;
+  const ids=logIdsOf([c]),n=countLinked(ids);
+  if(!confirm('Smazat celou kategorii i s položkami?'+(n?`\n\nZruší se i ${linkedTxt(n)} v dluzích, obálkách nebo investicích.`:'')))return;
+  ids.forEach(removeLinked);
+  p.cats=p.cats.filter(x=>x.id!==id);detailCat=null;closeModal();commit();}
 function moveCat(id,dir){const p=P();const i=p.cats.findIndex(x=>x.id===id);const j=i+dir;if(i<0||j<0||j>=p.cats.length)return;const c=p.cats.splice(i,1)[0];p.cats.splice(j,0,c);commit();}
 
 /* měsíční plány kategorií — vše na jedné obrazovce */
@@ -1935,7 +1965,19 @@ async function invStockPreview(refetch){
   el.textContent='Načítám kurz…';
   try{const q=await stockPriceCzk(sym);_stockPx=q;_stockCcy=q.ccy;
     el.innerHTML=`${q.nm?esc(q.nm)+' · ':''}kurz <b>${fmCcy(q.px,q.ccy)}</b> · v korunách <b>${fm(Math.round(q.czk))}</b> / ks`+(qty?` · hodnota ≈ <b>${fm(Math.round(q.czk*qty))}</b>`:'');
-  }catch(e){el.textContent='Nepovedlo se: '+(e.message||'zkus to znovu');_stockPx=null;}}
+  }catch(e){
+    _stockPx=null;
+    el.textContent='Nepovedlo se: '+(e.message||'zkus to znovu');
+    if(/nenalezen/.test(e.message||'')){
+      el.textContent='Symbol '+sym+' burza nezná, zkouším jiné…';
+      const tipy=await suggestSymbols(sym);
+      // mezitím mohl uživatel psát dál — nepřepisuj nález k jinému symbolu
+      if((symEl.value||'').trim().toUpperCase()!==sym)return;
+      el.innerHTML=tipy.length
+        ? `Symbol <b>${esc(sym)}</b> burza nezná. Nemyslel jsi ${tipy.map(t=>`<a onclick="useSym('${esc(t)}')"><b>${esc(t)}</b></a>`).join(' nebo ')}?`
+        : `Symbol <b>${esc(sym)}</b> burza nezná a nic podobného jsem nenašel. Zkontroluj ho u brokera — evropské papíry mají za tečkou burzu (.AS, .DE, .L, .PR).`;
+    }
+  }}
 function saveInv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}
   const typ=document.getElementById('m_ctype').value;
   let val,rate=0,crypto=null,stock=null,qty=null,ccy=null;
@@ -2238,7 +2280,11 @@ function periodEditModal(){const p=P();openModal(`<h3>Upravit období</h3>
     <div class="fr"><div class="fg"><span class="fl">Od výplaty</span><input class="inp" id="m_f" type="date" value="${p.from}"></div><div class="fg"><span class="fl">Příští výplata</span><input class="inp" id="m_t" type="date" value="${p.to}"></div></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="savePeriod()">Uložit</button></div>`);}
 function savePeriod(){const p=P();p.nm=document.getElementById('m_nm').value.trim()||p.nm;p.from=document.getElementById('m_f').value||p.from;p.to=document.getElementById('m_t').value||p.to;closeModal();commit();}
-function delPeriod(){if(S.periods.length<=1){toast('Musí zůstat aspoň jedno období');return;}if(!confirm('Smazat aktuální období?'))return;const i=periodIndex();S.periods.splice(i,1);S.curId=S.periods[Math.max(0,i-1)].id;detailCat=null;commit();}
+function delPeriod(){if(S.periods.length<=1){toast('Musí zůstat aspoň jedno období');return;}
+  const p=P(),ids=logIdsOf(p.cats),n=countLinked(ids);
+  if(!confirm(`Smazat období „${p.nm}"?`+(n?`\n\nZruší se i ${linkedTxt(n)} v dluzích, obálkách nebo investicích.`:'')))return;
+  ids.forEach(removeLinked);
+  const i=periodIndex();S.periods.splice(i,1);S.curId=S.periods[Math.max(0,i-1)].id;detailCat=null;commit();}
 
 /* data */
 function exportData(){S.lastExport=todayISO();saveLS();const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='rozpocet-zaloha-'+todayISO()+'.json';a.click();URL.revokeObjectURL(url);toast('Záloha stažena');R();}
