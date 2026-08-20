@@ -223,6 +223,16 @@ S.tax            — daň z úroků (výchozí 15 %)
   ve Workeru, bez ní by se uložil papír s nulou.
   Všechno běží jen při neúspěchu, takže to nic nestojí navíc.
 
+- **Přehled kurzů k porovnání s brokerem** (`pxOverviewModal`), tlačítko
+  „Kurzy" na Investicích. Ukazuje **celý řetěz výpočtu** — kusy × kurz ×
+  měna = hodnota — protože když číslo nesedí s brokerem, je potřeba
+  vidět, ve kterém kroku se to rozešlo, ne jen výsledek. Kvůli tomu se
+  při každém stažení ukládá `inv.px` (kurz v měně burzy) a `inv.fx`
+  (přepočet na Kč); bez nich by šlo dopočítat jen Kč/ks. Drobný rozdíl
+  proti brokerovi je normální (ECB kurz vs. kurz brokera s marží, jiný
+  okamžik stažení) a je to v modalu napsané — dvojnásobek ale znamená
+  špatný symbol, typicky jiná třída akcie.
+
 - **Londýn kotuje v pencích, ne librách.** Yahoo vrací `GBp` (a `ZAc`,
   `ILA`), což by po `toUpperCase()` splynulo s `GBP` a hodnota by vyšla
   **stokrát vyšší**. Worker to proto dělí stem a měnu normalizuje ještě

@@ -1185,7 +1185,7 @@ function vInvestice(p){
     <div class="num" style="font-size:30px;color:var(--plum)">${fm(ti)}</div>
     <div class="mini" style="margin-top:6px">Tento cyklus vloženo: <b style="color:var(--teal)">+${fm(investedInPeriod(p.id))}</b></div></div>`;
   h+=tipBan('percent',`<b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b> — zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
-  h+=`<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:14px"><button class="btn" onclick="invCalcModal()">${ic('percent',15)} Kalkulačka</button><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
+  h+=`<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:14px">${S.investments.some(i=>i.stock||i.crypto)?`<button class="btn" onclick="pxOverviewModal()">${ic('list',15)} Kurzy</button>`:''}<button class="btn" onclick="invCalcModal()">${ic('percent',15)} Kalkulačka</button><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
   if(!S.investments.length)h+=`<div class="card"><div class="empty">Zatím žádné investice.</div></div>`;
   const sorted=S.investments.map((x,i)=>({x,i})).sort((a,b)=>(b.x.val||0)-(a.x.val||0));
   sorted.forEach(({x:inv,i})=>{const pcw=ti>0?Math.round(inv.val/ti*100):0;const mInt=inv.rate>0?Math.round((inv.val||0)*inv.rate/100/12*(1-(S.tax||0)/100)):0;
@@ -2052,6 +2052,48 @@ function applyMarketValue(inv,val){
   else inv.hist.push({id:uid(),d:today,a:diff,n:'Kurz',k:'gain',auto:true});
   return diff;
 }
+/* ---------- přehled kurzů ----------
+   Na porovnání s brokerem. Ukazuje celý řetěz výpočtu (kusy × kurz ×
+   měna = hodnota), protože když číslo nesedí, je potřeba vidět, ve
+   kterém kroku se to rozešlo — ne jen výsledek. */
+function pxOverviewModal(){
+  const list=S.investments.filter(i=>i.stock||i.crypto);
+  if(!list.length){toast('Nemáš žádnou položku s automatickým kurzem');return;}
+  const radek=i=>{
+    const kcKs=i.qty>0?(i.val||0)/i.qty:0;
+    const cizi=i.stock&&i.ccy&&i.ccy!=='CZK';
+    return `<tr style="border-top:1px solid var(--line)">
+      <td style="padding:8px 10px 8px 0;white-space:nowrap">
+        <div style="font-weight:600">${esc(i.nm)}</div>
+        <div class="mini">${esc(i.stock||i.crypto||'')}${i.pxBad?` <span style="color:var(--gold)">· nenačten</span>`:''}</div></td>
+      <td class="num" style="text-align:right;padding:8px 6px;white-space:nowrap">${(''+(i.qty||0)).replace('.',',')}</td>
+      <td class="num" style="text-align:right;padding:8px 6px;white-space:nowrap">${i.px?fmCcy(i.px,i.stock?i.ccy:'CZK'):'—'}</td>
+      <td class="num mini" style="text-align:right;padding:8px 6px;white-space:nowrap">${cizi&&i.fx?(''+Math.round(i.fx*1000)/1000).replace('.',','):'—'}</td>
+      <td class="num" style="text-align:right;padding:8px 6px;white-space:nowrap">${kcKs?fmEx(Math.round(kcKs*100)/100):'—'}</td>
+      <td class="num" style="text-align:right;padding:8px 0 8px 6px;font-weight:600;white-space:nowrap">${fm(i.val||0)}</td></tr>`;};
+  const celkem=list.reduce((s2,i)=>s2+(i.val||0),0);
+  const kdy=list.map(i=>i.pxAt).filter(Boolean).sort().pop();
+  openModal(`<h3>Kurzy k porovnání s brokerem</h3>
+    <div class="md">Celý výpočet krok za krokem — kusy × kurz × měna. Když ti číslo nesedí s brokerem, uvidíš, kde se to rozešlo.</div>
+    <div style="overflow-x:auto;margin-top:6px">
+    <table style="width:100%;min-width:480px;border-collapse:collapse;font-size:13px">
+      <tr class="mini" style="text-align:right">
+        <th style="text-align:left;padding-bottom:4px">Papír</th><th style="padding-bottom:4px">Kusů</th>
+        <th style="padding-bottom:4px">Kurz</th><th style="padding-bottom:4px">Měna→Kč</th>
+        <th style="padding-bottom:4px">Kč/ks</th><th style="padding-bottom:4px">Hodnota</th></tr>
+      ${list.map(radek).join('')}
+      <tr style="border-top:1.5px solid var(--line2)"><td colspan="5" style="padding:10px 6px 0 0;font-weight:600">Celkem</td>
+        <td class="num" style="text-align:right;padding:10px 0 0 6px;font-weight:600">${fm(celkem)}</td></tr>
+    </table></div>
+    <p class="mini" style="margin-top:10px">${kdy?`Kurzy stažené ${agoTxt(kdy)}.`:''}<span style="opacity:.8"> Tabulku jde na úzké obrazovce posunout do stran.</span></p>
+    <div class="banner tip" style="margin-top:12px"><span class="bi">${ic('bulb',16)}</span><div><b>Drobný rozdíl proti brokerovi je normální.</b> Appka přepočítává denním kurzem ECB, broker si účtuje vlastní kurz s marží — to samo dělá zhruba procento. K tomu se liší okamžik, kdy byla cena stažená. <b>Rozdíl do pár procent neřeš.</b> Když je hodnota o desítky procent jinde nebo skoro dvojnásobná, je špatně symbol — nejspíš jiná třída akcie nebo jiná burza.</div></div>
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zavřít</button><button class="btn fill" onclick="pxRefreshAll()">${ic('repeat',15)} Aktualizovat vše</button></div>`);
+}
+async function pxRefreshAll(){
+  toast('Aktualizuji kurzy…');lastPxFetch=0;
+  await autoPriceRefresh(true);
+  pxOverviewModal();
+}
 async function invRefreshPrice(id){const inv=S.investments.find(x=>x.id===id);
   if(!inv||!(inv.crypto||inv.stock))return;
   toast('Aktualizuji kurz…');
@@ -2060,6 +2102,7 @@ async function invRefreshPrice(id){const inv=S.investments.find(x=>x.id===id);
       const diff=applyMarketValue(inv,Math.round(px*(inv.qty||0)));
       toast(`${inv.nm}: kurz ${fm(px)} · ${diff>=0?'+':''}${fm(diff)}`);}
     else{const q=await stockPriceCzk(inv.stock);inv.ccy=q.ccy;delete inv.pxBad;
+      inv.px=q.px;inv.fx=q.px?q.czk/q.px:1;   // ať jde v přehledu rozebrat, odkud se číslo vzalo
       const diff=applyMarketValue(inv,Math.round(q.czk*(inv.qty||0)));
       toast(`${inv.nm}: ${fmCcy(q.px,q.ccy)} · ${diff>=0?'+':''}${fm(diff)}`);}
     commit();
@@ -2087,7 +2130,7 @@ async function autoPriceRefresh(force){
     if(r.ok){const j=await r.json();
       coins.forEach(o=>{const i=zivy(o.id);if(!i||!i.crypto||!(i.qty>0))return;
         const px=j[i.crypto]&&j[i.crypto].czk;
-        if(px){dotek=true;if(applyMarketValue(i,Math.round(px*i.qty)))zmena=true;}});}
+        if(px){dotek=true;i.px=px;i.fx=1;if(applyMarketValue(i,Math.round(px*i.qty)))zmena=true;}});}
   }catch(e){}
   if(stocks.length&&syncOn())try{
     const q=await fetchStockQuotes([...new Set(stocks.map(i=>i.stock))]);
@@ -2096,7 +2139,7 @@ async function autoPriceRefresh(force){
       try{fx[c]=await fetchFx(c);}catch(e){}}
     stocks.forEach(o=>{const i=zivy(o.id);if(!i||!i.stock||!(i.qty>0))return;
       const x=q[i.stock],f=x&&fx[x.ccy];
-      if(x&&f){i.ccy=x.ccy;delete i.pxBad;dotek=true;
+      if(x&&f){i.ccy=x.ccy;delete i.pxBad;dotek=true;i.px=x.px;i.fx=f;
         if(applyMarketValue(i,Math.round(x.px*f*i.qty)))zmena=true;}
       // symbol, který zdroj nezná (překlep, zrušený papír), se nesmí tvářit
       // jako aktuální — jinak karta ukazuje starou hodnotu jako čerstvou
