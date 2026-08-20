@@ -273,6 +273,12 @@ S.tax            — daň z úroků (výchozí 15 %)
 - **Pevné platby** (`fixedBlock`) na Přehledu: seznam položek s `fixAmt`,
   u každé tlačítko Zaplatit. **Po jedné, nikdy hromadně** — viz pravidlo
   o bulk operacích výš. Zaplaceno = má v cyklu aspoň jeden zápis.
+  **Tlačítko se schová, když otevřený cyklus není ten, do kterého patří
+  dnešek.** `payFixed` zapisuje přes `logToDate` podle dnešního data, ale
+  stav „zaplaceno" se čte z otevřeného cyklu — když se lišily, platba
+  spadla jinam, řádek dál nabízel Zaplatit a šlo ji zaplatit několikrát
+  (nalezeno a opraveno 20. 8. 2026). `payFixed` navíc odmítne zápis,
+  když už v cyklu jeden je.
 
 - **Kurz krypta se stahuje sám** (`autoPriceRefresh`) při startu appky a
   při návratu do okna, max jednou za 10 minut, jedním dotazem na všechny

@@ -554,13 +554,18 @@ async function fetchFx(ccy){
 }
 async function fetchStockQuotes(symbols){
   if(!syncOn())throw new Error('kurzy jdou přes tvůj Worker — nejdřív zapni synchronizaci');
-  const r=await wkFetch('/px?s='+encodeURIComponent(symbols.join(',')));
-  if(!r.ok){let m='';try{m=(await r.json()).error||'';}catch(e){}
-    throw new Error(m||('server vrátil '+r.status));}
-  const j=await r.json(),px=(j&&j.px)||{};
+  // Worker bere nejvýš 25 symbolů na dotaz a přebytek by mlčky zahodil,
+  // takže se to radši rozdělí tady než aby část portfolia tiše zamrzla
   const out={};
-  symbols.forEach(sym=>{const q=px[sym];
-    if(q&&isFinite(q.px)&&q.px>0)out[sym]={px:q.px,ccy:(q.ccy||'USD').toUpperCase(),nm:q.nm||''};});
+  for(let i=0;i<symbols.length;i+=25){
+    const davka=symbols.slice(i,i+25);
+    const r=await wkFetch('/px?s='+encodeURIComponent(davka.join(',')));
+    if(!r.ok){let m='';try{m=(await r.json()).error||'';}catch(e){}
+      throw new Error(m||('server vrátil '+r.status));}
+    const j=await r.json(),px=(j&&j.px)||{};
+    davka.forEach(sym=>{const q=px[sym];
+      if(q&&isFinite(q.px)&&q.px>0)out[sym]={px:q.px,ccy:(q.ccy||'USD').toUpperCase(),nm:q.nm||''};});
+  }
   return out;
 }
 // cena jednoho papíru přepočtená do korun
@@ -906,18 +911,29 @@ function R(){
 function fixedRows(p){const r=[];p.cats.forEach(c=>c.it.forEach(it=>{if(it.fixAmt&&it.pl>0)r.push({c,it,a:itemActual(it)});}));return r;}
 function fixedBlock(p){
   const rows=fixedRows(p);if(!rows.length)return '';
+  /* Zaplatit zapisuje podle DNEŠNÍHO data (viz logToDate), takže když se
+     díváš na jiný cyklus, než do kterého dnešek patří, tlačítko by zapsalo
+     jinam a řádek by dál nabízel zaplacení — dalo by se tak omylem zaplatit
+     několikrát. V takovém případě se tlačítka schovají a řekne se proč. */
+  const dnesni=periodForDate(todayISO());
+  const mimo=!dnesni||dnesni.id!==p.id;
   const done=rows.filter(r=>r.a>0).length,zbyva=rows.filter(r=>!r.a).reduce((s,r)=>s+r.it.pl,0);
   let h=`<div class="card"><div class="ch"><span class="ct">${ic('repeat',15)} Pevné platby</span>
     <span class="mini">${done}/${rows.length} zaplaceno${zbyva>0?` · zbývá ${fm(zbyva)}`:''}</span></div>`;
+  if(mimo)h+=`<div class="mini" style="margin-bottom:10px">${ic('zap',13)} Díváš se na jiný cyklus, než do kterého patří dnešek${dnesni?` (${esc(dnesni.nm)})`:''}. Zaplacení jedním klikem je proto vypnuté — zapiš platbu u položky s datem, ať skončí tam, kam patří.</div>`;
   rows.forEach(({c,it,a})=>{h+=`<div class="row" style="cursor:default">
     <div class="ic" style="background:${a>0?'var(--teal-bg)':'var(--bg2)'};color:${a>0?'var(--teal)':'var(--text3)'}">${ic(a>0?'check':c.icon,18)}</div>
     <div class="m"><div class="t1"${a>0?' style="color:var(--text3)"':''}>${esc(it.nm)}</div><div class="t2">${esc(c.nm)} · ${fmEx(it.pl)}${linkTarget(it)?' → '+esc(linkTarget(it).obj.nm):''}</div></div>
     ${a>0?`<span class="tag ok">${fm(a)}</span>`
+         :mimo?`<span class="mini">nezaplaceno</span>`
          :`<button class="btn sm fill" onclick="payFixed('${c.id}','${it.id}')">Zaplatit</button>`}</div>`;});
   return h+`</div>`;
 }
 function payFixed(cid,iid){
   const c=P().cats.find(x=>x.id===cid),it=c&&c.it.find(x=>x.id===iid);if(!it||!(it.pl>0))return;
+  const dnesni=periodForDate(todayISO());
+  if(!dnesni||dnesni.id!==P().id){toast('Dnešek patří do jiného cyklu — zapiš platbu s datem');return;}
+  if(itemActual(it)>0){toast('Tahle platba už je v cyklu zapsaná');return;}
   const r=logToDate(c,it,{id:uid(),d:todayISO(),a:it.pl,n:''});
   const lt=linkTarget(it);
   toast(`${it.nm}: ${fmEx(it.pl)}`+(lt?` → ${lt.obj.nm}`:'')+(r.jinam?` · ${r.period.nm}`:''));commit();
@@ -1132,6 +1148,7 @@ function vInvestice(p){
         <span class="mini">Zhodnocení <b class="num" style="color:${gain>0?'var(--teal)':gain<0?'var(--neg)':'var(--text3)'}">${gain>0?'+':''}${fm(gain)}${put>0?` (${gain>0?'+':''}${(''+gpc).replace('.',',')} %)`:''}</b></span>
         <div style="flex:1"></div>
         ${inv.crypto||inv.stock?`<button class="btn sm" onclick="invRefreshPrice('${inv.id}')">${ic('trending',14)} Aktualizovat kurz</button>`:`<button class="btn sm" onclick="invRevalue('${inv.id}')">${ic('trending',14)} Přecenit</button>`}</div>`;
+    if(inv.pxBad)h+=`<div class="mini" style="margin-top:8px;color:var(--gold)">${ic('zap',13)} Kurz se nedaří načíst — zkontroluj symbol <b>${esc(inv.stock||'')}</b>. Hodnota níž je poslední známá, ne aktuální.</div>`;
     const tr=invTrend(inv);
     if(tr)h+=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px">${ic('trending',13)}${tr}</div>`;
     // denní záznamy z kurzu se sem netahají — je jich moc a nic neříkají;
@@ -1459,9 +1476,10 @@ function statCompare(){
   const ps=S.periods.slice().sort((a,b)=>a.from.localeCompare(b.from));
   if(ps.length<2)return `<div class="card"><div class="ct" style="margin-bottom:14px">${ic('repeat',15)} Porovnání období</div><div class="empty">Na porovnání potřebuješ aspoň dvě období.</div></div>`;
   const cur=P();
+  // výchozí volba se jen dopočítá, do cmpA/cmpB píše výhradně setCmp —
+  // vykreslovací funkce nemá měnit stav, na kterém sama stojí
   const A=ps.find(x=>x.id===cmpA)||prevPeriodOf(cur)||ps[ps.length-2];
   const B=ps.find(x=>x.id===cmpB)||cur;
-  cmpA=A.id;cmpB=B.id;
   const opt=(sel)=>ps.map(x=>`<option value="${x.id}" ${x.id===sel?'selected':''}>${esc(x.nm)} · ${nwMon(x.from)}</option>`).join('');
   let h=`<div class="card"><div class="ct" style="margin-bottom:14px">${ic('repeat',15)} Porovnání období</div>
     <div class="fr" style="align-items:flex-end;flex-wrap:wrap">
@@ -1893,6 +1911,7 @@ let _cryptoPx=null;
 async function invCryptoPreview(){const coinEl=document.getElementById('m_coin'),qtyEl=document.getElementById('m_qty'),el=document.getElementById('m_cpx');
   if(!coinEl||!el)return;const coin=coinEl.value,qty=num(qtyEl.value);
   if(!qty){el.textContent='Zadej množství.';_cryptoPx=null;return;}
+  _cryptoPx=null;   // viz invStockPreview — cena nesmí přežít změnu měny
   el.textContent='Načítám kurz…';
   try{const px=await fetchCryptoPrice(coin);_cryptoPx=px;
     el.innerHTML=`Kurz <b>${fm(px)}</b> / ks · hodnota ≈ <b>${fm(Math.round(px*qty))}</b>`;
@@ -1910,6 +1929,9 @@ async function invStockPreview(refetch){
   if(!refetch&&_stockPx!=null){
     el.innerHTML=`Kurz <b>${fmCcy(_stockPx.px,_stockCcy)}</b> · v korunách <b>${fm(Math.round(_stockPx.czk))}</b> / ks`+(qty?` · hodnota ≈ <b>${fm(Math.round(_stockPx.czk*qty))}</b>`:'');
     return;}
+  // starou cenu zahoď HNED — jinak by ji Vytvořit stihlo spárovat s novým
+  // symbolem dřív, než dorazí odpověď, a uložilo cizí hodnotu
+  _stockPx=null;_stockCcy='';
   el.textContent='Načítám kurz…';
   try{const q=await stockPriceCzk(sym);_stockPx=q;_stockCcy=q.ccy;
     el.innerHTML=`${q.nm?esc(q.nm)+' · ':''}kurz <b>${fmCcy(q.px,q.ccy)}</b> · v korunách <b>${fm(Math.round(q.czk))}</b> / ks`+(qty?` · hodnota ≈ <b>${fm(Math.round(q.czk*qty))}</b>`:'');
@@ -1954,7 +1976,7 @@ async function invRefreshPrice(id){const inv=S.investments.find(x=>x.id===id);
     if(inv.crypto){const px=await fetchCryptoPrice(inv.crypto);
       const diff=applyMarketValue(inv,Math.round(px*(inv.qty||0)));
       toast(`${inv.nm}: kurz ${fm(px)} · ${diff>=0?'+':''}${fm(diff)}`);}
-    else{const q=await stockPriceCzk(inv.stock);inv.ccy=q.ccy;
+    else{const q=await stockPriceCzk(inv.stock);inv.ccy=q.ccy;delete inv.pxBad;
       const diff=applyMarketValue(inv,Math.round(q.czk*(inv.qty||0)));
       toast(`${inv.nm}: ${fmCcy(q.px,q.ccy)} · ${diff>=0?'+':''}${fm(diff)}`);}
     commit();
@@ -1970,23 +1992,38 @@ async function autoPriceRefresh(force){
   if(!coins.length&&!stocks.length)return;
   if(!force&&Date.now()-lastPxFetch<10*60*1000)return;   // víc než jednou za 10 min nemá smysl
   lastPxFetch=Date.now();
-  let zmena=false;
+  let zmena=false,dotek=false;
+  /* Mezi zahájením a odpovědí může doběhnout synchronizace a nahradit celé
+     S novějším stavem z cloudu. Držet si reference na staré objekty by
+     znamenalo zapsat kurz do něčeho, co už nikde není — proto se investice
+     po každém čekání dohledá znovu podle id. */
+  const zivy=id=>S.investments.find(x=>x.id===id)||null;
   if(coins.length)try{
     const ids=[...new Set(coins.map(i=>i.crypto))].join(',');
     const r=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids)}&vs_currencies=czk`);
     if(r.ok){const j=await r.json();
-      coins.forEach(i=>{const px=j[i.crypto]&&j[i.crypto].czk;
-        if(px&&applyMarketValue(i,Math.round(px*i.qty)))zmena=true;});}
+      coins.forEach(o=>{const i=zivy(o.id);if(!i||!i.crypto||!(i.qty>0))return;
+        const px=j[i.crypto]&&j[i.crypto].czk;
+        if(px){dotek=true;if(applyMarketValue(i,Math.round(px*i.qty)))zmena=true;}});}
   }catch(e){}
   if(stocks.length&&syncOn())try{
     const q=await fetchStockQuotes([...new Set(stocks.map(i=>i.stock))]);
     const fx={};
     for(const c of [...new Set(Object.values(q).map(x=>x.ccy))]){
       try{fx[c]=await fetchFx(c);}catch(e){}}
-    stocks.forEach(i=>{const x=q[i.stock],f=x&&fx[x.ccy];
-      if(x&&f){i.ccy=x.ccy;if(applyMarketValue(i,Math.round(x.px*f*i.qty)))zmena=true;}});
+    stocks.forEach(o=>{const i=zivy(o.id);if(!i||!i.stock||!(i.qty>0))return;
+      const x=q[i.stock],f=x&&fx[x.ccy];
+      if(x&&f){i.ccy=x.ccy;delete i.pxBad;dotek=true;
+        if(applyMarketValue(i,Math.round(x.px*f*i.qty)))zmena=true;}
+      // symbol, který zdroj nezná (překlep, zrušený papír), se nesmí tvářit
+      // jako aktuální — jinak karta ukazuje starou hodnotu jako čerstvou
+      else if(i.pxBad!==true){i.pxBad=true;zmena=true;}});
   }catch(e){}
-  if(zmena)commit();else R();
+  /* Překreslovat, když se nic nezměnilo, je nejen zbytečné — smazalo by to
+     rozepsané rychlé zadání pokaždé, když se člověk vrátí do okna. Čas
+     posledního kurzu se ale uložit musí, jinak po reloadu tvrdí něco jiného. */
+  if(zmena)commit();
+  else if(dotek)persist();
 }
 /* přecenění: hodnotu určuje trh, rozdíl je zhodnocení (ne tvůj vklad) */
 /* ---------- investiční kalkulačka ----------
