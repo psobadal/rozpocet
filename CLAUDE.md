@@ -211,9 +211,17 @@ S.tax            — daň z úroků (výchozí 15 %)
   jen každý mluvil jinou řečí. Při neúspěchu se proto nejdřív zkusí
   překlad (NL→AS, UK→L, FR→PA, CZ→PR, US→bez přípony…) a když projde,
   symbol se přepíše sám a **napíše se proč**. Teprve pak přijde na řadu
-  `suggestSymbols`, který zkusí tentýž základ na obvyklých burzách
-  (`BURZY`) a nabídne existující jako odkaz. Obojí běží jen při
-  neúspěchu, takže to nic nestojí navíc.
+  `suggestSymbols` (tentýž základ na obvyklých burzách) a **hledání
+  podle názvu** přes `/find` — obojí paralelně, ať to netrvá dvakrát.
+  `/find` je Yahoo search přes Worker; hledá se podle pole **Název**,
+  takže „Novo Nordisk" najde papír i když je symbol úplně mimo.
+  **Severské burzy píšou třídu akcie s pomlčkou** (`NOVO-B.CO`,
+  `VOLV-B.ST`), brokeři ji vynechávají (`NOVOB.DK`) — `mapSymbol` proto
+  vrací víc kandidátů a pomlčkovou variantu zkouší taky. Pozor:
+  `NOVOB.CO` Yahoo vrátí jako platnou odpověď, ale bez ceny a s burzou
+  „YHD" — proto ta kontrola `typeof px === 'number' && px > 0`
+  ve Workeru, bez ní by se uložil papír s nulou.
+  Všechno běží jen při neúspěchu, takže to nic nestojí navíc.
 
 - **Londýn kotuje v pencích, ne librách.** Yahoo vrací `GBp` (a `ZAc`,
   `ILA`), což by po `toUpperCase()` splynulo s `GBP` a hodnota by vyšla

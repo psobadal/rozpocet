@@ -86,6 +86,31 @@ export default {
         return json({ px: out });
       }
 
+      /* Hledání papíru podle názvu. Přípony burz se pamatují blbě a
+         u severských akcií se liší i základ symbolu (XTB píše NOVOB,
+         burza NOVO-B), takže hádat je marné — tohle najde papír podle
+         toho, jak se jmenuje. */
+      if (url.pathname === '/find') {
+        const zna = await env.ROZPOCET.list({ prefix: 'cur:' + k, limit: 1 });
+        if (!zna.keys.length) return json({ error: 'neznámý sync kód' }, 401);
+        const q = (url.searchParams.get('q') || '').trim().slice(0, 80);
+        if (!q) return json({ hits: [] });
+        try {
+          const r = await fetch(
+            'https://query1.finance.yahoo.com/v1/finance/search?quotesCount=12&newsCount=0&q=' +
+            encodeURIComponent(q),
+            { headers: { 'User-Agent': 'Mozilla/5.0' }, cf: { cacheTtl: 300 } });
+          if (!r.ok) return json({ hits: [] });
+          const j = await r.json();
+          const hits = (j.quotes || [])
+            .filter(x => x.symbol && (x.quoteType === 'EQUITY' || x.quoteType === 'ETF'))
+            .slice(0, 8)
+            .map(x => ({ sym: x.symbol, ex: x.exchDisp || '',
+                         nm: x.shortname || x.longname || '' }));
+          return json({ hits });
+        } catch (e) { return json({ hits: [] }); }
+      }
+
       // seznam dnů, ze kterých je uložená verze (nejnovější první)
       if (url.pathname === '/list') {
         const l = await env.ROZPOCET.list({ prefix: 'snap:' + k + ':' });

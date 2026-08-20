@@ -580,12 +580,27 @@ const BURZA_MAP={NL:'AS',UK:'L',GB:'L',FR:'PA',IT:'MI',ES:'MC',CH:'SW',AT:'VI',
   BE:'BR',PT:'LS',CZ:'PR',SE:'ST',DK:'CO',NO:'OL',FI:'HE',PL:'WA',IE:'IR',US:''};
 function mapSymbol(sym){
   const m=/^(.+)\.([A-Za-z]{2})$/.exec(sym||'');
-  if(!m)return null;
+  if(!m)return [];
   const cil=BURZA_MAP[m[2].toUpperCase()];
-  if(cil===undefined)return null;
-  const out=cil?m[1]+'.'+cil:m[1];
-  return out===sym?null:out;
+  if(cil===undefined)return [];
+  const zaklady=[m[1]];
+  // Severské burzy píšou třídu akcie s pomlčkou (NOVO-B, VOLV-B),
+  // brokeři ji vynechávají — zkus obě podoby
+  const h=/^(.{2,})([ABC])$/.exec(m[1]);
+  if(h&&m[1].indexOf('-')<0)zaklady.push(h[1]+'-'+h[2]);
+  return zaklady.map(z=>cil?z+'.'+cil:z).filter(x=>x!==sym);
 }
+// hledání papíru podle názvu přes Worker (burza sama CORS neposílá)
+async function findSymbols(q){
+  if(!syncOn()||!q)return [];
+  try{const r=await wkFetch('/find?q='+encodeURIComponent(q));
+    if(!r.ok)return [];
+    const j=await r.json();return (j&&j.hits)||[];
+  }catch(e){return [];}
+}
+const hitHtml=h=>`<a onclick="useSym('${esc(h.sym)}')"><b>${esc(h.sym)}</b></a>`
+  +(h.ex?` <span style="opacity:.75">${esc(h.ex)}</span>`:'')
+  +(h.nm?` — ${esc(h.nm)}`:'');
 async function suggestSymbols(sym){
   const base=(sym||'').split('.')[0];
   if(!base)return [];
@@ -1981,8 +1996,8 @@ async function invStockPreview(refetch){
     _stockPx=null;
     if(!/nenalezen/.test(e.message||'')){el.textContent='Nepovedlo se: '+(e.message||'zkus to znovu');return;}
     // 1) překlad značení brokera — nejčastější případ, tak ho zkus první
-    const alt=mapSymbol(sym);
-    if(alt){
+    for(const alt of mapSymbol(sym)){
+      if(!porad())return;
       el.textContent=`Symbol ${sym} burza nezná, zkouším ${alt}…`;
       try{const q=await stockPriceCzk(alt);
         if(!porad())return;
@@ -1991,14 +2006,16 @@ async function invStockPreview(refetch){
         return;
       }catch(e2){}
     }
-    // 2) když ani to, zkus tentýž základ na obvyklých burzách
+    // 2) hledej podle názvu i podle podobných burz zároveň — ať to netrvá dvakrát
     if(!porad())return;
-    el.textContent=`Symbol ${sym} burza nezná, hledám podobné…`;
-    const tipy=await suggestSymbols(sym);
+    el.textContent=`Symbol ${sym} burza nezná, hledám…`;
+    const nazev=(document.getElementById('m_nm')?.value||'').trim();
+    const [tipy,hits]=await Promise.all([suggestSymbols(sym),findSymbols(nazev||sym.split('.')[0])]);
     if(!porad())return;
-    el.innerHTML=tipy.length
-      ? `Symbol <b>${esc(sym)}</b> burza nezná. Nemyslel jsi ${tipy.map(t=>`<a onclick="useSym('${esc(t)}')"><b>${esc(t)}</b></a>`).join(' nebo ')}?`
-      : `Symbol <b>${esc(sym)}</b> burza nezná a nic podobného jsem nenašel. Zkontroluj ho u brokera — evropské papíry mají za tečkou burzu (.AS, .DE, .L, .PR).`;
+    const radky=hits.map(hitHtml).concat(tipy.filter(t=>!hits.some(h=>h.sym===t)).map(t=>`<a onclick="useSym('${esc(t)}')"><b>${esc(t)}</b></a>`));
+    el.innerHTML=radky.length
+      ? `Symbol <b>${esc(sym)}</b> burza nezná. Nehledáš některý z těchhle?<div style="margin-top:6px;line-height:1.9">${radky.slice(0,6).join('<br>')}</div>`
+      : `Symbol <b>${esc(sym)}</b> burza nezná a nic podobného jsem nenašel. Zkus do pole Název napsat jméno firmy nebo fondu — hledám i podle něj.`;
   }}
 const stockPxHtml=(q,qty)=>`${q.nm?esc(q.nm)+' · ':''}kurz <b>${fmCcy(q.px,q.ccy)}</b> · v korunách <b>${fm(Math.round(q.czk))}</b> / ks`
   +(qty?` · hodnota ≈ <b>${fm(Math.round(q.czk*qty))}</b>`:'');
