@@ -47,6 +47,38 @@ export default {
     const k = await keyFor(code);
 
     if (req.method === 'GET') {
+      /* Kurzy akcií a ETF. Prohlížeč si je u burzy vyzvednout nemůže —
+         zdroj neposílá CORS hlavičky — takže to udělá Worker za něj.
+         Chodí sem jen symboly, žádná data o penězích. Sync kód se
+         vyžaduje výš, ať Worker neslouží cizím lidem jako proxy. */
+      if (url.pathname === '/px') {
+        // Kontrola kódu výš pozná jen délku, což by proxy otevřelo komukoliv
+        // s dvaceti znaky. Tady chceme kód, pod kterým fakt leží data.
+        const known = await env.ROZPOCET.list({ prefix: 'cur:' + k, limit: 1 });
+        if (!known.keys.length) return json({ error: 'neznámý sync kód' }, 401);
+        const syms = (url.searchParams.get('s') || '').split(',')
+          .map(x => x.trim().toUpperCase()).filter(Boolean).slice(0, 25);
+        if (!syms.length) return json({ error: 'chybí symboly' }, 400);
+        const out = {};
+        await Promise.all(syms.map(async sym => {
+          try {
+            const r = await fetch(
+              'https://query1.finance.yahoo.com/v8/finance/chart/' +
+              encodeURIComponent(sym) + '?interval=1d&range=1d',
+              { headers: { 'User-Agent': 'Mozilla/5.0' }, cf: { cacheTtl: 300 } });
+            if (!r.ok) return;
+            const m = (((await r.json()).chart || {}).result || [{}])[0] || {};
+            const meta = m.meta || {};
+            const px = meta.regularMarketPrice;
+            if (typeof px === 'number' && px > 0)
+              out[sym] = { px, ccy: (meta.currency || 'USD').toUpperCase(),
+                           nm: meta.longName || meta.shortName || '',
+                           ex: meta.fullExchangeName || meta.exchangeName || '' };
+          } catch (e) { /* jeden nedostupný papír nesmí shodit ostatní */ }
+        }));
+        return json({ px: out });
+      }
+
       // seznam dnů, ze kterých je uložená verze (nejnovější první)
       if (url.pathname === '/list') {
         const l = await env.ROZPOCET.list({ prefix: 'snap:' + k + ':' });

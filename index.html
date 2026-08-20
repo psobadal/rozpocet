@@ -431,6 +431,7 @@ function migrate(s){
     if(typeof gm.fees==='number'){gm.fees=gm.fees>0?[{d:s.created||todayISO(),a:gm.fees,n:'Poplatky'}]:[];}
     gm.fees||=[];});
   s.tax=(s.tax==null?CONFIG.taxRate:s.tax);
+  delete s.stockKey;   // kurzy chodí přes Worker, klíč k burze už není potřeba
   s.ui||={};s.ui.appName||=CONFIG.appName;s.ui.accent||=CONFIG.accent;s.ui.numFont||=CONFIG.numFont||'bahnschrift';
   if(!s.ui.tabs||!s.ui.tabs.length)s.ui.tabs=defTabs();
   // ensure new tabs exist (e.g. dluhy) & drop obsolete (byt)
@@ -534,13 +535,12 @@ async function fetchCryptoPrice(coinId){
 }
 
 /* ---------- kurzy akcií a ETF ----------
-   Krypto umí CoinGecko bez klíče, akcie takový zdroj nemají — Twelve Data
-   chce vlastní klíč, ale je zdarma a dá 800 dotazů denně (appka jich
-   udělá pár). Klíč žije v S, na rozdíl od sync kódu: je to jen čtení
-   burzovních dat, ne přístup k penězům, a takhle se propíše i do mobilu.
-   Ceny chodí v měně burzy, proto se přepočítávají přes ECB kurz
-   (frankfurter.dev, taky bez klíče). */
-const stockKey=()=>(''+(S.stockKey||'')).trim();
+   Kurzy chodí přes vlastní Worker (viz sync-worker.js, endpoint /px).
+   Burza sama neposílá CORS hlavičky, takže si ji prohlížeč zavolat nesmí —
+   Worker to udělá za něj a data podá s hlavičkami, které projdou. Díky
+   tomu není potřeba žádný klíč ani registrace a fungují i evropské ETF.
+   Daň za to: kurzy jedou jen se zapnutou synchronizací. */
+// ceny chodí v měně burzy; přepočet dělá ECB přes frankfurter.dev (taky bez klíče)
 let _fx={},_fxAt=0;
 async function fetchFx(ccy){
   ccy=(ccy||'CZK').toUpperCase();
@@ -553,19 +553,14 @@ async function fetchFx(ccy){
   _fx[ccy]=v;_fxAt=Date.now();return v;
 }
 async function fetchStockQuotes(symbols){
-  const key=stockKey();
-  if(!key)throw new Error('chybí klíč (Nastavení → Kurzy akcií)');
-  const r=await fetch(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbols.join(','))}&apikey=${encodeURIComponent(key)}`);
-  const j=await r.json();
-  if(j&&j.status==='error')throw new Error(j.message||'data se nepodařilo načíst');
-  // jeden symbol vrací rovnou objekt, víc symbolů objekt klíčovaný symbolem
-  const raw=(j&&j.symbol)?{[j.symbol]:j}:j;
+  if(!syncOn())throw new Error('kurzy jdou přes tvůj Worker — nejdřív zapni synchronizaci');
+  const r=await wkFetch('/px?s='+encodeURIComponent(symbols.join(',')));
+  if(!r.ok){let m='';try{m=(await r.json()).error||'';}catch(e){}
+    throw new Error(m||('server vrátil '+r.status));}
+  const j=await r.json(),px=(j&&j.px)||{};
   const out={};
-  symbols.forEach(sym=>{const q=raw&&raw[sym];
-    if(!q||q.status==='error')return;
-    const px=parseFloat(q.close);
-    if(!isFinite(px)||px<=0)return;
-    out[sym]={px,ccy:(q.currency||'USD').toUpperCase(),nm:q.name||''};});
+  symbols.forEach(sym=>{const q=px[sym];
+    if(q&&isFinite(q.px)&&q.px>0)out[sym]={px:q.px,ccy:(q.ccy||'USD').toUpperCase(),nm:q.nm||''};});
   return out;
 }
 // cena jednoho papíru přepočtená do korun
@@ -1598,14 +1593,6 @@ function vNastaveni(p){
     <div style="max-width:200px"><div class="fg"><span class="fl">Sazba %</span><input class="inp num" type="number" value="${S.tax}" onchange="S.tax=+this.value;commit()"></div></div>
     <p class="mini" style="margin-top:10px">Strhává se z úroku připsaného u spořáků a investic (v ČR běžně 15 %).</p></div>`;
 
-  // klíč ke kurzům akcií — na rozdíl od sync kódu smí být v S (jen čtení burzovních dat)
-  h+=`<div class="card"><div class="ct" style="margin-bottom:6px">${ic('trending',15)} Kurzy akcií a ETF</div>
-    <p class="mini" style="margin:0 0 12px">Krypto se stahuje samo a zadarmo. Akcie a ETF potřebují vlastní klíč — zdarma a bez karty na <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener">twelvedata.com</a>, 800 dotazů denně (appka jich udělá pár).</p>
-    <div class="fg"><span class="fl">Klíč</span><input class="inp" id="st_key" value="${esc(S.stockKey||'')}" placeholder="zatím nenastaveno" style="font-family:ui-monospace,monospace;font-size:12px"></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn fill" onclick="saveStockKey()">Uložit klíč</button>
-      ${S.stockKey?`<button class="btn gho" onclick="S.stockKey='';persist();toast('Klíč smazán');R()">Smazat</button>`:''}</div>
-    ${S.stockKey?`<p class="mini" style="margin-top:10px">${ic('check',13)} Nastaveno. Kurzy se stahují samy při otevření appky, max jednou za 10 minut.</p>`:''}</div>`;
-
   h+=`<div class="card"><div class="ct" style="margin-bottom:10px;color:var(--neg)">Nebezpečná zóna</div><p class="mini" style="margin:0 0 12px">Smaže všechna data. Jde vrátit jen ze zálohy.</p><button class="btn dgr" onclick="resetAll()">${ic('trash',15)} Smazat všechna data</button></div>`;
   // až bude synchronizace zapnutá, tahle rada je vyřízená a nemá co ukazovat
   if(!syncOn())h+=tipBan('rocket','<b>Mobil a synchronizace</b> jsou další krok — až budeš chtít appku i do telefonu se stejnými daty, projdi si SYNC-SETUP.md.');
@@ -1883,15 +1870,13 @@ function invModal(id){const inv=id?S.investments.find(x=>x.id===id):null;mctx={i
       <p class="mini" id="m_cpx" style="margin-top:6px">Zadej množství.</p>
     </div>
     <div id="m_stockbox" style="${isS?'':'display:none'}">
-      ${stockKey()?'':`<div class="fg"><span class="fl">Klíč k datům o kurzech</span>
-        <input class="inp" id="m_skey" placeholder="vlož klíč z twelvedata.com" style="font-family:ui-monospace,monospace;font-size:12px">
-        <div class="mini" style="margin-top:6px">Zdarma a bez karty na <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener">twelvedata.com</a> — registrace na mail a klíč máš hned. Uloží se a příště už se ptát nebudu.</div></div>`}
+      ${syncOn()?'':`<div class="banner warn" style="margin:0 0 12px"><span class="bi">${ic('zap',16)}</span><div>Kurzy se stahují přes tvůj Worker, takže potřebuješ zapnutou <b>synchronizaci</b> (Nastavení). Bez ní zadej hodnotu ručně.</div></div>`}
       <div class="fr">
         <div class="fg"><span class="fl">Symbol</span><input class="inp" id="m_sym" value="${inv&&inv.stock?esc(inv.stock):''}" placeholder="AAPL" onchange="invStockPreview(true)" style="text-transform:uppercase"></div>
         <div class="fg"><span class="fl">Počet kusů</span><input class="inp num" id="m_sqty" type="number" step="any" value="${inv&&inv.stock&&inv.qty?inv.qty:''}" placeholder="0" oninput="invStockPreview(false)"></div>
       </div>
       <p class="mini" id="m_spx" style="margin-top:6px">Zadej symbol a počet kusů.</p>
-      <div class="mini" style="margin-top:6px">Americké akcie jsou prostý symbol (<b>AAPL</b>, <b>MSFT</b>). Evropské ETF potřebují i burzu, třeba <b>VWCE:XETR</b>. Cena se přepočte do korun denním kurzem ECB sama.</div>
+      <div class="mini" style="margin-top:6px">Americké akcie jsou prostý symbol (<b>AAPL</b>, <b>MSFT</b>). Evropské ETF mají za tečkou burzu: <b>IMAE.AS</b> (Amsterdam), <b>VWCE.DE</b> (Xetra), <b>CSPX.L</b> (Londýn). Cena se přepočte do korun denním kurzem ECB sama.</div>
     </div>
     <p class="mini" style="margin-top:8px">Úrok se připisuje k 1. dni v měsíci, po dani ${S.tax} %.</p>
     ${inv?`<div style="text-align:right;margin-top:8px"><button class="btn dgr sm" onclick="delInv('${inv.id}')">Smazat</button></div>`:''}
@@ -1920,10 +1905,8 @@ async function invStockPreview(refetch){
   if(!symEl||!el)return;
   const sym=(symEl.value||'').trim().toUpperCase();symEl.value=sym;
   const qty=num(qtyEl.value);
-  const keyEl=document.getElementById('m_skey');
-  if(keyEl&&keyEl.value.trim()&&!stockKey()){S.stockKey=keyEl.value.trim();saveLS();}
   if(!sym){el.textContent='Zadej symbol a počet kusů.';_stockPx=null;return;}
-  if(!stockKey()){el.textContent='Nejdřív vlož klíč, jinak kurz nestáhnu.';_stockPx=null;return;}
+  if(!syncOn()){el.textContent='Bez zapnuté synchronizace kurz nestáhnu.';_stockPx=null;return;}
   if(!refetch&&_stockPx!=null){
     el.innerHTML=`Kurz <b>${fmCcy(_stockPx.px,_stockCcy)}</b> · v korunách <b>${fm(Math.round(_stockPx.czk))}</b> / ks`+(qty?` · hodnota ≈ <b>${fm(Math.round(_stockPx.czk*qty))}</b>`:'');
     return;}
@@ -1939,8 +1922,6 @@ function saveInv(){const nm=document.getElementById('m_nm').value.trim();if(!nm)
     if(_cryptoPx==null){toast('Počkej na načtení kurzu (nebo zkontroluj připojení)');return;}
     val=Math.round(qty*_cryptoPx);}
   else if(typ==='stock'){
-    const keyEl=document.getElementById('m_skey');
-    if(keyEl&&keyEl.value.trim())S.stockKey=keyEl.value.trim();
     stock=(document.getElementById('m_sym').value||'').trim().toUpperCase();
     qty=num(document.getElementById('m_sqty').value);
     if(!stock){toast('Zadej symbol');return;}
@@ -1997,7 +1978,7 @@ async function autoPriceRefresh(force){
       coins.forEach(i=>{const px=j[i.crypto]&&j[i.crypto].czk;
         if(px&&applyMarketValue(i,Math.round(px*i.qty)))zmena=true;});}
   }catch(e){}
-  if(stocks.length&&stockKey())try{
+  if(stocks.length&&syncOn())try{
     const q=await fetchStockQuotes([...new Set(stocks.map(i=>i.stock))]);
     const fx={};
     for(const c of [...new Set(Object.values(q).map(x=>x.ccy))]){
@@ -2197,9 +2178,6 @@ function delFee(gEnc,i){const g=decodeURIComponent(gEnc);const gm=S.debtGroups[g
 
 /* customization actions */
 function hideIntro(){S.ui.hideIntro=true;toast('Skryto — vrátíš v Nastavení');commit();}
-function saveStockKey(){const v=(document.getElementById('st_key').value||'').trim();
-  S.stockKey=v;persist();toast(v?'Klíč uložen':'Klíč smazán');R();
-  if(v)autoPriceRefresh(true);}
 function toggleTips(){if(S.ui.hideTips)delete S.ui.hideTips;else S.ui.hideTips=true;
   toast(S.ui.hideTips?'Vysvětlivky skryté':'Vysvětlivky zpátky');commit();}
 function showIntro(){S.ui.hideIntro=false;go('prehled');}

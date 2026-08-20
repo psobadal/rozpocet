@@ -172,19 +172,28 @@ S.tax            — daň z úroků (výchozí 15 %)
   připojení `invCryptoPreview`/`invRefreshPrice` jen ohlásí chybu a
   neprovedou žádnou změnu dat.
 
-- **Akcie a ETF — auto kurz z burzy.** Stejný princip jako krypto, jen
-  jiný zdroj: `inv.stock` (symbol, např. `AAPL` nebo `VWCE:XETR`),
-  `inv.qty` (kusy) a `inv.ccy` (měna burzy, doplní se ze zdroje).
-  Data jdou z Twelve Data — na rozdíl od CoinGecko **chce klíč**, zdarma
-  a bez karty, 800 dotazů denně. Klíč žije v `S.stockKey`, tedy
-  **schválně v `S`** (na rozdíl od sync kódu): je to jen čtení
-  burzovních dat, ne přístup k penězům, a takhle se propíše i do mobilu.
+- **Akcie a ETF — auto kurz přes vlastní Worker.** `inv.stock` (symbol),
+  `inv.qty` (kusy), `inv.ccy` (měna burzy, doplní se ze zdroje).
+  Symbol má evropská burza za tečkou: `IMAE.AS`, `VWCE.DE`, `CSPX.L`;
+  americké akcie jsou prosté (`AAPL`).
+  **Proč přes Worker a ne přímo:** burzovní zdroj neposílá CORS hlavičky,
+  takže z prohlížeče zavolat nejde. Endpoint `/px` v `sync-worker.js` si
+  kurz vyzvedne serverově a podá ho appce (`fetchStockQuotes` → `wkFetch`).
+  **Odpadlo Twelve Data** (19. 8. 2026) — free tier neuměl evropské ETF,
+  na `IMAE.AS` hlásil „available starting with the Grow plan". Tím zmizel
+  i `S.stockKey`; `migrate()` ho maže. Nový zdroj nechce klíč ani
+  registraci a pokrývá všechny burzy.
+  **Daň za to:** kurzy akcií jedou jen se **zapnutou synchronizací**
+  (Worker je nosič). Bez ní to řekne a nechá zadat hodnotu ručně;
+  krypto přes CoinGecko jede pořád i bez syncu.
+  `/px` ověřuje sync kód proti KV (`list` s prefixem `cur:`), ne jen jeho
+  délku — jinak by Worker sloužil komukoliv s dvaceti znaky jako proxy.
   Ceny chodí v měně burzy, přepočet dělá `fetchFx()` přes
-  frankfurter.dev (ECB, taky bez klíče, hodinová cache). CZK papíry se
+  frankfurter.dev (ECB, bez klíče, hodinová cache). CZK papíry se
   nepřepočítávají vůbec. `fmCcy(n,ccy)` je formát bez „Kč" — `fmEx` by
   k cizí měně lepilo koruny a vznikalo „300 Kč USD" (nahlášeno a
   opraveno). **Kurz se stahuje jen při změně symbolu**, ne při přepsání
-  počtu kusů — každý dotaz jde z denního limitu.
+  počtu kusů.
 
 - **Dluhy — skupiny/projekty (Byt, Auto...).** `S.debtGroups[jméno]` může
   existovat BEZ jediného dluhu (založíš projekt dřív, dluhy přidáváš postupně).
