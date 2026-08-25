@@ -12,5 +12,14 @@
       "binding": "ROZPOCET",
       "id": "f45ce1d702204b8aa4557bb4d5e93150"
     }
+  ],
+  // Databáze pro účty (e-mail + magic link) — samostatná od KV úložiště
+  // ROZPOCET, kde žijí data na starém sync kódu. Vidí se do d1-schema.sql.
+  "d1_databases": [
+    {
+      "binding": "ACCOUNTS_DB",
+      "database_name": "rozpocet-accounts",
+      "database_id": "fb6cf420-e241-4c17-a56a-e9348d79e38e"
+    }
   ]
 }

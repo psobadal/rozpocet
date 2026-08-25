@@ -61,6 +61,47 @@ npx wrangler kv key get "cur:<hash>" --namespace-id=f45ce1d702204b8aa4557bb4d5e9
 že smazal) a `kv key list` je eventuálně konzistentní, takže hned po mazání může
 ukázat starý stav. Do KV nesahat bez důvodu — jsou tam reálná data uživatele.
 
+## Účty na e-mail (rozpracováno, fáze 1 hotová)
+
+Vedle sync kódu (výše) appka staví **druhý, oddělený** systém přihlášení —
+e-mail + magic link, na účet uživatele s vlastní databází. Cíl: appku jde
+otevřít cizím lidem, ne jen tomu, kdo si sám rozjede Cloudflare Worker.
+Podrobný plán (schéma, endpointy, fáze, proč) je v
+`~/.claude/plans/majestic-humming-hartmanis.md`. **Zásadní pravidlo, které
+platí po celou dobu stavby:** starý sync-kód systém se nesmí ani dotknout —
+žádná migrace, žádné sdílené klíče, jen paralelní cesta vedle něj.
+
+**Databáze:** D1 `rozpocet-accounts` (`fb6cf420-e241-4c17-a56a-e9348d79e38e`),
+binding `ACCOUNTS_DB` ve `wrangler.jsonc`. Schéma v `d1-schema.sql`
+(`users`/`magic_links`/`sessions`), nasazení:
+```bash
+npx wrangler d1 execute rozpocet-accounts --remote --file=./d1-schema.sql
+```
+Rozpočtová data účtu **nejsou** v D1 — zůstávají v tom samém KV `ROZPOCET`
+jako sync kód, jen s prefixem `acct:cur:<user_id>` / `acct:prev:<user_id>` /
+`acct:snap:<user_id>:<datum>` místo `cur:<hash>` atd. — formátově
+nezaměnitelné se starými klíči (UUID vs. sha256 hash), navíc explicitní
+prefix pro jistotu při čtení `wrangler kv key list`.
+
+**Hotovo (fáze 1 — jádro identity, `sync-worker.js`):** `/acct/request-link`,
+`/acct/verify`, `GET`/`PUT /acct/data`, `/acct/logout`. Ověřeno end-to-end
+přes `wrangler dev --remote` i po nasazení do produkce, včetně: neplatný
+e-mail, neplatný/expirovaný/dvakrát použitý token, izolace mezi uživateli,
+že rotace `cur→prev` a denní snapshot fungují stejně jako u sync kódu,
+a hlavně — že starý sync-kódový systém běží beze změny (kontrola přes
+`wrangler kv key list`, žádný `acct:` klíč mezi starými, žádný starý klíč
+změněný). Testovací uživatelé/klíče po každém testu ručně smazané, ať
+databáze nezůstává zaneřáděná cizími testovacími řádky.
+
+**Zatím chybí (viz plán):** `/acct/prev`, `/acct/list`, `/acct/snap/<date>`
+(mirror starých endpointů), `/acct/logout-all`, `/acct/delete-account`,
+rate limiting na `/acct/request-link`, **reálné odesílání e-mailu** —
+`/acct/request-link` dnes vrací token přímo v odpovědi (`devToken`), což je
+**vyloženě dočasné a nesmí to jít do provozu, kde by to viděl někdo cizí** —
+nahradí se až se zapojí Resend. Celé `index.html` je zatím nedotčené —
+appka, kterou Patrik denně používá, o účtech vůbec neví, dokud nepřijde
+fáze klientské integrace.
+
 ## Jak nasazovat změny
 
 Po každé sadě úprav v `index.html`:

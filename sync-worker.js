@@ -13,12 +13,17 @@
    do „prev". Kdyby něco přepsalo data nesmyslem, jde se o krok vrátit
    přes GET /prev. Hlavní zálohou zůstává datový soubor na disku a
    export z appky — tohle je jen záchranná brzda navíc.
+
+   Vedle toho běží (fáze 1, rozpracováno) druhá, oddělená cesta pro účty
+   na e-mail + magic link — vše pod `/acct/*`, vlastní D1 databáze
+   ACCOUNTS_DB, vlastní KV prefix `acct:`. Sync kód a účty se nikdy
+   nepletou dohromady — viz plán v CLAUDE.md.
    ===================================================================== */
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',   // chrání tajný kód v hlavičce, ne origin
-  'Access-Control-Allow-Methods': 'GET,PUT,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type,X-Sync-Code',
+  'Access-Control-Allow-Methods': 'GET,PUT,POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type,X-Sync-Code,Authorization',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -27,9 +32,20 @@ const json = (o, s) => new Response(JSON.stringify(o), {
   headers: { ...CORS, 'Content-Type': 'application/json' },
 });
 
-async function keyFor(code) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
+// Sdílený hash pro sync kód i pro oba typy tokenů u účtů — raw hodnota
+// se nikdy nikam neukládá, jen tenhle otisk.
+async function sha256hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// 256bitový náhodný token pro magic link i session — base64url, bez paddingu.
+function randomToken() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  let s = '';
+  bytes.forEach(b => s += String.fromCharCode(b));
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export default {
@@ -39,12 +55,19 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === '/ping') return json({ ok: true });
 
+    /* ---------- účty (e-mail + magic link) ----------
+       Úplně jiná autentizace než sync kód níž — token chodí v hlavičce
+       Authorization: Bearer, ne X-Sync-Code. Musí se vyhodnotit TADY,
+       než appka vůbec sáhne na X-Sync-Code — jinak by každý požadavek
+       na účet dostal 401 kvůli chybějící staré hlavičce. */
+    if (url.pathname.startsWith('/acct/')) return handleAccount(req, env, url);
+
     if (!env.ROZPOCET) return json({ error: 'chybí KV binding ROZPOCET' }, 500);
 
     // Kód chodí v hlavičce, ne v URL — ať se neukládá do logů a historie.
     const code = req.headers.get('X-Sync-Code') || '';
     if (code.length < 20) return json({ error: 'chybí nebo krátký sync kód' }, 401);
-    const k = await keyFor(code);
+    const k = await sha256hex(code);
 
     if (req.method === 'GET') {
       /* Kurzy akcií a ETF. Prohlížeč si je u burzy vyzvednout nemůže —
@@ -151,3 +174,134 @@ export default {
     return json({ error: 'nepodporovaná metoda' }, 405);
   },
 };
+
+/* =====================================================================
+   ÚČTY — e-mail + magic link (fáze 1: jádro identity, zatím bez mailu)
+   ---------------------------------------------------------------------
+   D1 (ACCOUNTS_DB) drží jen identitu — uživatele, magic linky, session.
+   Samotná rozpočtová data zůstávají v KV (ROZPOCET), stejný cur/prev/snap
+   vzor jako u sync kódu, jen s prefixem `acct:` a klíčem podle user_id
+   místo hashe kódu — nemůže se to s starým systémem nikdy splést.
+
+   FÁZE 1 provizorium: /acct/request-link zatím vrací token přímo
+   v odpovědi (`devToken`), protože e-mailová služba (Resend) se zapojí
+   až ve fázi 2. Tohle NIKDY nesmí jít do produkce — je to jen pro vývoj
+   a testování na jednom stroji.
+   ===================================================================== */
+async function handleAccount(req, env, url) {
+  if (!env.ACCOUNTS_DB) return json({ error: 'chybí D1 binding ACCOUNTS_DB' }, 500);
+  const path = url.pathname.slice('/acct/'.length);
+
+  if (path === 'request-link') {
+    if (req.method !== 'POST') return json({ error: 'nepodporovaná metoda' }, 405);
+    let body; try { body = await req.json(); } catch (e) { return json({ error: 'nevalidní JSON' }, 400); }
+    const email = ((body && body.email) || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'neplatný e-mail' }, 400);
+
+    const now = Date.now();
+    let user = await env.ACCOUNTS_DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+    if (!user) {
+      user = { id: crypto.randomUUID() };
+      await env.ACCOUNTS_DB.prepare('INSERT INTO users (id, email, created_at) VALUES (?, ?, ?)')
+        .bind(user.id, email, now).run();
+    }
+    // starý nepoužitý odkaz zneplatnit — ať nezůstávají živé duplicity
+    await env.ACCOUNTS_DB.prepare('UPDATE magic_links SET used_at=? WHERE user_id=? AND used_at IS NULL')
+      .bind(now, user.id).run();
+
+    const rawToken = randomToken();
+    await env.ACCOUNTS_DB.prepare(
+      'INSERT INTO magic_links (id, user_id, token_hash, created_at, expires_at, requested_ip) VALUES (?,?,?,?,?,?)'
+    ).bind(crypto.randomUUID(), user.id, await sha256hex(rawToken), now, now + 15 * 60 * 1000,
+           req.headers.get('CF-Connecting-IP') || '').run();
+
+    // TODO fáze 2: poslat rawToken e-mailem přes Resend a vracet jen {ok:true}.
+    return json({ ok: true, devToken: rawToken });
+  }
+
+  if (path === 'verify') {
+    if (req.method !== 'POST') return json({ error: 'nepodporovaná metoda' }, 405);
+    let body; try { body = await req.json(); } catch (e) { return json({ error: 'nevalidní JSON' }, 400); }
+    const rawToken = ((body && body.token) || '').trim();
+    if (!rawToken) return json({ error: 'chybí token' }, 400);
+
+    const now = Date.now();
+    const tokenHash = await sha256hex(rawToken);
+    const link = await env.ACCOUNTS_DB.prepare(
+      'SELECT * FROM magic_links WHERE token_hash=? AND used_at IS NULL AND expires_at>?'
+    ).bind(tokenHash, now).first();
+    if (!link) return json({ error: 'odkaz vypršel nebo byl použit' }, 401);
+    await env.ACCOUNTS_DB.prepare('UPDATE magic_links SET used_at=? WHERE id=?').bind(now, link.id).run();
+
+    const user = await env.ACCOUNTS_DB.prepare('SELECT * FROM users WHERE id=?').bind(link.user_id).first();
+    if (!user) return json({ error: 'účet nenalezen' }, 404);
+    await env.ACCOUNTS_DB.prepare('UPDATE users SET last_login_at=? WHERE id=?').bind(now, user.id).run();
+
+    const rawSession = randomToken();
+    await env.ACCOUNTS_DB.prepare(
+      'INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at, last_seen_at, user_agent) VALUES (?,?,?,?,?,?,?)'
+    ).bind(crypto.randomUUID(), user.id, await sha256hex(rawSession), now, now + 60 * 86400000, now,
+           req.headers.get('User-Agent') || '').run();
+
+    return json({ ok: true, token: rawSession, userId: user.id, email: user.email });
+  }
+
+  // zbytek cest pod /acct/ vyžaduje platnou (neodvolanou, nevypršelou) relaci
+  const session = await requireSession(req, env);
+  if (!session) return json({ error: 'neplatná nebo vypršelá relace' }, 401);
+
+  if (path === 'data') {
+    if (!env.ROZPOCET) return json({ error: 'chybí KV binding ROZPOCET' }, 500);
+    const kvKey = 'acct:cur:' + session.user_id;
+    if (req.method === 'GET') {
+      const val = await env.ROZPOCET.get(kvKey);
+      if (!val) return json({}, 404);
+      return new Response(val, { headers: { ...CORS, 'Content-Type': 'application/json' } });
+    }
+    if (req.method === 'PUT') {
+      const body = await req.text();
+      let parsed;
+      try { parsed = JSON.parse(body); } catch (e) { return json({ error: 'nevalidní JSON' }, 400); }
+      if (!parsed || typeof parsed.data !== 'object' || parsed.data === null)
+        return json({ error: 'chybí pole data' }, 400);
+
+      const cur = await env.ROZPOCET.get(kvKey);
+      if (cur) await env.ROZPOCET.put('acct:prev:' + session.user_id, cur);
+      await env.ROZPOCET.put(kvKey, body);
+
+      const day = new Date().toISOString().slice(0, 10);
+      await env.ROZPOCET.put('acct:snap:' + session.user_id + ':' + day, body,
+        { expirationTtl: 60 * 60 * 24 * 180 });
+
+      return json({ ok: true, mt: parsed.mt || null });
+    }
+    return json({ error: 'nepodporovaná metoda' }, 405);
+  }
+
+  if (path === 'logout') {
+    if (req.method !== 'POST') return json({ error: 'nepodporovaná metoda' }, 405);
+    await env.ACCOUNTS_DB.prepare('UPDATE sessions SET revoked_at=? WHERE id=?')
+      .bind(Date.now(), session.id).run();
+    return json({ ok: true });
+  }
+
+  return json({ error: 'nenalezeno' }, 404);
+}
+
+// Ověří Authorization: Bearer <token> proti D1, prodlouží expiraci relace
+// jen když je potřeba (ne při každém požadavku — ušetří zbytečné D1 zápisy
+// při odesílání každé změny každých 1,5 s).
+async function requireSession(req, env) {
+  const m = /^Bearer\s+(.+)$/.exec(req.headers.get('Authorization') || '');
+  if (!m) return null;
+  const now = Date.now();
+  const session = await env.ACCOUNTS_DB.prepare(
+    'SELECT * FROM sessions WHERE token_hash=? AND revoked_at IS NULL AND expires_at>?'
+  ).bind(await sha256hex(m[1].trim()), now).first();
+  if (!session) return null;
+  if (!session.last_seen_at || now - session.last_seen_at > 86400000) {
+    await env.ACCOUNTS_DB.prepare('UPDATE sessions SET last_seen_at=?, expires_at=? WHERE id=?')
+      .bind(now, now + 60 * 86400000, session.id).run();
+  }
+  return session;
+}
