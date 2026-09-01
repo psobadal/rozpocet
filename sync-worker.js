@@ -69,6 +69,19 @@ export default {
     if (code.length < 20) return json({ error: 'chybí nebo krátký sync kód' }, 401);
     const k = await sha256hex(code);
 
+    /* Kontrola délky sama o sobě pustí KOHOKOLIV s dvaceti znaky — kdo zná
+       adresu Workeru, mohl si sem ukládat vlastní data. Tenhle Worker slouží
+       jen svému majiteli, takže se otisk kódu porovná se seznamem povolených.
+       Seznam je v tajemství ALLOWED_HASHES (`npx wrangler secret put`), ne
+       v repu — repo je veřejné.
+       Když tajemství není nastavené, chová se Worker jako dřív a pustí
+       všechno: špatně nasazené tajemství nesmí odstřihnout majitele
+       od vlastních dat. */
+    if (env.ALLOWED_HASHES) {
+      const allowed = env.ALLOWED_HASHES.split(',').map(x => x.trim()).filter(Boolean);
+      if (!allowed.includes(k)) return json({ error: 'neznámý sync kód' }, 401);
+    }
+
     if (req.method === 'GET') {
       /* Kurzy akcií a ETF. Prohlížeč si je u burzy vyzvednout nemůže —
          zdroj neposílá CORS hlavičky — takže to udělá Worker za něj.

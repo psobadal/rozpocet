@@ -39,6 +39,18 @@ Nasazeno a živé od 17. 8. 2026:
 - Připojená jsou dvě PC a mobil (všechna sdílejí jeden sync kód → v KV je
   jeden trojklíč `cur:`/`prev:`/`snap:` pod stejným hashem).
 
+**Worker pouští jen povolené kódy.** Kontrola délky (≥ 20 znaků) sama o sobě
+pustí kohokoliv, kdo zná adresu Workeru — a ta je v historii gitu, protože
+repo je veřejné. Kdokoliv by si sem tedy mohl ukládat vlastní data: sežral by
+free tier a majitel účtu by nevědomky hostoval cizí finanční data (GDPR).
+Proto se otisk kódu porovnává se seznamem v tajemství `ALLOWED_HASHES`
+(`npx wrangler secret put ALLOWED_HASHES`, hodnota = hashe oddělené čárkou,
+nikdy v repu). **Když tajemství chybí, Worker se chová jako dřív a pustí
+všechno** — špatně nasazené tajemství nesmí odstřihnout majitele od dat.
+Pozor: po vygenerování nového připojovacího kódu se musí seznam přenastavit,
+jinak appka přestane synchronizovat. Otisk stávajícího kódu jde přečíst
+z názvů klíčů `cur:<hash>` v KV.
+
 Nasazení změny Workeru (konfigurace je ve `wrangler.jsonc`, KV binding `ROZPOCET`):
 ```bash
 npx wrangler deploy
