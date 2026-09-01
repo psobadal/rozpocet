@@ -390,7 +390,16 @@ function applyTheme(){applyAccent(S.ui.accent);applyNumFont(S.ui.numFont);
 function defCats(){return CONFIG.categories.map(c=>({id:uid(),nm:c.nm,icon:c.icon,kind:c.kind||'need',it:(c.items||[]).map(n=>({id:uid(),nm:n,pl:0,log:[]}))}));}
 function defPeriod(nm,from,to){return{id:uid(),nm,from,to,income:[{label:'Výplata',pl:0,ac:0},{label:'Jiné',pl:0,ac:0}],cats:defCats()};}
 // první období nového uživatele: ode dneška na měsíc — datum si pak upraví podle své výplaty
-function curCycleDates(){const s=new Date();s.setHours(0,0,0,0);const e=new Date(s.getFullYear(),s.getMonth()+1,s.getDate());return{from:iso(s),to:iso(e)};}
+/* Datum o měsíc dál, ale bez přetečení: 31. 1. + měsíc je 28. 2., ne 3. 3.
+   Naivní new Date(rok, měsíc+1, den) den nedrží — únor 31 si přepočítá na
+   březen. Kdo si vede kalendářní měsíce a začal na konci měsíce, dostal
+   předvyplněné nesmyslné období. */
+function addMonth(isoStr){
+  const d=new Date(isoStr),y=d.getFullYear(),m=d.getMonth();
+  const posledni=new Date(y,m+2,0).getDate();   // poslední den cílového měsíce
+  return iso(new Date(y,m+1,Math.min(d.getDate(),posledni)));
+}
+function curCycleDates(){const s=new Date();s.setHours(0,0,0,0);return{from:iso(s),to:addMonth(iso(s))};}
 const MON=['ledna','února','března','dubna','května','června','července','srpna','září','října','listopadu','prosince'];
 function monthName(isoStr){const p=isoStr.split('-');return MON[+p[1]-1]+' '+p[0];}
 const defTabs=()=>[
@@ -2350,7 +2359,7 @@ function toggleTab(id){const t=S.ui.tabs.find(x=>x.id===id);if(t&&t.id!=='nastav
 function moveTab(id,dir){const i=S.ui.tabs.findIndex(x=>x.id===id);const j=i+dir;if(j<0||j>=S.ui.tabs.length)return;const t=S.ui.tabs.splice(i,1)[0];S.ui.tabs.splice(j,0,t);commit();}
 
 /* periods */
-function newPeriodModal(){const last=S.periods[S.periods.length-1];const from=last?last.to:todayISO();const fd2=new Date(from);const to=iso(new Date(fd2.getFullYear(),fd2.getMonth()+1,fd2.getDate()));
+function newPeriodModal(){const last=S.periods[S.periods.length-1];const from=last?last.to:todayISO();const to=addMonth(from);
   openModal(`<h3>Nové výplatní období</h3><div class="md">Zadej skutečná data — od dne, kdy přišla výplata, do příští výplaty. Klidně pokaždé jiná.</div>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="Výplata ${monthName(from)}"></div>
     <div class="fr"><div class="fg"><span class="fl">Od výplaty</span><input class="inp" id="m_f" type="date" value="${from}"></div><div class="fg"><span class="fl">Příští výplata</span><input class="inp" id="m_t" type="date" value="${to}"></div></div>

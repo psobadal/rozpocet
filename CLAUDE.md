@@ -157,6 +157,16 @@ S.tax            — daň z úroků (výchozí 15 %)
 
 - **Cyklus = výplata, ne kalendářní měsíc.** `S.periods` má vlastní `from`/`to`,
   uživatel je zadává ručně (výplata mu chodí 14.–18., nikdy stejně).
+  **Kalendářní měsíc jde nastavit taky** — od prvního do prvního — a další
+  období se pak předvyplňují sama správně. Nic se kvůli tomu neprogramovalo,
+  jen se to říká na úvodní stránce, ať to lidi napadne.
+  `addMonth()` přičítá měsíc **bez přetečení**: 31. 1. + měsíc je 28. 2.
+  (v přestupném roce 29. 2.), ne 3. 3. Naivní `new Date(rok, měsíc+1, den)`
+  den nedrží a únor 31 si přepočítá na březen — kdo začal na konci měsíce,
+  dostal předvyplněné nesmyslné období (nalezeno a opraveno 1. 9. 2026).
+  Používá to `curCycleDates()` i `newPeriodModal()`. Místa, kde se přičítá
+  měsíc a den se předtím nastaví na 1 nebo 0 (`nwSeries`, `creditInterest`),
+  jsou v pořádku a nechají se být.
 
 - **Sinking fund model u obálek — nikdy neměnit bez rozmyslu:** vklad do obálky
   = výdaj TEĎ (sníží „zbývá volných", počítá se do „odloženo tento cyklus").
