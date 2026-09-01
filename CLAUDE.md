@@ -9,7 +9,6 @@ na webu. Cílem je i „free appka pro kohokoliv" (viz README.md).
 - **Lokálně (Mac, aktuální):** `~/Documents/GitHub/rozpocet/` — plný `git clone`.
   Pozor: na Ploše bývá i `~/Desktop/Claude/rozpocet-main/`, což je jen rozbalený
   ZIP bez `.git` a **zastaralý** — needituj ho, změny se odtamtud nikam nedostanou.
-- **Lokálně (starý Windows):** `C:\Users\START\Downloads\Rozpočet\index.html`
 - **GitHub:** [psobadal/rozpocet](https://github.com/psobadal/rozpocet) (veřejné repo, účet uživatele)
 - **Živě na webu:** https://psobadal.github.io/rozpocet/ (GitHub Pages, větev `main`, root)
 - **Synchronizace:** vlastní Worker na Cloudflare (`sync-worker.js` v repu, návod
@@ -33,9 +32,10 @@ na webu. Cílem je i „free appka pro kohokoliv" (viz README.md).
 
 Nasazeno a živé od 17. 8. 2026:
 
-- **Adresa:** `https://rozpocet-sync.ozpo-et.workers.dev` (`/ping` vrací `{"ok":true}`)
-- **Účet:** `p.s.obadal@gmail.com`, account id `a63c016bfa6ff650a9607ba26d272999`
-- **KV úložiště:** `rozpocet`, id `f45ce1d702204b8aa4557bb4d5e93150`
+- **Adresa Workeru, účet a ID úložišť** nejsou v repu (je veřejné) — žijí
+  v `LOCAL-NOTES.md`, který je v `.gitignore`. ID KV a D1 jsou i ve
+  `wrangler.jsonc`, protože bez nich nejde nasadit; nejsou to přihlašovací
+  údaje, samy o sobě nikomu přístup nedají.
 - Připojená jsou dvě PC a mobil (všechna sdílejí jeden sync kód → v KV je
   jeden trojklíč `cur:`/`prev:`/`snap:` pod stejným hashem).
 
@@ -54,8 +54,8 @@ Management → **Connected Applications**, ne pod starou adresou `authorized-app
 
 Nahlédnutí do dat nebo záchrana, když se ztratí sync kód:
 ```bash
-npx wrangler kv key list --namespace-id=f45ce1d702204b8aa4557bb4d5e93150 --remote
-npx wrangler kv key get "cur:<hash>" --namespace-id=f45ce1d702204b8aa4557bb4d5e93150 --remote
+npx wrangler kv key list --namespace-id=<id z wrangler.jsonc> --remote
+npx wrangler kv key get "cur:<hash>" --namespace-id=<id z wrangler.jsonc> --remote
 ```
 `kv key delete` **nemá** přepínač `--force` (s ním jen vypíše nápovědu a tváří se,
 že smazal) a `kv key list` je eventuálně konzistentní, takže hned po mazání může
@@ -71,8 +71,7 @@ Podrobný plán (schéma, endpointy, fáze, proč) je v
 platí po celou dobu stavby:** starý sync-kód systém se nesmí ani dotknout —
 žádná migrace, žádné sdílené klíče, jen paralelní cesta vedle něj.
 
-**Databáze:** D1 `rozpocet-accounts` (`fb6cf420-e241-4c17-a56a-e9348d79e38e`),
-binding `ACCOUNTS_DB` ve `wrangler.jsonc`. Schéma v `d1-schema.sql`
+**Databáze:** D1 `rozpocet-accounts`, binding `ACCOUNTS_DB` ve `wrangler.jsonc`. Schéma v `d1-schema.sql`
 (`users`/`magic_links`/`sessions`), nasazení:
 ```bash
 npx wrangler d1 execute rozpocet-accounts --remote --file=./d1-schema.sql
@@ -107,12 +106,13 @@ fáze klientské integrace.
 Po každé sadě úprav v `index.html`:
 ```bash
 git -C ~/Documents/GitHub/rozpocet add index.html
-git -C ~/Documents/GitHub/rozpocet -c user.name='Patrik' -c user.email='obadal@aqe.cz' commit -F <soubor_se_zpravou>
+git -C ~/Documents/GitHub/rozpocet commit -F <soubor_se_zpravou>
 git -C ~/Documents/GitHub/rozpocet push
 ```
 Používej `git -C <cesta>` — pracovní adresář Bash toolu se mezi voláními vrací
 jinam a `git` pak hlásí „not a git repository". Commit zprávu piš do dočasného
 souboru a commituj přes `-F` (multi-line `-m` dělá potíže s diakritikou).
+Jméno a mail pro commity jsou nastavené lokálně v gitu, nepatří sem.
 Na Windows se navíc push pouštěl na pozadí s `GIT_TERMINAL_PROMPT=1`, na Macu
 to není potřeba. GitHub Pages se aktualizuje samo do ~30 s po pushi.
 
@@ -485,8 +485,3 @@ Na Investicích vedle Nové položky. Čistě „co kdyby", **nesahá na data**.
 Úrok měsíčně, vklad na konci měsíce, daň průběžně z úroku — schválně
 stejně jako `creditInterest()`, ať appka nepočítá dvěma způsoby.
 Ověřeno proti uzavřenému vzorci pro anuitu.
-
-## Odkaz na soutěž (jiný projekt, mimochodem)
-
-`C:\Users\START\Downloads\LEGO Kódobraní\` — samostatný nesouvisející úkol
-(Alza soutěž), má vlastní CLAUDE.md a KOD.md.

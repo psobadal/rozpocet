@@ -1,2 +1,5 @@
 .wrangler/
 node_modules/
+
+# lokální poznámky s osobními údaji — repo je veřejné
+LOCAL-NOTES.md
