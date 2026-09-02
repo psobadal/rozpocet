@@ -30,3 +30,10 @@ Appka je jeden soubor a je stavěná na úpravy:
 ## Soukromí
 
 Žádná data se nikam neposílají. Všechno zůstává v tvém prohlížeči / v souboru na tvém disku.
+
+## Licence
+
+Používat, upravovat i provozovat na vlastním serveru smíš zdarma. Prodávat ani na tom
+jinak vydělávat ne — viz [LICENSE.md](LICENSE.md) (PolyForm Noncommercial 1.0.0).
+
+Appka slouží k přehledu o vlastních penězích, není to finanční poradenství.

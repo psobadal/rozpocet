@@ -1,4 +1,16 @@
 <!DOCTYPE html>
+<!--
+  Můj rozpočet — appka na rozpočet od výplaty k výplatě
+  Copyright Patrik Obadal · https://github.com/psobadal/rozpocet
+
+  Používat, upravovat i provozovat na vlastním serveru smíš zdarma.
+  Prodávat ani jinak na tom vydělávat ne. Podmínky: LICENSE.md v repu
+  (PolyForm Noncommercial 1.0.0).
+
+  Pokud jsi tenhle soubor dostal odjinud než z odkazu výš, nemáš jistotu,
+  že do něj někdo nepřidal kód, který posílá tvoje finanční data pryč.
+  Originál je vždy na té adrese.
+-->
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
@@ -1673,6 +1685,11 @@ function vNastaveni(p){
   h+=`<div class="card"><div class="ct" style="margin-bottom:14px">${ic('percent',15)} Daň z úroků</div>
     <div style="max-width:200px"><div class="fg"><span class="fl">Sazba %</span><input class="inp num" type="number" value="${S.tax}" onchange="S.tax=+this.value;commit()"></div></div>
     <p class="mini" style="margin-top:10px">Strhává se z úroku připsaného u spořáků a investic (v ČR běžně 15 %).</p></div>`;
+
+  h+=`<div class="card"><div class="ct" style="margin-bottom:10px">${ic('coin',15)} O appce</div>
+    <p class="mini" style="margin:0">Můj rozpočet — <a href="https://github.com/psobadal/rozpocet" target="_blank" rel="noopener">otevřený kód na GitHubu</a>.
+    Používat a upravovat smíš zdarma, prodávat ne (<a href="https://github.com/psobadal/rozpocet/blob/main/LICENSE.md" target="_blank" rel="noopener">licence</a>).
+    Appka slouží k přehledu o vlastních penězích, není to finanční poradenství.</p></div>`;
 
   h+=`<div class="card"><div class="ct" style="margin-bottom:10px;color:var(--neg)">Nebezpečná zóna</div><p class="mini" style="margin:0 0 12px">Smaže všechna data. Jde vrátit jen ze zálohy.</p><button class="btn dgr" onclick="resetAll()">${ic('trash',15)} Smazat všechna data</button></div>`;
   // až bude synchronizace zapnutá, tahle rada je vyřízená a nemá co ukazovat
