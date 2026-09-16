@@ -680,6 +680,17 @@ function periodForDate(d){
   if(!d)return null;
   return S.periods.find(p=>p.from<=d&&d<p.to)||S.periods.find(p=>p.from<=d&&d<=p.to)||null;
 }
+/* Kam zapsat nový záznam. Období se dotýkají: nové začíná dnem, kterým to
+   předchozí končí. Hraniční den proto pravidlo from<=d<to přiřkne tomu
+   novějšímu, jenže když se zrovna díváš na to starší, mínil jsi skoro
+   jistě jeho. Na hraničním dni tedy vyhrává otevřené období, jinde
+   rozhoduje dál čistě datum, aby šlo dopisovat starší účtenky. */
+function periodForEntry(d){
+  if(!d)return null;
+  const cur=P();
+  if(cur&&cur.from<=d&&d<=cur.to)return cur;
+  return periodForDate(d);
+}
 // kategorie a položka se mezi obdobími páruje podle názvu — id je v každém období jiné
 function catInPeriod(tp,src){
   let c=tp.cats.find(x=>x.nm.toLowerCase()===src.nm.toLowerCase());
@@ -695,7 +706,7 @@ function itemInPeriod(tc,src){
 }
 // zapíše výdaj tam, kam podle data patří; vrátí, do kterého období to spadlo
 function logToDate(srcCat,srcItem,le){
-  const cur=P(),tp=periodForDate(le.d)||cur;
+  const cur=P(),tp=periodForEntry(le.d)||cur;
   const tc=tp.id===cur.id?srcCat:catInPeriod(tp,srcCat);
   const ti=tp.id===cur.id?srcItem:itemInPeriod(tc,srcItem);
   ti.log.push(le);pushLinked(ti,le,tp.id);
@@ -1756,7 +1767,7 @@ function quickAdd(){const p=P();const val=document.getElementById('qcat').value;
   const nmEl=document.getElementById('qname'),nm=nmEl?nmEl.value.trim():'';
   const date=document.getElementById('qdate').value||todayISO();
   qaSel=val;qaDate=date; // zapamatuj výběr pro další rychlé zadání
-  const tp=periodForDate(date)||p,jinam=tp.id!==p.id;
+  const tp=periodForEntry(date)||p,jinam=tp.id!==p.id;
   if(val.startsWith('env:')){const e=S.envelopes.find(x=>x.id===val.slice(4));if(!e)return;e.bal=(e.bal||0)+amt;e.hist.push({d:date,t:'in',a:amt,n:nm||'',pid:tp.id});
     toast(`Odloženo ${fm(amt)} → ${e.nm}`+(jinam?` · ${tp.nm}`:''));}
   else{const cid=val.startsWith('cat:')?val.slice(4):val;const c=p.cats.find(x=>x.id===cid);if(!c)return;
