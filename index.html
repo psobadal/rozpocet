@@ -779,7 +779,7 @@ function loanPreview(principal,rate,monthly,fixDate,rateAfter){
   return{n:r.n,date:futureMonthStr(r.n),interest:r.interest,total:r.total};}
 const COLS=['#c4694a','#3a8a7a','#7a5a8c','#c0902f','#5a7fa0','#a0604f','#5c8a5c','#8a6a9a','#b08a3a','#6a8f99','#9a6a7a','#7a9a5a'];
 const col=i=>COLS[i%COLS.length];
-function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
+function toast(m,ms){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),ms||2200);}
 
 /* ---------- interest auto-credit (1. dne v měsíci, po dani) ---------- */
 function firstOfMonth(d){return new Date(d.getFullYear(),d.getMonth(),1);}
@@ -1076,7 +1076,7 @@ function vPrehled(p){
       <select class="inp" id="qcat" style="flex:1.1;min-width:130px" onchange="qaSetCat(this.value)"><option value="" ${qaCur(p)?'':'selected'}>— vyber kategorii —</option><optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaCur(p)==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaCur(p)==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}</select>
       ${qaItemField(p)}
       <input class="inp num" id="qamt" type="number" placeholder="Kč" value="${qaFixAmt(p)||''}" style="flex:.9;min-width:100px" onkeydown="if(event.key==='Enter')quickAdd()">
-      <input class="inp" id="qdate" type="date" value="${qaDate||todayISO()}" style="flex:0 0 148px">
+      <input class="inp" id="qdate" type="date" value="${qaDate||todayISO()}" style="flex:0 0 148px${qaDate&&qaDate!==todayISO()?';border-color:var(--gold);background:var(--gold-bg)':''}">${qaDate&&qaDate!==todayISO()?`<span class="mini" style="color:var(--gold);white-space:nowrap">zapisuješ na ${fd(qaDate)} · <a onclick="qaDate='';R()">zpět na dnešek</a></span>`:''}
       <button class="btn fill" id="qadd" onclick="quickAdd()">${qaFixAmt(p)?'Zaplatit':'Přidat'}</button></div>
     ${qaFixAmt(p)?`<div class="mini" style="margin-top:8px">${ic('check',13)} Pevná částka ${fmEx(qaFixAmt(p))} je předvyplněná z plánu — stačí kliknout. Přepsat ji můžeš.</div>`:''}</div>`;
   h+=fixedBlock(p);
@@ -1767,7 +1767,7 @@ function quickAdd(){const p=P();const val=document.getElementById('qcat').value;
       if(!it){it={id:uid(),nm:itNm,pl:0,log:[]};c.it.push(it);}}
     qaItem=it.id;   // ať zůstane vybraná i pro další zápis
     const le={id:uid(),d:date,a:amt,n:''},r=logToDate(c,it,le);
-    const lt=linkTarget(it);toast(`${c.nm}: ${fm(amt)}`+(lt?` → ${lt.obj.nm}`:'')+(r.jinam?` · zapsáno do „${r.period.nm}"`:''));}
+    const lt=linkTarget(it);toast(`${c.nm}: ${fm(amt)}`+(lt?` → ${lt.obj.nm}`:'')+(r.jinam?` · POZOR: podle data ${fd(date)} to spadlo do období „${r.period.nm}", ne do otevřeného`:''),r.jinam?5000:2200);}
   commit();setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.focus();},60);}
 // kurzor patří na první nevyplněné pole — bez kategorie se stejně nic nezapíše
 function quickModal(){go('prehled');setTimeout(()=>{
