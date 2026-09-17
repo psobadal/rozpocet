@@ -439,12 +439,17 @@ function defState(){
 
 /* ---------- state ---------- */
 let S=defState();
-let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='', qaItem='';
+let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='', qaItem='', qaFrom='', pohHledej='', pohRozsah=0;
 let fileHandle=null, fileOK=false;
 
 function loadLS(){try{const r=localStorage.getItem(LS);if(r)return migrate(JSON.parse(r));}catch(e){}return null;}
 function migrate(s){
   s.periods||=[];s.envelopes||=[];s.investments||=[];s.debts||=[];
+  s.ui=s.ui||{};
+  /* Kdy appka začala vést sjednocený seznam Pohybů. Schválně se NEDOTAHUJE
+     starší historie zpětně — appka ukazuje jen pohyby od tohohle data,
+     stará data zůstávají beze změny vidět postaru v jednotlivých záložkách. */
+  if(!s.ui.pohybyOd)s.ui.pohybyOd=todayISO();
   s.debts.forEach(d=>{d.paid0=d.paid0||0;d.monthly=d.monthly||0;d.group=d.group||'';d.pay||=[];d.paidToPrice=!!d.paidToPrice;d.fixDate=d.fixDate||'';});
   s.debtGroups=s.debtGroups||{};
   Object.keys(s.debtGroups).forEach(g=>{const gm=s.debtGroups[g];gm.contrib||=[];gm.ltv=gm.ltv||0;
@@ -690,6 +695,16 @@ function periodForEntry(d){
   const cur=P();
   if(cur&&cur.from<=d&&d<=cur.to)return cur;
   return periodForDate(d);
+}
+function dateMinus(dstr,dny){const dt=new Date(dstr+'T12:00:00');dt.setDate(dt.getDate()-dny);return iso(dt);}
+/* Lidsky čitelné jméno truhlice pro hlášky a seznam Pohybů. */
+function presunNazev(val){
+  if(val==='vyplata')return 'Výplata';
+  if(val.startsWith('cat:')){const c=P().cats.find(x=>'cat:'+x.id===val);return c?c.nm:'Kategorie';}
+  if(val.startsWith('env:')){const e=S.envelopes.find(x=>x.id===val.slice(4));return e?e.nm:'Obálka';}
+  if(val.startsWith('inv:')){const i=S.investments.find(x=>x.id===val.slice(4));return i?i.nm:'Investice';}
+  if(val.startsWith('debt:')){const d=S.debts.find(x=>x.id===val.slice(5));return d?d.nm:'Dluh';}
+  return val;
 }
 // kategorie a položka se mezi obdobími páruje podle názvu — id je v každém období jiné
 function catInPeriod(tp,src){
@@ -1082,14 +1097,25 @@ function vPrehled(p){
     <div class="tile"><div class="tl">Naplánováno</div><div class="tv">${fm(plan)}</div></div>
     <div class="tile"><div class="tl">Výplata − plán</div><div class="tv ${afterPlan<0?'neg':'pos'}">${fm(afterPlan)}</div></div>
     <div class="tile"><div class="tl">Z plánu utraceno</div><div class="tv">${Math.round(exp/plan*100)} %</div></div></div>`;
-  h+=`<div class="qa"><div class="qa-t">${ic('plus',15)} Rychlé zadání</div>
+  h+=`<div class="qa"><div class="qa-t">${ic('repeat',15)} Přesun peněz</div>
     <div class="qa-row">
-      <select class="inp" id="qcat" style="flex:1.1;min-width:130px" onchange="qaSetCat(this.value)"><option value="" ${qaCur(p)?'':'selected'}>— vyber kategorii —</option><optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaCur(p)==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaCur(p)==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}</select>
+      <select class="inp" id="qfrom" style="flex:0.9;min-width:120px" onchange="qaSetFrom(this.value)">
+        <option value="" ${qaFrom?'':'selected'}>— vyber odkud —</option>
+        <option value="vyplata" ${qaFrom==='vyplata'?'selected':''}>Výplata</option>
+        ${S.envelopes.length?`<optgroup label="Obálka">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaFrom==='env:'+e.id?'selected':''}>${esc(e.nm)}</option>`).join('')}</optgroup>`:''}
+        ${S.investments.length?`<optgroup label="Investice">${S.investments.map(i=>`<option value="inv:${i.id}" ${qaFrom==='inv:'+i.id?'selected':''}>${esc(i.nm)}</option>`).join('')}</optgroup>`:''}
+      </select>
+      <span style="color:var(--text4);flex:none">${ic('cright',16)}</span>
+      <select class="inp" id="qcat" style="flex:1.1;min-width:130px" onchange="qaSetCat(this.value)"><option value="" ${qaCur(p)?'':'selected'}>— vyber kam —</option>${(qaFrom.startsWith('env:')||qaFrom.startsWith('inv:'))?`<option value="vyplata" ${qaCur(p)==='vyplata'?'selected':''}>→ Výplata (na účet, bez kategorie)</option>`:''}<optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaCur(p)==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaCur(p)==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}${S.investments.length?`<optgroup label="Vložit do investice">${S.investments.map(i=>`<option value="inv:${i.id}" ${qaCur(p)==='inv:'+i.id?'selected':''}>→ ${esc(i.nm)}</option>`).join('')}</optgroup>`:''}${S.debts.length?`<optgroup label="Splátka dluhu">${S.debts.map(d=>`<option value="debt:${d.id}" ${qaCur(p)==='debt:'+d.id?'selected':''}>→ ${esc(d.nm)}</option>`).join('')}</optgroup>`:''}</select>
       ${qaItemField(p)}
       <input class="inp num" id="qamt" type="number" placeholder="Kč" value="${qaFixAmt(p)||''}" style="flex:.9;min-width:100px" onkeydown="if(event.key==='Enter')quickAdd()">
       <input class="inp" id="qdate" type="date" value="${qaDate||todayISO()}" style="flex:0 0 148px${qaDate&&qaDate!==todayISO()?';border-color:var(--gold);background:var(--gold-bg)':''}">${qaDate&&qaDate!==todayISO()?`<span class="mini" style="color:var(--gold);white-space:nowrap">zapisuješ na ${fd(qaDate)} · <a onclick="qaDate='';R()">zpět na dnešek</a></span>`:''}
       <button class="btn fill" id="qadd" onclick="quickAdd()">${qaFixAmt(p)?'Zaplatit':'Přidat'}</button></div>
-    ${qaFixAmt(p)?`<div class="mini" style="margin-top:8px">${ic('check',13)} Pevná částka ${fmEx(qaFixAmt(p))} je předvyplněná z plánu — stačí kliknout. Přepsat ji můžeš.</div>`:''}</div>`;
+    ${qaCur(p).startsWith('cat:')?`<input class="inp" id="qnote" placeholder="Poznámka (nepovinné)" style="margin-top:8px;width:100%" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`:''}
+    ${qaFixAmt(p)?`<div class="mini" style="margin-top:8px">${ic('check',13)} Pevná částka ${fmEx(qaFixAmt(p))} je předvyplněná z plánu — stačí kliknout. Přepsat ji můžeš.</div>`:''}
+    ${qaFrom?`<div class="mini" style="margin-top:8px;color:${qaFrom==='vyplata'?'var(--neg)':'var(--teal)'}">${qaFrom==='vyplata'?ic('zap',13):ic('repeat',13)} ${qaFrom==='vyplata'?'Platíš přímo z výplaty — sníží to, co ti zbývá volných.':'Peníze se jen přesouvají mezi truhlicemi — zbývá volných se tím nemění (dokud to skutečně neutratíš).'}</div>`:''}
+    </div>`;
+  h+=vPohybyList();
   h+=fixedBlock(p);
   h+=`<div class="card"><div class="ch"><span class="ct">Příjmy</span><button class="btn sm" onclick="incomeModal()">${ic('edit',15)} Upravit</button></div>
     <div class="grid2"><div><div class="mini">Plánováno</div><div class="num" style="font-size:20px">${fm(incPlan(p))}</div></div>
@@ -1724,10 +1750,14 @@ function toggleItem(id){openItem=openItem===id?null:id;R();}
 // Prázdno znamená prázdno: po otevření appky není vybraná ani kategorie,
 // ani položka. Nic se nesmí připsat jinam, než kam se člověk dívá.
 function qaCur(p){
+  if(qaSel==='vyplata')return 'vyplata';
   if(qaSel.startsWith('cat:')&&p.cats.some(c=>'cat:'+c.id===qaSel))return qaSel;
   if(qaSel.startsWith('env:')&&S.envelopes.some(e=>'env:'+e.id===qaSel))return qaSel;
+  if(qaSel.startsWith('inv:')&&S.investments.some(i=>'inv:'+i.id===qaSel))return qaSel;
+  if(qaSel.startsWith('debt:')&&S.debts.some(d=>'debt:'+d.id===qaSel))return qaSel;
   return '';
 }
+function qaSetFrom(v){qaKeepAmt(()=>{qaFrom=v;});}
 function qaKeepAmt(fn){ // překreslení nesmí sebrat už napsanou částku
   const a=document.getElementById('qamt'),keep=a?a.value:'';
   fn();R();
@@ -1761,27 +1791,139 @@ function qaItemField(p){
     <option value="" ${sel?'':'selected'}>— vyber položku —</option>
     ${its.map(it=>`<option value="${it.id}" ${sel===it.id?'selected':''}>${esc(it.nm)}${it.fixAmt&&it.pl>0?' · '+fmEx(it.pl):''}</option>`).join('')}<option value="__new">+ nová položka…</option></select>`;
 }
-function quickAdd(){const p=P();const val=document.getElementById('qcat').value;
-  if(!val){toast('Vyber kategorii');return;}
+/* Přesun peněz — jediné místo, kudy appka zapisuje pohyb mezi truhlicemi.
+   Pravidlo je vždy stejné: ze zdroje Výplata se prostě zapíše normální
+   vklad/výdaj (to je to, co appka dělala vždycky). Ze zdroje Obálka/
+   Investice se navíc PŘED tím odečte z té truhlice — u obálky je odečet
+   strukturálně neviditelný pro „zbývá volných" (stejně jako dosavadní
+   čerpání), u investice je to opravdový záporný zápis, který se v součtu
+   sám vyruší s tím, co přibude na druhé straně. Jediné místo, kde se to
+   samo nevyruší, je obálka jako zdroj mimo kategorii (obálka → obálka/
+   investice/dluh) — tam se druhá strana označí `src`, ať se nezapočítá
+   podruhé. Ověřeno pro všechny kombinace automatizovaným testem. */
+function quickAdd(){const p=P();
+  const from=document.getElementById('qfrom')?.value||'';
+  const val=document.getElementById('qcat').value;
+  if(!from){toast('Vyber odkud');return;}
+  if(!val){toast('Vyber kam');return;}
+  if(from===val){toast('Zdroj a cíl musí být různé');return;}
   const amt=Math.abs(num(document.getElementById('qamt').value));if(!amt){toast('Zadej částku');return;}
   const nmEl=document.getElementById('qname'),nm=nmEl?nmEl.value.trim():'';
+  const noteEl=document.getElementById('qnote'),poznamka=noteEl?noteEl.value.trim():'';
   const date=document.getElementById('qdate').value||todayISO();
-  qaSel=val;qaDate=date; // zapamatuj výběr pro další rychlé zadání
+  qaSel=val;qaFrom=from;qaDate=date; // zapamatuj výběr pro další zadání
   const tp=periodForEntry(date)||p,jinam=tp.id!==p.id;
-  if(val.startsWith('env:')){const e=S.envelopes.find(x=>x.id===val.slice(4));if(!e)return;e.bal=(e.bal||0)+amt;e.hist.push({d:date,t:'in',a:amt,n:nm||'',pid:tp.id});
-    toast(`Odloženo ${fm(amt)} → ${e.nm}`+(jinam?` · ${tp.nm}`:''));}
-  else{const cid=val.startsWith('cat:')?val.slice(4):val;const c=p.cats.find(x=>x.id===cid);if(!c)return;
+  const zNazev=presunNazev(from);
+
+  if(from.startsWith('env:')){
+    const e=S.envelopes.find(x=>x.id===from.slice(4));if(!e)return;
+    if(amt>(e.bal||0)){toast('V obálce '+e.nm+' není dost peněz');return;}
+    const out={d:date,t:'out',a:amt,n:nm,pid:tp.id};
+    if(val.startsWith('cat:')){const c=p.cats.find(x=>'cat:'+x.id===val);if(c)out.cat=c.nm;}
+    e.bal=(e.bal||0)-amt;e.hist.push(out);
+    if(val.startsWith('cat:')){   // obálka → kategorie: appka to odjakživa řeší jen značkou na obálce
+      commit();toast(`${zNazev} → ${presunNazev(val)}: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
+      setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);return;
+    }
+  }else if(from.startsWith('inv:')){
+    const inv=S.investments.find(x=>x.id===from.slice(4));if(!inv)return;
+    inv.val=(inv.val||0)-amt;inv.hist.push({d:date,a:-amt,n:nm,pid:tp.id});
+  }
+
+  if(val==='vyplata'){   // zpátky na účet, bez kategorie — jen truhlice → výplata
+    commit();toast(`${zNazev} → Výplata: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
+    setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);return;
+  }
+
+  if(val.startsWith('cat:')){
+    const cid=val.slice(4);const c=p.cats.find(x=>x.id===cid);if(!c)return;
     const selEl=document.getElementById('qitem');
     if(selEl&&!selEl.value){toast('Vyber položku');return;}
     let it=selEl&&selEl.value&&selEl.value!=='__new'?c.it.find(x=>x.id===selEl.value):null;
     if(!it){const itNm=nm||'Ostatní';it=c.it.find(x=>x.nm.toLowerCase()===itNm.toLowerCase());
       if(!it){it={id:uid(),nm:itNm,pl:0,log:[]};c.it.push(it);}}
-    qaItem=it.id;   // ať zůstane vybraná i pro další zápis
-    const le={id:uid(),d:date,a:amt,n:''},r=logToDate(c,it,le);
-    const lt=linkTarget(it);toast(`${c.nm}: ${fm(amt)}`+(lt?` → ${lt.obj.nm}`:'')+(r.jinam?` · POZOR: podle data ${fd(date)} to spadlo do období „${r.period.nm}", ne do otevřeného`:''),r.jinam?5000:2200);}
-  commit();setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.focus();},60);}
+    qaItem=it.id;
+    const le={id:uid(),d:date,a:amt,n:from!=='vyplata'?('z '+zNazev+(poznamka?' · '+poznamka:'')):poznamka},r=logToDate(c,it,le);
+    const lt=linkTarget(it);
+    toast(`${c.nm}: ${fm(amt)}`+(lt?` → ${lt.obj.nm}`:'')+(from!=='vyplata'?` · z ${zNazev}`:'')+(r.jinam?` · POZOR: podle data ${fd(date)} to spadlo do období „${r.period.nm}", ne do otevřeného`:''),r.jinam?5000:2200);
+  }else if(val.startsWith('env:')){
+    const e=S.envelopes.find(x=>x.id===val.slice(4));if(!e)return;
+    const en={d:date,t:'in',a:amt,n:nm,pid:tp.id};
+    if(from.startsWith('env:'))en.src=zNazev;   // jinak se stejná koruna počítá jako odloženo podruhé
+    e.bal=(e.bal||0)+amt;e.hist.push(en);
+    toast(`${zNazev} → ${e.nm}: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
+  }else if(val.startsWith('inv:')){
+    const inv=S.investments.find(x=>x.id===val.slice(4));if(!inv)return;
+    const en={d:date,a:amt,n:nm,pid:tp.id};
+    if(from.startsWith('env:'))en.src=zNazev;
+    inv.val=(inv.val||0)+amt;inv.hist.push(en);
+    toast(`${zNazev} → ${inv.nm}: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
+  }else if(val.startsWith('debt:')){
+    const dt=S.debts.find(x=>x.id===val.slice(5));if(!dt)return;
+    const en={d:date,a:amt,n:nm};
+    if(from.startsWith('env:'))en.src=zNazev;
+    dt.pay=dt.pay||[];dt.pay.push(en);
+    toast(`${zNazev} → ${dt.nm}, splátka: ${fm(amt)}`);
+  }
+  commit();setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);}
+
+/* ---- Pohyby: jeden prohledatelný seznam napříč kategoriemi, obálkami,
+   investicemi a dluhy. Historie zpětně se schválně NEDOTAHUJE — appka
+   ukazuje jen pohyby od zapnutí (S.ui.pohybyOd), stará data zůstávají
+   beze změny vidět postaru ve svých záložkách. */
+function allMovements(od){
+  const out=[];
+  S.periods.forEach(per=>per.cats.forEach(c=>c.it.forEach(it=>(it.log||[]).forEach(le=>{
+    if(le.d<od)return;
+    const lt=linkTarget(it);
+    out.push({d:le.d,a:le.a,label:c.nm+': '+it.nm,sub:(le.n?le.n+' · ':'')+'výdaj'+(lt?' → '+lt.obj.nm:''),icon:'arrowupright',volne:true});
+  }))));
+  S.envelopes.forEach(e=>(e.hist||[]).forEach(h=>{
+    if(h.d<od)return;
+    const volne=h.t==='in'&&!h.src;
+    out.push({d:h.d,a:h.a,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):'čerpání'+(h.cat?' · '+h.cat:'')),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne});
+  }));
+  S.investments.forEach(inv=>(inv.hist||[]).forEach(h=>{
+    if(h.k||h.d<od)return;
+    const volne=!h.src;
+    out.push({d:h.d,a:Math.abs(h.a),label:'Investice: '+inv.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:h.a>0?'vklad':'výběr'),icon:h.a>0?'arrowupright':'arrowdownleft',volne});
+  }));
+  S.debts.forEach(dt=>(dt.pay||[]).forEach(h=>{
+    if(h.d<od)return;
+    out.push({d:h.d,a:h.a,label:'Dluh: '+dt.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:'splátka'),icon:'arrowupright',volne:!h.src});
+  }));
+  out.sort((x,y)=>y.d.localeCompare(x.d));
+  return out;
+}
+function pohOd(){
+  const idx=Math.max(0,periodIndex()-pohRozsah);
+  const per=S.periods[idx]||P();
+  const zaklad=pohRozsah===0?dateMinus(P().from,7):per.from;
+  return (S.ui.pohybyOd&&S.ui.pohybyOd>zaklad)?S.ui.pohybyOd:zaklad;
+}
+function pohSetQ(v){pohHledej=v;R();setTimeout(()=>{const el=document.getElementById('pohq');if(el){el.focus();el.setSelectionRange(v.length,v.length);}},20);}
+function vPohybyList(){
+  const od=pohOd();
+  let list=allMovements(od);
+  const q=pohHledej.trim().toLowerCase();
+  if(q)list=list.filter(x=>(x.label+' '+x.sub+' '+x.a+' '+fd(x.d)).toLowerCase().includes(q));
+  const dno=Math.max(0,periodIndex()-pohRozsah)===0;
+  const maZbytek=!dno&&od>(S.ui.pohybyOd||'0000');
+  let h=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('list',15)} Pohyby</span></div>
+    <input class="inp" id="pohq" placeholder="Hledat podle názvu, částky, data…" value="${esc(pohHledej)}" oninput="pohSetQ(this.value)" style="margin-bottom:6px">`;
+  if(!list.length)h+=`<div class="empty">${q?'Nic jsme nenašli.':'Zatím nic k zobrazení.'}</div>`;
+  list.forEach(x=>{h+=`<div class="row" style="cursor:default">
+      <div class="ic" style="background:${x.volne?'var(--neg-bg)':'var(--teal-bg)'};color:${x.volne?'var(--neg)':'var(--teal)'}">${ic(x.icon==='arrowupright'?'cright':'cleft',17)}</div>
+      <div class="m"><div class="t1">${esc(x.label)}</div><div class="t2">${fd(x.d)} · ${esc(x.sub)}</div></div>
+      <span class="num" style="font-weight:600;flex:none;color:${x.volne?'var(--neg)':'var(--text2)'}">${x.volne?'−':''}${fm(x.a)}</span></div>`;});
+  if(maZbytek)h+=`<button class="btn gho" style="width:100%;margin-top:10px" onclick="pohRozsah++;R()">Načíst další (starší cyklus)</button>`;
+  h+=`</div>`;
+  return h;
+}
 // kurzor patří na první nevyplněné pole — bez kategorie se stejně nic nezapíše
 function quickModal(){go('prehled');setTimeout(()=>{
+  const from=document.getElementById('qfrom');
+  if(from&&!from.value)return from.focus();
   const cat=document.getElementById('qcat');
   if(cat&&!cat.value)return cat.focus();
   const it=document.getElementById('qitem');
