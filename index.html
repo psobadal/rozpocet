@@ -439,7 +439,7 @@ function defState(){
 
 /* ---------- state ---------- */
 let S=defState();
-let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='', qaItem='', qaFrom='', pohHledej='', pohRozsah=0;
+let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='', qaItem='', qaFrom='', qaXfer=false, pohHledej='', pohLimit=5, poh=[];
 let fileHandle=null, fileOK=false;
 
 function loadLS(){try{const r=localStorage.getItem(LS);if(r)return migrate(JSON.parse(r));}catch(e){}return null;}
@@ -699,7 +699,7 @@ function periodForEntry(d){
 function dateMinus(dstr,dny){const dt=new Date(dstr+'T12:00:00');dt.setDate(dt.getDate()-dny);return iso(dt);}
 /* Lidsky čitelné jméno truhlice pro hlášky a seznam Pohybů. */
 function presunNazev(val){
-  if(val==='vyplata')return 'Výplata';
+  if(val==='vyplata')return 'Účet';   // interní klíč zůstává 'vyplata', zobrazený název ne — nejde vždy o výplatu doslova
   if(val.startsWith('cat:')){const c=P().cats.find(x=>'cat:'+x.id===val);return c?c.nm:'Kategorie';}
   if(val.startsWith('env:')){const e=S.envelopes.find(x=>x.id===val.slice(4));return e?e.nm:'Obálka';}
   if(val.startsWith('inv:')){const i=S.investments.find(x=>x.id===val.slice(4));return i?i.nm:'Investice';}
@@ -1097,23 +1097,26 @@ function vPrehled(p){
     <div class="tile"><div class="tl">Naplánováno</div><div class="tv">${fm(plan)}</div></div>
     <div class="tile"><div class="tl">Výplata − plán</div><div class="tv ${afterPlan<0?'neg':'pos'}">${fm(afterPlan)}</div></div>
     <div class="tile"><div class="tl">Z plánu utraceno</div><div class="tv">${Math.round(exp/plan*100)} %</div></div></div>`;
-  h+=`<div class="qa"><div class="qa-t">${ic('repeat',15)} Přesun peněz</div>
+  h+=`<div class="qa"><div class="qa-t" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>${ic('repeat',15)} ${qaXfer?'Peníze zpět na účet':'Zápis'}</span>
+      <a class="mini" style="cursor:pointer;font-weight:600" onclick="qaXfer=!qaXfer;qaFrom='';qaSel='';qaItem='';R()">${qaXfer?`${ic('cleft',13)} Zpět na běžný zápis`:'↔ Peníze z obálky/investice zpět na účet'}</a>
+    </div>
     <div class="qa-row">
-      <select class="inp" id="qfrom" style="flex:0.9;min-width:120px" onchange="qaSetFrom(this.value)">
+      ${qaXfer?`<select class="inp" id="qfrom" style="flex:0.9;min-width:120px" onchange="qaSetFrom(this.value)">
         <option value="" ${qaFrom?'':'selected'}>— vyber odkud —</option>
-        <option value="vyplata" ${qaFrom==='vyplata'?'selected':''}>Výplata</option>
         ${S.envelopes.length?`<optgroup label="Obálka">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaFrom==='env:'+e.id?'selected':''}>${esc(e.nm)}</option>`).join('')}</optgroup>`:''}
         ${S.investments.length?`<optgroup label="Investice">${S.investments.map(i=>`<option value="inv:${i.id}" ${qaFrom==='inv:'+i.id?'selected':''}>${esc(i.nm)}</option>`).join('')}</optgroup>`:''}
       </select>
       <span style="color:var(--text4);flex:none">${ic('cright',16)}</span>
-      <select class="inp" id="qcat" style="flex:1.1;min-width:130px" onchange="qaSetCat(this.value)"><option value="" ${qaCur(p)?'':'selected'}>— vyber kam —</option>${(qaFrom.startsWith('env:')||qaFrom.startsWith('inv:'))?`<option value="vyplata" ${qaCur(p)==='vyplata'?'selected':''}>→ Výplata (na účet, bez kategorie)</option>`:''}<optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaCur(p)==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaCur(p)==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}${S.investments.length?`<optgroup label="Vložit do investice">${S.investments.map(i=>`<option value="inv:${i.id}" ${qaCur(p)==='inv:'+i.id?'selected':''}>→ ${esc(i.nm)}</option>`).join('')}</optgroup>`:''}${S.debts.length?`<optgroup label="Splátka dluhu">${S.debts.map(d=>`<option value="debt:${d.id}" ${qaCur(p)==='debt:'+d.id?'selected':''}>→ ${esc(d.nm)}</option>`).join('')}</optgroup>`:''}</select>
-      ${qaItemField(p)}
+      <div class="inp" style="flex:1.1;min-width:130px;display:flex;align-items:center;opacity:.7">→ Účet</div>
+      <input class="inp" id="qname" placeholder="Poznámka (nepovinné)" style="flex:1.4;min-width:140px" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`
+      :`<select class="inp" id="qcat" style="flex:1.1;min-width:130px" onchange="qaSetCat(this.value)"><option value="" ${qaCur(p)?'':'selected'}>— vyber kam —</option><optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaCur(p)==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaCur(p)==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}${S.investments.length?`<optgroup label="Vložit do investice">${S.investments.map(i=>`<option value="inv:${i.id}" ${qaCur(p)==='inv:'+i.id?'selected':''}>→ ${esc(i.nm)}</option>`).join('')}</optgroup>`:''}${S.debts.length?`<optgroup label="Splátka dluhu">${S.debts.map(d=>`<option value="debt:${d.id}" ${qaCur(p)==='debt:'+d.id?'selected':''}>→ ${esc(d.nm)}</option>`).join('')}</optgroup>`:''}</select>
+      ${qaItemField(p)}`}
       <input class="inp num" id="qamt" type="number" placeholder="Kč" value="${qaFixAmt(p)||''}" style="flex:.9;min-width:100px" onkeydown="if(event.key==='Enter')quickAdd()">
       <input class="inp" id="qdate" type="date" value="${qaDate||todayISO()}" style="flex:0 0 148px${qaDate&&qaDate!==todayISO()?';border-color:var(--gold);background:var(--gold-bg)':''}">${qaDate&&qaDate!==todayISO()?`<span class="mini" style="color:var(--gold);white-space:nowrap">zapisuješ na ${fd(qaDate)} · <a onclick="qaDate='';R()">zpět na dnešek</a></span>`:''}
       <button class="btn fill" id="qadd" onclick="quickAdd()">${qaFixAmt(p)?'Zaplatit':'Přidat'}</button></div>
-    ${qaCur(p).startsWith('cat:')?`<input class="inp" id="qnote" placeholder="Poznámka (nepovinné)" style="margin-top:8px;width:100%" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`:''}
+    ${!qaXfer&&qaCur(p).startsWith('cat:')?`<input class="inp" id="qnote" placeholder="Poznámka (nepovinné)" style="margin-top:8px;width:100%" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`:''}
     ${qaFixAmt(p)?`<div class="mini" style="margin-top:8px">${ic('check',13)} Pevná částka ${fmEx(qaFixAmt(p))} je předvyplněná z plánu — stačí kliknout. Přepsat ji můžeš.</div>`:''}
-    ${qaFrom?`<div class="mini" style="margin-top:8px;color:${qaFrom==='vyplata'?'var(--neg)':'var(--teal)'}">${qaFrom==='vyplata'?ic('zap',13):ic('repeat',13)} ${qaFrom==='vyplata'?'Platíš přímo z výplaty — sníží to, co ti zbývá volných.':'Peníze se jen přesouvají mezi truhlicemi — zbývá volných se tím nemění (dokud to skutečně neutratíš).'}</div>`:''}
     </div>`;
   h+=vPohybyList();
   h+=fixedBlock(p);
@@ -1802,9 +1805,9 @@ function qaItemField(p){
    investice/dluh) — tam se druhá strana označí `src`, ať se nezapočítá
    podruhé. Ověřeno pro všechny kombinace automatizovaným testem. */
 function quickAdd(){const p=P();
-  const from=document.getElementById('qfrom')?.value||'';
-  const val=document.getElementById('qcat').value;
-  if(!from){toast('Vyber odkud');return;}
+  const from=qaXfer?(document.getElementById('qfrom')?.value||''):'vyplata';
+  const val=qaXfer?'vyplata':(document.getElementById('qcat')?.value||'');
+  if(qaXfer&&!from){toast('Vyber odkud');return;}
   if(!val){toast('Vyber kam');return;}
   if(from===val){toast('Zdroj a cíl musí být různé');return;}
   const amt=Math.abs(num(document.getElementById('qamt').value));if(!amt){toast('Zadej částku');return;}
@@ -1831,7 +1834,7 @@ function quickAdd(){const p=P();
   }
 
   if(val==='vyplata'){   // zpátky na účet, bez kategorie — jen truhlice → výplata
-    commit();toast(`${zNazev} → Výplata: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
+    commit();toast(`${zNazev} → Účet: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
     setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);return;
   }
 
@@ -1872,51 +1875,56 @@ function quickAdd(){const p=P();
    ukazuje jen pohyby od zapnutí (S.ui.pohybyOd), stará data zůstávají
    beze změny vidět postaru ve svých záložkách. */
 function allMovements(od){
-  const out=[];
-  S.periods.forEach(per=>per.cats.forEach(c=>c.it.forEach(it=>(it.log||[]).forEach(le=>{
+  const out=[];let seq=0;
+  S.periods.forEach(per=>per.cats.forEach(c=>c.it.forEach(it=>(it.log||[]).forEach((le,li)=>{
     if(le.d<od)return;
     const lt=linkTarget(it);
-    out.push({d:le.d,a:le.a,label:c.nm+': '+it.nm,sub:(le.n?le.n+' · ':'')+'výdaj'+(lt?' → '+lt.obj.nm:''),icon:'arrowupright',volne:true});
+    out.push({d:le.d,a:le.a,label:c.nm+': '+it.nm,sub:(le.n?le.n+' · ':'')+'výdaj'+(lt?' → '+lt.obj.nm:''),icon:'arrowupright',volne:true,seq:seq++,
+      kind:'cat',pid:per.id,cid:c.id,iid:it.id,li});
   }))));
-  S.envelopes.forEach(e=>(e.hist||[]).forEach(h=>{
+  S.envelopes.forEach(e=>(e.hist||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
     const volne=h.t==='in'&&!h.src;
-    out.push({d:h.d,a:h.a,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):'čerpání'+(h.cat?' · '+h.cat:'')),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne});
+    out.push({d:h.d,a:h.a,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):'čerpání'+(h.cat?' · '+h.cat:'')),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne,seq:seq++,
+      kind:'env',eid:e.id,hidx});
   }));
-  S.investments.forEach(inv=>(inv.hist||[]).forEach(h=>{
+  S.investments.forEach(inv=>(inv.hist||[]).forEach((h,hidx)=>{
     if(h.k||h.d<od)return;
     const volne=!h.src;
-    out.push({d:h.d,a:Math.abs(h.a),label:'Investice: '+inv.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:h.a>0?'vklad':'výběr'),icon:h.a>0?'arrowupright':'arrowdownleft',volne});
+    out.push({d:h.d,a:Math.abs(h.a),label:'Investice: '+inv.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:h.a>0?'vklad':'výběr'),icon:h.a>0?'arrowupright':'arrowdownleft',volne,seq:seq++,
+      kind:'inv',invId:inv.id,hidx});
   }));
-  S.debts.forEach(dt=>(dt.pay||[]).forEach(h=>{
+  S.debts.forEach(dt=>(dt.pay||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
-    out.push({d:h.d,a:h.a,label:'Dluh: '+dt.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:'splátka'),icon:'arrowupright',volne:!h.src});
+    out.push({d:h.d,a:h.a,label:'Dluh: '+dt.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:'splátka'),icon:'arrowupright',volne:!h.src,seq:seq++,
+      kind:'debt',did:dt.id,hidx});
   }));
-  out.sort((x,y)=>y.d.localeCompare(x.d));
+  // stejné datum (appka nemá čas, jen den) — řadí se podle pořadí zápisu, ať je opravdu nejnovější nahoře
+  out.sort((x,y)=>y.d.localeCompare(x.d)||y.seq-x.seq);
   return out;
 }
-function pohOd(){
-  const idx=Math.max(0,periodIndex()-pohRozsah);
-  const per=S.periods[idx]||P();
-  const zaklad=pohRozsah===0?dateMinus(P().from,7):per.from;
-  return (S.ui.pohybyOd&&S.ui.pohybyOd>zaklad)?S.ui.pohybyOd:zaklad;
-}
 function pohSetQ(v){pohHledej=v;R();setTimeout(()=>{const el=document.getElementById('pohq');if(el){el.focus();el.setSelectionRange(v.length,v.length);}},20);}
+function pohClick(x){
+  if(x.kind==='cat')logModal(x.cid,x.iid,x.li,x.pid);
+  else if(x.kind==='env')envHistModal(x.eid,x.hidx);
+  else if(x.kind==='inv')invHistModal(x.invId,x.hidx);
+  else debtPayEditModal(x.did,x.hidx);
+}
 function vPohybyList(){
-  const od=pohOd();
+  const od=S.ui.pohybyOd||todayISO();
   let list=allMovements(od);
   const q=pohHledej.trim().toLowerCase();
   if(q)list=list.filter(x=>(x.label+' '+x.sub+' '+x.a+' '+fd(x.d)).toLowerCase().includes(q));
-  const dno=Math.max(0,periodIndex()-pohRozsah)===0;
-  const maZbytek=!dno&&od>(S.ui.pohybyOd||'0000');
+  const shown=q?list:list.slice(0,pohLimit);
+  poh=shown;   // kliká se přes index, ať se nemusí IDčka lepit do onclick atributu
   let h=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('list',15)} Pohyby</span></div>
     <input class="inp" id="pohq" placeholder="Hledat podle názvu, částky, data…" value="${esc(pohHledej)}" oninput="pohSetQ(this.value)" style="margin-bottom:6px">`;
-  if(!list.length)h+=`<div class="empty">${q?'Nic jsme nenašli.':'Zatím nic k zobrazení.'}</div>`;
-  list.forEach(x=>{h+=`<div class="row" style="cursor:default">
+  if(!shown.length)h+=`<div class="empty">${q?'Nic jsme nenašli.':'Zatím nic k zobrazení.'}</div>`;
+  shown.forEach((x,i)=>{h+=`<div class="row" style="cursor:pointer" onclick="pohClick(poh[${i}])">
       <div class="ic" style="background:${x.volne?'var(--neg-bg)':'var(--teal-bg)'};color:${x.volne?'var(--neg)':'var(--teal)'}">${ic(x.icon==='arrowupright'?'cright':'cleft',17)}</div>
       <div class="m"><div class="t1">${esc(x.label)}</div><div class="t2">${fd(x.d)} · ${esc(x.sub)}</div></div>
       <span class="num" style="font-weight:600;flex:none;color:${x.volne?'var(--neg)':'var(--text2)'}">${x.volne?'−':''}${fm(x.a)}</span></div>`;});
-  if(maZbytek)h+=`<button class="btn gho" style="width:100%;margin-top:10px" onclick="pohRozsah++;R()">Načíst další (starší cyklus)</button>`;
+  if(!q&&list.length>pohLimit)h+=`<button class="btn gho" style="width:100%;margin-top:10px" onclick="pohLimit+=5;R()">Načíst další</button>`;
   h+=`</div>`;
   return h;
 }
@@ -1935,26 +1943,29 @@ function addLog(cid,iid){const c=P().cats.find(x=>x.id===cid),it=c&&c.it.find(x=
   const le={id:uid(),d:document.getElementById('ld-'+iid).value||todayISO(),a,n:document.getElementById('ln-'+iid).value.trim()};
   const r=logToDate(c,it,le);openItem=iid;
   const lt=linkTarget(it);toast(`${it.nm}: +${fm(a)}`+(lt?` → ${lt.obj.nm}`:'')+(r.jinam?` · zapsáno do „${r.period.nm}"`:''));commit();}
-function delLog(cid,iid,li){const it=P().cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;const le=it.log[li];if(le&&le.id)removeLinked(le.id);it.log.splice(li,1);openItem=iid;closeModal();commit();}
+function delLog(cid,iid,li,pid){const per=pid?(S.periods.find(x=>x.id===pid)||P()):P();const it=per.cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;const le=it.log[li];if(le&&le.id)removeLinked(le.id);it.log.splice(li,1);openItem=iid;closeModal();commit();}
 /* Oprava zápisu: přepsat částku v poli by u propojené položky nechalo
    starou splátku dluhu / vklad do obálky na místě. Proto se zápis
    odebere i s propojeným záznamem a založí znovu — a když se změnilo
    datum tak, že spadá do jiného období, `logToDate` ho tam rovnou
-   přesune. */
-function logModal(cid,iid,li){
-  const c=P().cats.find(x=>x.id===cid),it=c&&c.it.find(x=>x.id===iid),le=it&&it.log[li];if(!le)return;
-  mctx={cid,iid,li};
-  openModal(`<h3>Upravit zápis</h3><div class="md">${esc(it.nm)} · ${esc(c.nm)}</div>
+   přesune. `pid` je nepovinné — z Pohybů se může editovat i zápis
+   z jiného cyklu, než je zrovna otevřený. */
+function logModal(cid,iid,li,pid){
+  const per=pid?(S.periods.find(x=>x.id===pid)||P()):P();
+  const c=per.cats.find(x=>x.id===cid),it=c&&c.it.find(x=>x.id===iid),le=it&&it.log[li];if(!le)return;
+  mctx={cid,iid,li,pid:per.id};
+  openModal(`<h3>Upravit zápis</h3><div class="md">${esc(it.nm)} · ${esc(c.nm)}${per.id!==P().id?' · '+esc(per.nm):''}</div>
     <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${le.d||todayISO()}"></div>
       <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${le.a||0}" onkeydown="if(event.key==='Enter')saveLog()"></div></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(le.n||'')}" onkeydown="if(event.key==='Enter')saveLog()"></div>
     ${linkTarget(it)?`<div class="mini" style="margin-top:10px">${ic('check',13)} Propisuje se do „${esc(linkTarget(it).obj.nm)}" — oprava se přenese i tam.</div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveLog()">Uložit</button></div>
-    <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delLog('${cid}','${iid}',${li})">${ic('trash',14)} Smazat zápis</button></div>`);
+    <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delLog('${cid}','${iid}',${li},'${per.id}')">${ic('trash',14)} Smazat zápis</button></div>`);
   setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
 }
 function saveLog(){
-  const c=P().cats.find(x=>x.id===mctx.cid),it=c&&c.it.find(x=>x.id===mctx.iid),le=it&&it.log[mctx.li];if(!le)return;
+  const per=mctx.pid?(S.periods.find(x=>x.id===mctx.pid)||P()):P();
+  const c=per.cats.find(x=>x.id===mctx.cid),it=c&&c.it.find(x=>x.id===mctx.iid),le=it&&it.log[mctx.li];if(!le)return;
   const a=Math.abs(num(document.getElementById('m_a').value));if(!a){toast('Zadej částku');return;}
   const d=document.getElementById('m_d').value||le.d,n=document.getElementById('m_n').value.trim();
   if(!le.id)le.id=uid();          // hodně stará data nemusí mít id
@@ -2102,6 +2113,27 @@ function doEnvMove(){const e=S.envelopes.find(x=>x.id===mctx.id);const a=Math.ab
 function delEnvHist(id,idx){const e=S.envelopes.find(x=>x.id===id);if(!e||!e.hist||!e.hist[idx])return;
   const x=e.hist[idx];if(!confirm('Smazat tenhle záznam z historie obálky?'))return;
   e.bal=(e.bal||0)-(x.t==='in'?x.a:-x.a);e.hist.splice(idx,1);commit();}
+// úprava záznamu z obálky (i z Pohybů) — směr (vklad/čerpání) se neopravuje, jen částka/datum/poznámka
+function envHistModal(eid,idx){
+  const e=S.envelopes.find(x=>x.id===eid),h=e&&e.hist[idx];if(!h)return;
+  mctx={eid,idx};
+  openModal(`<h3>Upravit záznam</h3><div class="md">${esc(e.nm)} · ${h.adj?'oprava zůstatku':h.t==='in'?'vklad':'čerpání'}${h.cat?' · '+esc(h.cat):''}</div>
+    <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${h.d||todayISO()}"></div>
+      <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${h.a||0}" onkeydown="if(event.key==='Enter')saveEnvHist()"></div></div>
+    <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(h.n||'')}" onkeydown="if(event.key==='Enter')saveEnvHist()"></div>
+    ${h.src?`<div class="mini" style="margin-top:10px">${ic('check',13)} Přišlo z „${esc(h.src)}" — appka to nepočítá znovu do „zbývá volných".</div>`:''}
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveEnvHist()">Uložit</button></div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delEnvHist('${eid}',${idx})">${ic('trash',14)} Smazat záznam</button></div>`);
+  setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
+}
+function saveEnvHist(){
+  const e=S.envelopes.find(x=>x.id===mctx.eid),h=e&&e.hist[mctx.idx];if(!h)return;
+  const a=Math.abs(num(document.getElementById('m_a').value));if(!a){toast('Zadej částku');return;}
+  const d=document.getElementById('m_d').value||h.d,n=document.getElementById('m_n').value.trim();
+  e.bal=(e.bal||0)-(h.t==='in'?h.a:-h.a)+(h.t==='in'?a:-a);
+  h.a=a;h.d=d;h.n=n;
+  closeModal();toast('Upraveno');commit();
+}
 /* investments */
 function invModal(id){const inv=id?S.investments.find(x=>x.id===id):null;mctx={id,icon:inv?inv.icon:'trending'};
   const isC=!!(inv&&inv.crypto),isS=!!(inv&&inv.stock);
@@ -2398,6 +2430,30 @@ function invAdd(id){const inv=S.investments.find(x=>x.id===id);mctx={id};openMod
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doInvAdd()">Přidat</button></div>`);
   setTimeout(()=>document.getElementById('m_a')?.focus(),50);}
 function doInvAdd(){const inv=S.investments.find(x=>x.id===mctx.id);const a=num(document.getElementById('m_a').value);if(!a){toast('Zadej částku');return;}inv.val=(inv.val||0)+a;inv.hist.push({d:todayISO(),a,n:document.getElementById('m_n').value.trim(),pid:S.curId});closeModal();toast(`${a>0?'+':''}${fm(a)} · ${inv.nm}`);commit();}
+// úprava vlastního vkladu/výběru (ne přecenění — to je k:'gain' a sem nechodí) — znaménko (vklad/výběr) se drží, mění se jen velikost
+function invHistModal(invId,idx){
+  const inv=S.investments.find(x=>x.id===invId),h=inv&&inv.hist[idx];if(!h)return;
+  mctx={invId,idx};
+  openModal(`<h3>Upravit záznam</h3><div class="md">${esc(inv.nm)} · ${h.src?'z '+esc(h.src):(h.a<0?'výběr':'vklad')}</div>
+    <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${h.d||todayISO()}"></div>
+      <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${Math.abs(h.a||0)}" onkeydown="if(event.key==='Enter')saveInvHist()"></div></div>
+    <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(h.n||'')}" onkeydown="if(event.key==='Enter')saveInvHist()"></div>
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveInvHist()">Uložit</button></div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delInvHist('${invId}',${idx})">${ic('trash',14)} Smazat záznam</button></div>`);
+  setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
+}
+function saveInvHist(){
+  const inv=S.investments.find(x=>x.id===mctx.invId),h=inv&&inv.hist[mctx.idx];if(!h)return;
+  const mag=Math.abs(num(document.getElementById('m_a').value));if(!mag){toast('Zadej částku');return;}
+  const a=h.a<0?-mag:mag;
+  const d=document.getElementById('m_d').value||h.d,n=document.getElementById('m_n').value.trim();
+  inv.val=(inv.val||0)-h.a+a;
+  h.a=a;h.d=d;h.n=n;
+  closeModal();toast('Upraveno');commit();
+}
+function delInvHist(id,idx){const inv=S.investments.find(x=>x.id===id);if(!inv||!inv.hist||!inv.hist[idx])return;
+  const h=inv.hist[idx];if(!confirm('Smazat tenhle záznam z historie investice?'))return;
+  inv.val=(inv.val||0)-h.a;inv.hist.splice(idx,1);commit();}
 
 /* debts */
 function debtModal(id,presetGroup){const d=id?S.debts.find(x=>x.id===id):null;mctx={id,icon:d?d.icon:'landmark'};
@@ -2463,6 +2519,23 @@ function debtPayModal(id){const d=S.debts.find(x=>x.id===id);mctx={id};openModal
   setTimeout(()=>document.getElementById('m_a')?.focus(),50);}
 function doDebtPay(){const d=S.debts.find(x=>x.id===mctx.id);const a=Math.abs(num(document.getElementById('m_a').value));if(!a){toast('Zadej částku');return;}d.pay.push({d:document.getElementById('m_d').value||todayISO(),a,n:document.getElementById('m_n').value.trim()});closeModal();toast(`Splátka ${fm(a)} · ${d.nm}`);commit();}
 function delDebtPay(id,i){const d=S.debts.find(x=>x.id===id);d.pay.splice(i,1);commit();}
+function debtPayEditModal(did,idx){
+  const d=S.debts.find(x=>x.id===did),h=d&&d.pay[idx];if(!h)return;
+  mctx={did,idx};
+  openModal(`<h3>Upravit splátku</h3><div class="md">${esc(d.nm)}${h.src?' · z '+esc(h.src):''}</div>
+    <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${h.d||todayISO()}"></div>
+      <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${h.a||0}" onkeydown="if(event.key==='Enter')saveDebtPay()"></div></div>
+    <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(h.n||'')}" onkeydown="if(event.key==='Enter')saveDebtPay()"></div>
+    <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveDebtPay()">Uložit</button></div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delDebtPay('${did}',${idx})">${ic('trash',14)} Smazat splátku</button></div>`);
+  setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
+}
+function saveDebtPay(){
+  const d=S.debts.find(x=>x.id===mctx.did),h=d&&d.pay[mctx.idx];if(!h)return;
+  const a=Math.abs(num(document.getElementById('m_a').value));if(!a){toast('Zadej částku');return;}
+  h.d=document.getElementById('m_d').value||h.d;h.a=a;h.n=document.getElementById('m_n').value.trim();
+  closeModal();toast('Upraveno');commit();
+}
 
 /* skupina dluhů: cena celku (např. Byt) — vklady i poplatky se přidávají zvlášť jako log, ne jedno číslo */
 function newGroupModal(){
