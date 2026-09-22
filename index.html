@@ -141,17 +141,6 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .tile .tv{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
 .pos{color:var(--teal)} .neg{color:var(--neg)} .warn{color:var(--gold)}
 
-.qa{background:var(--accent-bg);border:1.5px solid var(--accent-bg2);border-radius:var(--r);padding:18px;margin-bottom:14px}
-.qa-t{font-size:11.5px;font-weight:600;color:var(--accent-d);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;display:flex;align-items:center;gap:7px}
-.qa-row{display:flex;gap:8px;flex-wrap:wrap}
-.qa-row>select,.qa-row>input{flex:1;min-width:110px}
-/* Na mobilu byla každá věc na vlastní řádek a rychlé zadání zabíralo
-   přes třetinu obrazovky. Po dvou vedle sebe: kategorie+položka,
-   částka+datum, tlačítko přes celou šířku (dobře se trefuje palcem). */
-@media(max-width:640px){
-  .qa-row>*{flex:1 1 calc(50% - 4px)!important;min-width:0!important}
-  .qa-row>#qadd{flex:1 1 100%!important}}
-
 /* Navigace se řídí šířkou okna, ne zařízením: na širokém pilulky nahoře
    (appka běží i na dvou počítačích), na úzkém spodní lišta jako v bankovních
    appkách. Značky v HTML jsou pro obojí stejné, přepíná to jen CSS — kromě
@@ -163,7 +152,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
   .tab{flex:1;flex-direction:column;gap:3px;font-size:10px;font-weight:600;padding:7px 2px;border-radius:12px;min-width:0}
   .tab .tl{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}
   .tab.on{background:none;color:var(--accent)}
-  .tab.ov:not(.on){display:none}
+  .tab.tov:not(.on){display:none}
   .app{padding-bottom:108px}
   .fab{bottom:calc(96px + env(safe-area-inset-bottom));right:16px;width:52px;height:52px;border-radius:17px}
   .top{padding:16px 0 10px}
@@ -263,6 +252,38 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .fg>.fl{font-size:11.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px;display:block}
 .fr{display:flex;gap:10px}.fr>*{flex:1}
 .macts{display:flex;gap:10px;margin-top:20px}.macts .btn{flex:1;justify-content:center}
+/* Panel zápisu: na počítači obyčejný modal uprostřed, na mobilu vyjede
+   zespoda a drží se dole, jak je u appek zvykem. */
+.modal.sheet{max-width:440px;padding:20px 20px 22px}
+@media(max-width:640px){
+  .ov-sheet{align-items:flex-end;padding:0}
+  .modal.sheet{max-width:none;border-radius:24px 24px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));animation:rise .22s}
+}
+.zs-top{display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:500;margin-bottom:6px}
+.zs-x{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;border-radius:9px;display:grid;place-items:center}
+.zs-x:hover{background:var(--bg);color:var(--text)}
+.zs-amt{display:flex;align-items:baseline;justify-content:center;gap:6px;padding:14px 0 16px}
+.zs-amt input{width:auto;max-width:72%;border:none;outline:none;background:none;text-align:right;
+  font-family:var(--numfont);font-size:42px;font-weight:500;letter-spacing:-1.6px;color:var(--text)}
+.zs-amt input::placeholder{color:var(--text4)}
+.zs-amt span{font-size:22px;color:var(--text3);font-weight:500}
+.zs-seg{display:flex;gap:5px;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:14px}
+.zs-seg button{flex:1;background:none;border:none;color:var(--text2);font-size:12.5px;font-weight:600;padding:7px 4px;border-radius:99px;cursor:pointer}
+.zs-seg button.on{background:var(--white);color:var(--text);border:1px solid var(--line)}
+.zs-lbl{font-size:11.5px;color:var(--text3);font-weight:600;margin:12px 0 7px}
+.zs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:212px;overflow-y:auto}
+.zt{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 2px;color:var(--text2);min-width:0}
+.zt>svg{width:46px;height:46px;padding:12px;border-radius:15px;background:var(--bg);color:var(--text2);box-sizing:border-box}
+.zt span{font-size:10.5px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zt.on>svg{background:var(--accent);color:#fff}
+.zt.on{color:var(--accent-d)}
+.zs-pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+.zp{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border-radius:99px;padding:7px 12px;font-size:12.5px;color:var(--text2);font-weight:600}
+.zp.dim{color:var(--text3)}
+.zp input{border:none;background:none;outline:none;font-size:12.5px;color:var(--text2);font-weight:600;width:104px;padding:0}
+.zs-note-line{font-size:12px;color:var(--text3);margin-top:12px}
+.zs-go{width:100%;justify-content:center;margin-top:16px;padding:14px;font-size:15px;border-radius:15px}
+
 .iconpick{display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow:auto}
 .iconpick button{width:40px;height:40px;border-radius:10px;border:1.5px solid var(--line2);background:var(--white);cursor:pointer;display:grid;place-items:center;color:var(--text2)}
 .iconpick button.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-d)}
@@ -292,7 +313,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 </head>
 <body>
 <div class="app" id="app"></div>
-<button class="fab" title="Rychlý výdaj" onclick="quickModal()"></button>
+<button class="fab" title="Nový zápis" onclick="zapisOpen(false)"></button>
 <input type="file" id="impf" accept="application/json" class="hidden" onchange="importFile(event)">
 <script>
 "use strict";
@@ -1088,7 +1109,7 @@ function R(){
     <button class="nav" ${idx>=S.periods.length-1?'disabled':''} onclick="switchPeriod(1)">${ic('cright',18)}</button>
     <button class="edit" title="Upravit období" onclick="periodEditModal()">${ic('edit',17)}</button>
   </div>`;
-  h+=`<div class="tabs">`+visTabs.map((t,i)=>`<button class="tab ${tab===t.id?'on':''}${i>=4?' ov':''}" onclick="go('${t.id}')">${ic(t.icon,16)} <span class="tl">${esc(t.label)}</span></button>`).join('')
+  h+=`<div class="tabs">`+visTabs.map((t,i)=>`<button class="tab ${tab===t.id?'on':''}${i>=4?' tov':''}" onclick="go('${t.id}')">${ic(t.icon,16)} <span class="tl">${esc(t.label)}</span></button>`).join('')
     +`<button class="tab more" onclick="navMoreModal()">${ic('menu',16)} <span class="tl">Více</span></button></div>`;
   h+=(VIEWS[tab]||vPrehled)(p);
   document.getElementById('app').innerHTML=h;
@@ -1191,29 +1212,6 @@ function vPrehled(p){
     <div class="tile"><div class="tl">Naplánováno</div><div class="tv">${fm(plan)}</div></div>
     <div class="tile"><div class="tl">Výplata − plán</div><div class="tv ${afterPlan<0?'neg':'pos'}">${fm(afterPlan)}</div></div>
     <div class="tile"><div class="tl">Z plánu utraceno</div><div class="tv">${Math.round(exp/plan*100)} %</div></div></div>`;
-  h+=`<div class="qa"><div class="qa-t" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <span>${ic('repeat',15)} ${qaXfer?'Peníze zpět na účet':'Zápis'}</span>
-      <a class="mini" style="cursor:pointer;font-weight:600" onclick="qaXfer=!qaXfer;qaFrom='';qaSel='';qaItem='';R()">${qaXfer?`${ic('cleft',13)} Zpět na běžný zápis`:'↔ Peníze z obálky/investice zpět na účet'}</a>
-    </div>
-    <div class="qa-row">
-      ${qaXfer?`<select class="inp" id="qfrom" style="flex:0.9;min-width:120px" onchange="qaSetFrom(this.value)">
-        <option value="" ${qaFrom?'':'selected'}>— vyber odkud —</option>
-        ${S.envelopes.length?`<optgroup label="Obálka">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaFrom==='env:'+e.id?'selected':''}>${esc(e.nm)}</option>`).join('')}</optgroup>`:''}
-        ${S.investments.length?`<optgroup label="Investice">${S.investments.map(i=>`<option value="inv:${i.id}" ${qaFrom==='inv:'+i.id?'selected':''}>${esc(i.nm)}</option>`).join('')}</optgroup>`:''}
-      </select>
-      <span style="color:var(--text4);flex:none">${ic('cright',16)}</span>
-      <div class="inp" style="flex:1.1;min-width:130px;display:flex;align-items:center;opacity:.7">→ Účet</div>
-      <input class="inp" id="qname" placeholder="Poznámka (nepovinné)" style="flex:1.4;min-width:140px" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`
-      :`<select class="inp" id="qcat" style="flex:1.1;min-width:130px" onchange="qaSetCat(this.value)"><option value="" ${qaCur(p)?'':'selected'}>— vyber kam —</option><optgroup label="Výdaj do kategorie">${p.cats.map(c=>`<option value="cat:${c.id}" ${qaCur(p)==='cat:'+c.id?'selected':''}>${esc(c.nm)}</option>`).join('')}</optgroup>${S.envelopes.length?`<optgroup label="Odložit do obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${qaCur(p)==='env:'+e.id?'selected':''}>→ ${esc(e.nm)}</option>`).join('')}</optgroup>`:''}${S.investments.length?`<optgroup label="Vložit do investice">${S.investments.map(i=>`<option value="inv:${i.id}" ${qaCur(p)==='inv:'+i.id?'selected':''}>→ ${esc(i.nm)}</option>`).join('')}</optgroup>`:''}${S.debts.length?`<optgroup label="Splátka dluhu">${S.debts.map(d=>`<option value="debt:${d.id}" ${qaCur(p)==='debt:'+d.id?'selected':''}>→ ${esc(d.nm)}</option>`).join('')}</optgroup>`:''}</select>
-      ${qaItemField(p)}`}
-      <input class="inp num" id="qamt" type="number" placeholder="Kč" value="${qaFixAmt(p)||''}" style="flex:.9;min-width:100px" onkeydown="if(event.key==='Enter')quickAdd()">
-      <input class="inp" id="qdate" type="date" value="${qaDate||todayISO()}" style="flex:0 0 148px${qaDate&&qaDate!==todayISO()?';border-color:var(--gold);background:var(--gold-bg)':''}">${qaDate&&qaDate!==todayISO()?`<span class="mini" style="color:var(--gold);white-space:nowrap">zapisuješ na ${fd(qaDate)} · <a onclick="qaDate='';R()">zpět na dnešek</a></span>`:''}
-      <button class="btn fill" id="qadd" onclick="quickAdd()">${qaFixAmt(p)?'Zaplatit':'Přidat'}</button></div>
-    ${!qaXfer&&qaCur(p).startsWith('cat:')?`<input class="inp" id="qnote" placeholder="Poznámka (nepovinné)" style="margin-top:8px;width:100%" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`:''}
-    ${qaFixAmt(p)?`<div class="mini" style="margin-top:8px">${ic('check',13)} Pevná částka ${fmEx(qaFixAmt(p))} je předvyplněná z plánu — stačí kliknout. Přepsat ji můžeš.</div>`:''}
-    ${accById(S.ui.activeAcc)?`<div class="mini" style="margin-top:8px">${ic('wallet',13)} ${qaXfer?'Připíše se na účet':'Odečte se z účtu'}: <b>${esc(accById(S.ui.activeAcc).nm)}</b></div>`
-      :S.accounts.length?`<div class="mini" style="margin-top:8px;color:var(--text4)">${ic('wallet',13)} Bez vybraného účtu (přepni si ho šipkou nahoře) se tenhle zápis do žádného účtu nezapočítá.</div>`:''}
-    </div>`;
   h+=vPohybyList();
   h+=fixedBlock(p);
   h+=`<div class="card"><div class="ch"><span class="ct">Příjmy</span><button class="btn sm" onclick="incomeModal()">${ic('edit',15)} Upravit</button></div>
@@ -1861,40 +1859,13 @@ function qaCur(p){
   if(qaSel.startsWith('debt:')&&S.debts.some(d=>'debt:'+d.id===qaSel))return qaSel;
   return '';
 }
-function qaSetFrom(v){qaKeepAmt(()=>{qaFrom=v;});}
-function qaKeepAmt(fn){ // překreslení nesmí sebrat už napsanou částku
-  const a=document.getElementById('qamt'),keep=a?a.value:'';
-  fn();R();
-  const a2=document.getElementById('qamt');if(a2)a2.value=keep;
-}
-function qaSetCat(v){qaKeepAmt(()=>{qaSel=v;qaItem='';});}
-function qaBackToList(){qaKeepAmt(()=>{qaItem='';});}
-function qaSetItem(v){ // překreslit se musí — jiná položka může mít jinou obvyklou částku
-  qaItem=v;R();
-  setTimeout(()=>{
-    if(v==='__new')return document.getElementById('qname')?.focus();
-    const a=document.getElementById('qamt');if(a&&!a.value)a.focus();
-  },40);
-}
-// vybraná položka rychlého zadání (jen u kategorie; obálka položky nemá)
+// vybraná položka (jen u kategorie — obálka ani investice položky nemají)
 function qaSelItem(p){
   const cur=qaCur(p);if(!cur.startsWith('cat:')||!qaItem||qaItem==='__new')return null;
   const c=p.cats.find(x=>'cat:'+x.id===cur);
   return (c&&c.it.find(it=>it.id===qaItem))||null;
 }
 const qaFixAmt=p=>{const it=qaSelItem(p);return it&&it.fixAmt&&it.pl>0?it.pl:0;};
-function qaItemField(p){
-  const cur=qaCur(p),txt=ph=>`<input class="inp" id="qname" placeholder="${ph}" style="flex:1.4;min-width:140px" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`;
-  if(!cur)return `<select class="inp" disabled style="flex:1.4;min-width:140px;opacity:.6"><option>— nejdřív kategorii —</option></select>`;
-  if(!cur.startsWith('cat:'))return txt('Poznámka (nepovinné)');
-  const c=p.cats.find(x=>'cat:'+x.id===cur),its=(c&&c.it)||[];
-  if(!its.length)return txt('Za co?');
-  if(qaItem==='__new')return txt('Název nové položky')+`<button class="btn gho" onclick="qaBackToList()" title="Zpět na výběr" style="flex:0 0 auto">${ic('cleft',15)}</button>`;
-  const sel=its.some(it=>it.id===qaItem)?qaItem:'';   // nic nepředvybírej, ať se omylem nepřipíše jinam
-  return `<select class="inp" id="qitem" style="flex:1.4;min-width:140px" onchange="qaSetItem(this.value)">
-    <option value="" ${sel?'':'selected'}>— vyber položku —</option>
-    ${its.map(it=>`<option value="${it.id}" ${sel===it.id?'selected':''}>${esc(it.nm)}${it.fixAmt&&it.pl>0?' · '+fmEx(it.pl):''}</option>`).join('')}<option value="__new">+ nová položka…</option></select>`;
-}
 /* Přesun peněz — jediné místo, kudy appka zapisuje pohyb mezi truhlicemi.
    Pravidlo je vždy stejné: ze zdroje Výplata se prostě zapíše normální
    vklad/výdaj (to je to, co appka dělala vždycky). Ze zdroje Obálka/
@@ -1933,7 +1904,7 @@ function quickAdd(){const p=P();
     e.bal=(e.bal||0)-amt;e.hist.push(out);srcEntry=out;
     if(val.startsWith('cat:')){   // obálka → kategorie: appka to odjakživa řeší jen značkou na obálce
       commit();toast(`${zNazev} → ${presunNazev(val)}: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
-      setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);return;
+      setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);return true;
     }
   }else if(from.startsWith('inv:')){
     const inv=S.investments.find(x=>x.id===from.slice(4));if(!inv)return;
@@ -1944,7 +1915,7 @@ function quickAdd(){const p=P();
   if(val==='vyplata'){   // zpátky na účet, bez kategorie — jen truhlice → výplata
     if(acc&&srcEntry){srcEntry.acc=acc;accBump(acc,amt);}
     commit();toast(`${zNazev} → Účet: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
-    setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);return;
+    setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);return true;
   }
 
   if(val.startsWith('cat:')){
@@ -1982,7 +1953,7 @@ function quickAdd(){const p=P();
     dt.pay=dt.pay||[];dt.pay.push(en);
     toast(`${zNazev} → ${dt.nm}, splátka: ${fm(amt)}`);
   }
-  commit();setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);}
+  commit();setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);return true;}
 
 /* ---- Pohyby: jeden prohledatelný seznam napříč kategoriemi, obálkami,
    investicemi a dluhy. Historie zpětně se schválně NEDOTAHUJE — appka
@@ -2076,24 +2047,70 @@ function vPohybyList(){
   h+=`</div>`;
   return h;
 }
-// kurzor patří na první nevyplněné pole — bez kategorie se stejně nic nezapíše
-// Na mobilu se do spodní lišty vejdou čtyři záložky, zbytek je tady.
-function navMoreModal(){
-  const vis=S.ui.tabs.filter(t=>t.visible||t.id==='nastaveni');
-  openModal(`<h3>Další</h3>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px">
-    ${vis.map(t=>`<button onclick="closeModal();go('${t.id}')" style="background:${tab===t.id?'var(--accent-bg)':'var(--bg)'};border:1px solid ${tab===t.id?'var(--accent-bg2)':'var(--line)'};color:${tab===t.id?'var(--accent-d)':'var(--text)'};border-radius:14px;padding:14px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12px;font-weight:600">
-      ${ic(t.icon,21)}<span>${esc(t.label)}</span></button>`).join('')}</div>`);
+/* ---------- panel zápisu ----------
+   Dřív to byl řádek s pěti rozbalovátky na Přehledu. Tady je to jeden
+   panel: velká částka nahoře, pak mřížka, kam to jde, a nakonec pilulky
+   s podrobnostmi. Na mobilu vyjede zespoda, na počítači sedí uprostřed
+   a jde celý odklikat klávesnicí (kurzor rovnou v částce, Enter zapíše).
+   Motor je pořád quickAdd() — panel jen doplňuje ta samá pole, která
+   četl dosavadní řádek, takže všechny pojistky platí dál. */
+let zapisAmt='', zapisSeg='cat';
+const ZSEG=[{k:'cat',l:'Výdaj',i:'cart'},{k:'env',l:'Obálka',i:'envelope'},{k:'inv',l:'Investice',i:'trending'},{k:'debt',l:'Dluh',i:'landmark'}];
+function zapisOpen(xfer){
+  qaXfer=!!xfer;qaSel=xfer?'vyplata':'';qaFrom='';qaItem='';zapisAmt='';zapisSeg='cat';
+  openModal(zapisHTML(),'sheet');
+  setTimeout(()=>document.getElementById('qamt')?.focus(),80);
 }
-function quickModal(){go('prehled');setTimeout(()=>{
-  const from=document.getElementById('qfrom');
-  if(from&&!from.value)return from.focus();
-  const cat=document.getElementById('qcat');
-  if(cat&&!cat.value)return cat.focus();
-  const it=document.getElementById('qitem');
-  if(it&&!it.value)return it.focus();
-  document.getElementById('qamt')?.focus();},60);}
-
+function zapisRe(){
+  const a=document.getElementById('qamt');if(a)zapisAmt=a.value;
+  const n=document.getElementById('qnote');if(n)zapisNote=n.value;
+  const box=document.querySelector('.modal');if(box)box.innerHTML=zapisHTML();
+}
+let zapisNote='';
+function zapisSeg2(k){zapisSeg=k;qaSel='';qaItem='';zapisRe();}
+function zapisPick(v){qaSel=v;qaItem='';zapisRe();}
+function zapisFrom(v){qaFrom=v;zapisRe();}
+function zapisSubmit(){if(quickAdd()===true){zapisAmt='';zapisNote='';closeModal();}}
+function zapisHTML(){
+  const p=P(),cur=qaCur(p),acc=accById(S.ui.activeAcc);
+  const seg=cur.startsWith('env:')?'env':cur.startsWith('inv:')?'inv':cur.startsWith('debt:')?'debt':zapisSeg;
+  const cile=qaXfer?[]:seg==='env'?S.envelopes.map(e=>({v:'env:'+e.id,nm:e.nm,ik:e.icon}))
+    :seg==='inv'?S.investments.map(i=>({v:'inv:'+i.id,nm:i.nm,ik:i.icon}))
+    :seg==='debt'?S.debts.map(d=>({v:'debt:'+d.id,nm:d.nm,ik:d.icon}))
+    :p.cats.map(c=>({v:'cat:'+c.id,nm:c.nm,ik:c.icon}));
+  const zdroje=qaXfer?[...S.envelopes.map(e=>({v:'env:'+e.id,nm:e.nm,ik:e.icon})),...S.investments.map(i=>({v:'inv:'+i.id,nm:i.nm,ik:i.icon}))]:[];
+  const fix=qaFixAmt(p);
+  let h=`<div class="zs-top"><span>${qaXfer?'Peníze zpět na účet':'Nový zápis'}</span>
+    <button class="zs-x" onclick="closeModal()" aria-label="Zavřít">${ic('x',19)}</button></div>
+    <input type="hidden" id="qcat" value="${qaXfer?'vyplata':esc(cur)}">
+    ${qaXfer?`<input type="hidden" id="qfrom" value="${esc(qaFrom)}">`:''}
+    <div class="zs-amt"><input id="qamt" type="number" step="0.01" inputmode="decimal" placeholder="0" value="${esc(zapisAmt||(fix?String(fix):''))}" onkeydown="if(event.key==='Enter')zapisSubmit()"><span>Kč</span></div>`;
+  if(qaXfer){
+    h+=`<div class="zs-lbl">Odkud</div><div class="zs-grid">`
+      +zdroje.map(z=>`<button class="zt ${qaFrom===z.v?'on':''}" onclick="zapisFrom('${z.v}')">${ic(z.ik,21)}<span>${esc(z.nm)}</span></button>`).join('')
+      +`</div><div class="zs-note-line">${ic('cright',13)} Připíše se na účet${acc?`: <b>${esc(acc.nm)}</b>`:''}</div>`;
+  }else{
+    h+=`<div class="zs-seg">`+ZSEG.filter(x=>x.k==='cat'||(x.k==='env'&&S.envelopes.length)||(x.k==='inv'&&S.investments.length)||(x.k==='debt'&&S.debts.length))
+      .map(x=>`<button class="${seg===x.k?'on':''}" onclick="zapisSeg2('${x.k}')">${esc(x.l)}</button>`).join('')+`</div>`;
+    h+=`<div class="zs-grid">`+cile.map(c=>`<button class="zt ${cur===c.v?'on':''}" onclick="zapisPick('${c.v}')">${ic(c.ik,21)}<span>${esc(c.nm)}</span></button>`).join('')+`</div>`;
+    if(cur.startsWith('cat:')){
+      const c=p.cats.find(x=>'cat:'+x.id===cur),its=(c&&c.it)||[];
+      h+=`<div class="zs-lbl">Položka</div>`;
+      if(its.length)h+=`<select class="inp" id="qitem" onchange="qaItem=this.value;zapisRe()">
+        <option value="" ${qaItem?'':'selected'}>— vyber položku —</option>
+        ${its.map(it=>`<option value="${it.id}" ${qaItem===it.id?'selected':''}>${esc(it.nm)}${it.fixAmt&&it.pl>0?' · '+fmEx(it.pl):''}</option>`).join('')}
+        <option value="__new" ${qaItem==='__new'?'selected':''}>+ nová položka…</option></select>`;
+      if(!its.length||qaItem==='__new')h+=`<input class="inp" id="qname" placeholder="Název nové položky" style="margin-top:8px">`;
+    }else if(cur)h+=`<input class="inp" id="qname" placeholder="Poznámka (nepovinné)" style="margin-top:12px">`;
+  }
+  if(!qaXfer&&cur.startsWith('cat:'))h+=`<input class="inp" id="qnote" placeholder="Poznámka (nepovinné)" value="${esc(zapisNote)}" style="margin-top:8px">`;
+  h+=`<div class="zs-pills">
+    <label class="zp">${ic('calendar',15)}<input id="qdate" type="date" value="${qaDate||todayISO()}"></label>
+    ${!qaXfer&&acc?`<span class="zp">${ic('wallet',15)}${esc(acc.nm)}</span>`:''}
+    ${!qaXfer&&!acc&&S.accounts.length?`<span class="zp dim">${ic('wallet',15)}Bez účtu</span>`:''}</div>
+    <button class="btn fill zs-go" onclick="zapisSubmit()">${qaXfer?'Přesunout':'Zapsat'}</button>`;
+  return h;
+}
 function addLog(cid,iid){const c=P().cats.find(x=>x.id===cid),it=c&&c.it.find(x=>x.id===iid);if(!it)return;
   const a=Math.abs(num(document.getElementById('la-'+iid).value));if(!a){toast('Zadej částku');return;}
   const le={id:uid(),d:document.getElementById('ld-'+iid).value||todayISO(),a,n:document.getElementById('ln-'+iid).value.trim()};
@@ -2204,7 +2221,7 @@ function saveItemCfg(){
 function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
 
 /* modal infra */
-function openModal(html){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov';ov.id='ov';ov.innerHTML=`<div class="modal">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);}
+function openModal(html,cls){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov'+(cls?' ov-'+cls:'');ov.id='ov';ov.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);}
 function closeModal(){document.getElementById('ov')?.remove();}
 function iconPicker(list,cur){return `<div class="iconpick" id="m_ic">${list.map(n=>`<button class="${cur===n?'on':''}" data-ic="${n}" onclick="mctx.icon='${n}';document.querySelectorAll('#m_ic button').forEach(b=>b.classList.toggle('on',b.dataset.ic==='${n}'))">${ic(n,20)}</button>`).join('')}</div>`;}
 
@@ -2336,8 +2353,8 @@ function setActiveAcc(id){S.ui.activeAcc=id;commit();}
    z deseti důvodů, proč appku vůbec otvíráš. */
 function actionRow(){
   return `<div class="acts">
-    <button class="prim" onclick="quickModal()"><span class="ab">${ic('plus',23)}</span><span class="al">Zápis</span></button>
-    <button onclick="qaXfer=true;qaFrom='';qaSel='';quickModal()"><span class="ab">${ic('repeat',21)}</span><span class="al">Přesun</span></button>
+    <button class="prim" onclick="zapisOpen(false)"><span class="ab">${ic('plus',23)}</span><span class="al">Zápis</span></button>
+    <button onclick="zapisOpen(true)"><span class="ab">${ic('repeat',21)}</span><span class="al">Přesun</span></button>
     <button onclick="go('obalky')"><span class="ab">${ic('envelope',21)}</span><span class="al">Obálky</span></button>
     <button onclick="go('ucty')"><span class="ab">${ic('wallet',21)}</span><span class="al">Účty</span></button>
   </div>`;
