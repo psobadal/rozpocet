@@ -1840,7 +1840,7 @@ function quickAdd(){const p=P();
   if(from.startsWith('env:')){
     const e=S.envelopes.find(x=>x.id===from.slice(4));if(!e)return;
     if(amt>(e.bal||0)){toast('V obálce '+e.nm+' není dost peněz');return;}
-    const out={d:date,t:'out',a:amt,n:nm,pid:tp.id};
+    const out={id:uid(),d:date,t:'out',a:amt,n:nm,pid:tp.id};
     if(val.startsWith('cat:')){const c=p.cats.find(x=>'cat:'+x.id===val);if(c)out.cat=c.nm;}
     e.bal=(e.bal||0)-amt;e.hist.push(out);srcEntry=out;
     if(val.startsWith('cat:')){   // obálka → kategorie: appka to odjakživa řeší jen značkou na obálce
@@ -1849,7 +1849,7 @@ function quickAdd(){const p=P();
     }
   }else if(from.startsWith('inv:')){
     const inv=S.investments.find(x=>x.id===from.slice(4));if(!inv)return;
-    const en={d:date,a:-amt,n:nm,pid:tp.id};
+    const en={id:uid(),d:date,a:-amt,n:nm,pid:tp.id};
     inv.val=(inv.val||0)-amt;inv.hist.push(en);srcEntry=en;
   }
 
@@ -1874,21 +1874,21 @@ function quickAdd(){const p=P();
     toast(`${c.nm}: ${fm(amt)}`+(lt?` → ${lt.obj.nm}`:'')+(from!=='vyplata'?` · z ${zNazev}`:'')+(r.jinam?` · POZOR: podle data ${fd(date)} to spadlo do období „${r.period.nm}", ne do otevřeného`:''),r.jinam?5000:2200);
   }else if(val.startsWith('env:')){
     const e=S.envelopes.find(x=>x.id===val.slice(4));if(!e)return;
-    const en={d:date,t:'in',a:amt,n:nm,pid:tp.id};
+    const en={id:uid(),d:date,t:'in',a:amt,n:nm,pid:tp.id};
     if(from.startsWith('env:'))en.src=zNazev;   // jinak se stejná koruna počítá jako odloženo podruhé
     if(from==='vyplata'&&acc){en.acc=acc;accBump(acc,-amt);}
     e.bal=(e.bal||0)+amt;e.hist.push(en);
     toast(`${zNazev} → ${e.nm}: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
   }else if(val.startsWith('inv:')){
     const inv=S.investments.find(x=>x.id===val.slice(4));if(!inv)return;
-    const en={d:date,a:amt,n:nm,pid:tp.id};
+    const en={id:uid(),d:date,a:amt,n:nm,pid:tp.id};
     if(from.startsWith('env:'))en.src=zNazev;
     if(from==='vyplata'&&acc){en.acc=acc;accBump(acc,-amt);}
     inv.val=(inv.val||0)+amt;inv.hist.push(en);
     toast(`${zNazev} → ${inv.nm}: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
   }else if(val.startsWith('debt:')){
     const dt=S.debts.find(x=>x.id===val.slice(5));if(!dt)return;
-    const en={d:date,a:amt,n:nm};
+    const en={id:uid(),d:date,a:amt,n:nm};
     if(from.startsWith('env:'))en.src=zNazev;
     if(from==='vyplata'&&acc){en.acc=acc;accBump(acc,-amt);}
     dt.pay=dt.pay||[];dt.pay.push(en);
@@ -1903,37 +1903,42 @@ function quickAdd(){const p=P();
 // "· z Raiffka" / "· na účet Raiffka" — jen když má zápis značku `acc` (viz quickAdd/addLog/envMove/invAdd/debtPayModal)
 const accSub=(accId,dirIn)=>{if(!accId)return '';const a=accById(accId);return a?(' · '+(dirIn?'na účet ':'z ')+a.nm):'';};
 function allMovements(od){
-  const out=[];let seq=0;
+  const out=[];
   S.periods.forEach(per=>per.cats.forEach(c=>c.it.forEach(it=>(it.log||[]).forEach((le,li)=>{
     if(le.d<od)return;
     const lt=linkTarget(it);
-    out.push({d:le.d,a:le.a,label:c.nm+': '+it.nm,sub:(le.n?le.n+' · ':'')+'výdaj'+(lt?' → '+lt.obj.nm:'')+accSub(le.acc,false),icon:'arrowupright',volne:true,seq:seq++,
+    out.push({d:le.d,a:le.a,label:c.nm+': '+it.nm,sub:(le.n?le.n+' · ':'')+'výdaj'+(lt?' → '+lt.obj.nm:'')+accSub(le.acc,false),icon:'arrowupright',volne:true,rid:le.id||'',
       kind:'cat',pid:per.id,cid:c.id,iid:it.id,li});
   }))));
   S.envelopes.forEach(e=>(e.hist||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
     const volne=h.t==='in'&&!h.src;
-    out.push({d:h.d,a:h.a,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):'čerpání'+(h.cat?' · '+h.cat:''))+accSub(h.acc,h.t==='out'),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne,seq:seq++,
+    out.push({d:h.d,a:h.a,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):'čerpání'+(h.cat?' · '+h.cat:''))+accSub(h.acc,h.t==='out'),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
       kind:'env',eid:e.id,hidx});
   }));
   S.investments.forEach(inv=>(inv.hist||[]).forEach((h,hidx)=>{
     if(h.k||h.d<od)return;
     const volne=!h.src;
-    out.push({d:h.d,a:Math.abs(h.a),label:'Investice: '+inv.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:h.a>0?'vklad':'výběr')+accSub(h.acc,h.a<0),icon:h.a>0?'arrowupright':'arrowdownleft',volne,seq:seq++,
+    out.push({d:h.d,a:Math.abs(h.a),label:'Investice: '+inv.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:h.a>0?'vklad':'výběr')+accSub(h.acc,h.a<0),icon:h.a>0?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
       kind:'inv',invId:inv.id,hidx});
   }));
   S.debts.forEach(dt=>(dt.pay||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
-    out.push({d:h.d,a:h.a,label:'Dluh: '+dt.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:'splátka')+accSub(h.acc,false),icon:'arrowupright',volne:!h.src,seq:seq++,
+    out.push({d:h.d,a:h.a,label:'Dluh: '+dt.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:'splátka')+accSub(h.acc,false),icon:'arrowupright',volne:!h.src,rid:h.id||'',
       kind:'debt',did:dt.id,hidx});
   }));
   S.accounts.forEach(a=>(a.hist||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
-    out.push({d:h.d,a:Math.abs(h.a),label:'Účet: '+a.nm,sub:(h.n?h.n+' · ':'')+(h.a>=0?'vklad':'výběr'),icon:h.a>=0?'arrowupright':'arrowdownleft',volne:false,seq:seq++,
+    out.push({d:h.d,a:Math.abs(h.a),label:'Účet: '+a.nm,sub:(h.n?h.n+' · ':'')+(h.a>=0?'vklad':'výběr'),icon:h.a>=0?'arrowupright':'arrowdownleft',volne:false,rid:h.id||'',
       kind:'acc',aid:a.id,hidx});
   }));
-  // stejné datum (appka nemá čas, jen den) — řadí se podle pořadí zápisu, ať je opravdu nejnovější nahoře
-  out.sort((x,y)=>y.d.localeCompare(x.d)||y.seq-x.seq);
+  /* Stejné datum (appka nemá čas, jen den) se řadí podle `id` — ten začíná
+     časovým razítkem (viz uid()), takže i bez skutečného pole "čas" sedí
+     pořadí na to, co bylo zapsáno/upraveno později. Dřív se řadilo podle
+     pořadí procházení polí (kategorie→obálky→...), což u dvou zápisů ve
+     STEJNÝ den, ale v RŮZNÝCH položkách/kategoriích, dávalo nahoru tu, co
+     appka narazila dřív při procházení — ne tu, co byla zapsaná později. */
+  out.sort((x,y)=>y.d.localeCompare(x.d)||y.rid.localeCompare(x.rid));
   return out;
 }
 function pohSetQ(v){pohHledej=v;R();setTimeout(()=>{const el=document.getElementById('pohq');if(el){el.focus();el.setSelectionRange(v.length,v.length);}},20);}
@@ -2133,8 +2138,8 @@ function envModal(id){const e=id?S.envelopes.find(x=>x.id===id):null;mctx={id,ic
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveEnv()">${e?'Uložit':'Vytvořit'}</button></div>`);}
 function saveEnv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const mo=num(document.getElementById('m_mo').value),tg=num(document.getElementById('m_tg').value),due=document.getElementById('m_due').value,bal=num(document.getElementById('m_bal').value);
   if(mctx.id){const e=S.envelopes.find(x=>x.id===mctx.id);e.nm=nm;e.icon=mctx.icon;e.monthly=mo;e.target=tg;e.due=due;
-    const diff=bal-(e.bal||0);if(diff){e.bal=bal;e.hist.push({d:todayISO(),t:diff>0?'in':'out',a:Math.abs(diff),n:'Oprava zůstatku',pid:S.curId,adj:true});}}
-  else{const e={id:uid(),nm,icon:mctx.icon,bal:0,monthly:mo,target:tg,due,hist:[]};if(bal){e.bal=bal;e.hist.push({d:todayISO(),t:'in',a:bal,n:'Počáteční',pid:S.curId,adj:true});}S.envelopes.push(e);}closeModal();commit();}
+    const diff=bal-(e.bal||0);if(diff){e.bal=bal;e.hist.push({id:uid(),d:todayISO(),t:diff>0?'in':'out',a:Math.abs(diff),n:'Oprava zůstatku',pid:S.curId,adj:true});}}
+  else{const e={id:uid(),nm,icon:mctx.icon,bal:0,monthly:mo,target:tg,due,hist:[]};if(bal){e.bal=bal;e.hist.push({id:uid(),d:todayISO(),t:'in',a:bal,n:'Počáteční',pid:S.curId,adj:true});}S.envelopes.push(e);}closeModal();commit();}
 function delEnv(id){const e=S.envelopes.find(x=>x.id===id);if(e.bal>0&&!confirm(`V obálce je ${fm(e.bal)}. Opravdu smazat?`))return;if(e.bal<=0&&!confirm('Smazat obálku?'))return;S.envelopes=S.envelopes.filter(x=>x.id!==id);commit();}
 function envMove(id,dir){const e=S.envelopes.find(x=>x.id===id);mctx={id,dir};openModal(`<h3>${dir==='in'?'Vložit do':'Čerpat z'}: ${esc(e.nm)}</h3><div class="md">Zůstatek: <b>${fm(e.bal||0)}</b>${dir==='in'?' · vklad se započítá jako „odloženo" tento cyklus.':' · ubyde z obálky (do výplaty se už nepočítá).'}</div>
     <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" placeholder="0" onkeydown="if(event.key==='Enter')doEnvMove()"></div>
@@ -2144,7 +2149,7 @@ function envMove(id,dir){const e=S.envelopes.find(x=>x.id===id);mctx={id,dir};op
   setTimeout(()=>document.getElementById('m_a')?.focus(),50);}
 function doEnvMove(){const e=S.envelopes.find(x=>x.id===mctx.id);const a=Math.abs(num(document.getElementById('m_a').value));if(!a){toast('Zadej částku');return;}const n=document.getElementById('m_n').value.trim();
   if(mctx.dir==='out'&&a>(e.bal||0)){toast('V obálce není dost peněz');return;}
-  const entry={d:todayISO(),t:mctx.dir,a,n,pid:S.curId};
+  const entry={id:uid(),d:todayISO(),t:mctx.dir,a,n,pid:S.curId};
   if(mctx.dir==='out'){const cat=document.getElementById('m_cat')?.value;if(cat)entry.cat=cat;}
   const acc=mctx.dir==='in'?S.ui.activeAcc:'';if(acc){entry.acc=acc;accBump(acc,-a);}   // čerpání se účtu nedotýká — už bylo odečteno při vkladu
   e.bal=(e.bal||0)+(mctx.dir==='in'?a:-a);e.hist.push(entry);closeModal();toast(`${mctx.dir==='in'?'+':'−'}${fm(a)} · ${e.nm}`);commit();}
@@ -2188,20 +2193,26 @@ function saveEnvHist(){
    správně vrátit zpátky. */
 // pruh nad Přehledem — klik vybere/zruší aktivní účet, ze kterého se pak
 // běžné zápisy samy odečítají (viz quickAdd/addLog/envMove/invAdd/debtPayModal)
+// Přepínač "Účty dohromady" / jednotlivé účty — stejný vzhled a ovládání
+// jako přepínač období nahoře (šipky doleva/doprava). Pozice 0 = dohromady
+// (S.ui.activeAcc=''), pak jednotlivé účty v pořadí S.accounts.
 function accChips(){
   if(!S.accounts.length)return '';
-  const active=S.ui.activeAcc;
-  let h=`<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px">`;
-  S.accounts.forEach(a=>{
-    const on=active===a.id;
-    h+=`<button onclick="setActiveAcc('${a.id}')" style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 14px;border-radius:12px;border:1.5px solid ${on?'var(--accent)':'var(--line2)'};background:${on?'var(--accent)':'var(--white)'};color:${on?'#fff':'var(--text)'};cursor:pointer;white-space:nowrap">
-      <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px">${ic(a.icon,13,on?'#fff':'currentColor')} ${esc(a.nm)}</span>
-      <span style="font-size:14px;font-weight:700">${fm(a.bal||0)}</span></button>`;
-  });
-  h+=`</div>`;
-  return h;
+  const idx=S.ui.activeAcc?S.accounts.findIndex(a=>a.id===S.ui.activeAcc)+1:0;
+  const cur=idx>0?S.accounts[idx-1]:null;
+  return `<div class="period" style="margin-bottom:14px">
+    <button class="nav" onclick="accCycle(-1)">${ic('cleft',18)}</button>
+    <div class="mid"><div class="pn">${cur?ic(cur.icon,15)+' ':''}${cur?esc(cur.nm):'Účty dohromady'}</div><div class="pd">${fm(cur?cur.bal||0:totalAccounts())}</div></div>
+    <button class="nav" onclick="accCycle(1)">${ic('cright',18)}</button>
+  </div>`;
 }
-function setActiveAcc(id){S.ui.activeAcc=(S.ui.activeAcc===id)?'':id;commit();}
+function accCycle(dir){
+  const n=S.accounts.length;
+  const idx=S.ui.activeAcc?S.accounts.findIndex(a=>a.id===S.ui.activeAcc)+1:0;
+  const next=(idx+dir+n+1)%(n+1);
+  S.ui.activeAcc=next===0?'':S.accounts[next-1].id;
+  commit();
+}
 function vUcty(p){
   let h=tipBan('wallet','<b>Účty</b> = kde peníze fyzicky leží (Raiffka, mBank, spořák...). Přesun mezi účty se nikdy nepočítá do „zbývá volných" — je to pořád tvoje volná peníze, jen mění místo. Vyber si aktivní účet dole v Přehledu a běžné zápisy se z něj budou samy odečítat, bez vybírání.');
   h+=`<div class="card" style="text-align:center;margin-bottom:14px"><div class="ct" style="margin-bottom:6px">Celkem na účtech</div><div class="num" style="font-size:28px">${fm(totalAccounts())}</div></div>`;
@@ -2593,7 +2604,7 @@ function invAdd(id){const inv=S.investments.find(x=>x.id===id);mctx={id};openMod
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doInvAdd()">Přidat</button></div>`);
   setTimeout(()=>document.getElementById('m_a')?.focus(),50);}
 function doInvAdd(){const inv=S.investments.find(x=>x.id===mctx.id);const a=num(document.getElementById('m_a').value);if(!a){toast('Zadej částku');return;}
-  const en={d:todayISO(),a,n:document.getElementById('m_n').value.trim(),pid:S.curId};
+  const en={id:uid(),d:todayISO(),a,n:document.getElementById('m_n').value.trim(),pid:S.curId};
   const acc=S.ui.activeAcc;if(acc){en.acc=acc;accBump(acc,-a);}   // vklad odečte z účtu, výběr (záporná částka) mu naopak přičte
   inv.val=(inv.val||0)+a;inv.hist.push(en);closeModal();toast(`${a>0?'+':''}${fm(a)} · ${inv.nm}`);commit();}
 // úprava vlastního vkladu/výběru (ne přecenění — to je k:'gain' a sem nechodí) — znaménko (vklad/výběr) se drží, mění se jen velikost
@@ -2687,7 +2698,7 @@ function debtPayModal(id){const d=S.debts.find(x=>x.id===id);mctx={id};openModal
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doDebtPay()">Zaplatit</button></div>`);
   setTimeout(()=>document.getElementById('m_a')?.focus(),50);}
 function doDebtPay(){const d=S.debts.find(x=>x.id===mctx.id);const a=Math.abs(num(document.getElementById('m_a').value));if(!a){toast('Zadej částku');return;}
-  const en={d:document.getElementById('m_d').value||todayISO(),a,n:document.getElementById('m_n').value.trim()};
+  const en={id:uid(),d:document.getElementById('m_d').value||todayISO(),a,n:document.getElementById('m_n').value.trim()};
   const acc=S.ui.activeAcc;if(acc){en.acc=acc;accBump(acc,-a);}
   d.pay.push(en);closeModal();toast(`Splátka ${fm(a)} · ${d.nm}`);commit();}
 function delDebtPay(id,i){const d=S.debts.find(x=>x.id===id);const h=d.pay[i];if(h&&h.acc)accBump(h.acc,h.a);d.pay.splice(i,1);commit();}
