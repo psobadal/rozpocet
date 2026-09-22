@@ -173,6 +173,23 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 }
 @media(min-width:641px){.tab.more{display:none}}
 
+/* Seznam pohybů: bez linek mezi řádky, jen vzduch a denní hlavičky.
+   Kolečko nese ikonu kategorie nebo truhlice, barva říká, jestli to
+   ukrojilo z volných peněz, nebo jen přesunulo. */
+.pohchips{display:flex;gap:6px;overflow-x:auto;margin-bottom:4px;padding-bottom:4px;scrollbar-width:none}
+.pohchips::-webkit-scrollbar{display:none}
+.pchip{flex:none;background:var(--bg);border:1px solid var(--line);color:var(--text2);font-size:12px;font-weight:600;
+  padding:6px 12px;border-radius:99px;cursor:pointer;white-space:nowrap}
+.pchip.on{background:var(--text);border-color:var(--text);color:var(--white)}
+.pohden{font-size:11.5px;font-weight:600;color:var(--text3);padding:12px 0 2px}
+.mv{display:flex;align-items:center;gap:11px;padding:9px 0;cursor:pointer;border-radius:12px}
+.mv:hover{background:var(--bg)}
+.mvi{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;flex:none}
+.mv .m{flex:1;min-width:0}
+.mv .t1{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv .t2{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mva{font-size:14.5px;font-weight:600;flex:none}
+
 .inp{width:100%;background:var(--white);border:1.5px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s}
 .inp:focus{border-color:var(--accent)}
 select.inp{appearance:none;padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8078' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
@@ -502,7 +519,7 @@ function defState(){
 
 /* ---------- state ---------- */
 let S=defState();
-let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='', qaItem='', qaFrom='', qaXfer=false, pohHledej='', pohLimit=5, poh=[];
+let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='', qaItem='', qaFrom='', qaXfer=false, pohHledej='', pohLimit=5, poh=[], pohFiltr='';
 let fileHandle=null, fileOK=false;
 
 function loadLS(){try{const r=localStorage.getItem(LS);if(r)return migrate(JSON.parse(r));}catch(e){}return null;}
@@ -1978,29 +1995,29 @@ function allMovements(od){
   S.periods.forEach(per=>per.cats.forEach(c=>c.it.forEach(it=>(it.log||[]).forEach((le,li)=>{
     if(le.d<od)return;
     const lt=linkTarget(it);
-    out.push({d:le.d,a:le.a,label:c.nm+': '+it.nm,sub:(le.n?le.n+' · ':'')+'výdaj'+(lt?' → '+lt.obj.nm:'')+accSub(le.acc,false),icon:'arrowupright',volne:true,rid:le.id||'',
+    out.push({d:le.d,a:le.a,ikona:c.icon,label:c.nm+': '+it.nm,sub:(le.n?le.n+' · ':'')+'výdaj'+(lt?' → '+lt.obj.nm:'')+accSub(le.acc,false),icon:'arrowupright',volne:true,rid:le.id||'',
       kind:'cat',pid:per.id,cid:c.id,iid:it.id,li});
   }))));
   S.envelopes.forEach(e=>(e.hist||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
     const volne=h.t==='in'&&!h.src;
-    out.push({d:h.d,a:h.a,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):'čerpání'+(h.cat?' · '+h.cat:''))+accSub(h.acc,h.t==='out'),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
+    out.push({d:h.d,a:h.a,ikona:e.icon,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):'čerpání'+(h.cat?' · '+h.cat:''))+accSub(h.acc,h.t==='out'),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
       kind:'env',eid:e.id,hidx});
   }));
   S.investments.forEach(inv=>(inv.hist||[]).forEach((h,hidx)=>{
     if(h.k||h.d<od)return;
     const volne=!h.src;
-    out.push({d:h.d,a:Math.abs(h.a),label:'Investice: '+inv.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:h.a>0?'vklad':'výběr')+accSub(h.acc,h.a<0),icon:h.a>0?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
+    out.push({d:h.d,a:Math.abs(h.a),ikona:inv.icon,label:'Investice: '+inv.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:h.a>0?'vklad':'výběr')+accSub(h.acc,h.a<0),icon:h.a>0?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
       kind:'inv',invId:inv.id,hidx});
   }));
   S.debts.forEach(dt=>(dt.pay||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
-    out.push({d:h.d,a:h.a,label:'Dluh: '+dt.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:'splátka')+accSub(h.acc,false),icon:'arrowupright',volne:!h.src,rid:h.id||'',
+    out.push({d:h.d,a:h.a,ikona:dt.icon,label:'Dluh: '+dt.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:'splátka')+accSub(h.acc,false),icon:'arrowupright',volne:!h.src,rid:h.id||'',
       kind:'debt',did:dt.id,hidx});
   }));
   S.accounts.forEach(a=>(a.hist||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
-    out.push({d:h.d,a:Math.abs(h.a),label:'Účet: '+a.nm,sub:(h.n?h.n+' · ':'')+(h.a>=0?'vklad':'výběr'),icon:h.a>=0?'arrowupright':'arrowdownleft',volne:false,rid:h.id||'',
+    out.push({d:h.d,a:Math.abs(h.a),ikona:a.icon,label:'Účet: '+a.nm,sub:(h.n?h.n+' · ':'')+(h.a>=0?'vklad':'výběr'),icon:h.a>=0?'arrowupright':'arrowdownleft',volne:false,rid:h.id||'',
       kind:'acc',aid:a.id,hidx});
   }));
   /* Stejné datum (appka nemá čas, jen den) se řadí podle `id` — ten začíná
@@ -2020,21 +2037,42 @@ function pohClick(x){
   else if(x.kind==='debt')debtPayEditModal(x.did,x.hidx);
   else if(x.kind==='acc')accHistModal(x.aid,x.hidx);
 }
+const POH_DRUHY=[{k:'cat',l:'Výdaje'},{k:'env',l:'Obálky'},{k:'inv',l:'Investice'},{k:'debt',l:'Dluhy'},{k:'acc',l:'Účty'}];
+/* Den místo data u každého řádku: „Dnes" a „Včera" člověk přečte rychleji
+   než 22. 9., a u starších dnů stejně potřebuje vidět datum. */
+function pohDen(d){
+  const t=todayISO();
+  if(d===t)return 'Dnes';
+  if(d===dateMinus(t,1))return 'Včera';
+  return fdFull(d);
+}
+function pohSetFiltr(k){pohFiltr=pohFiltr===k?'':k;pohLimit=5;R();}
 function vPohybyList(){
   const od=S.ui.pohybyOd||todayISO();
   let list=allMovements(od);
+  const vse=list;
   const q=pohHledej.trim().toLowerCase();
+  if(pohFiltr)list=list.filter(x=>x.kind===pohFiltr);
   if(q)list=list.filter(x=>(x.label+' '+x.sub+' '+x.a+' '+fd(x.d)).toLowerCase().includes(q));
   const shown=q?list:list.slice(0,pohLimit);
   poh=shown;   // kliká se přes index, ať se nemusí IDčka lepit do onclick atributu
   let h=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('list',15)} Pohyby</span></div>
-    <input class="inp" id="pohq" placeholder="Hledat podle názvu, částky, data…" value="${esc(pohHledej)}" oninput="pohSetQ(this.value)" style="margin-bottom:6px">`;
-  if(!shown.length)h+=`<div class="empty">${q?'Nic jsme nenašli.':'Zatím nic k zobrazení.'}</div>`;
-  shown.forEach((x,i)=>{h+=`<div class="row" style="cursor:pointer" onclick="pohClick(poh[${i}])">
-      <div class="ic" style="background:${x.volne?'var(--neg-bg)':'var(--teal-bg)'};color:${x.volne?'var(--neg)':'var(--teal)'}">${ic(x.icon==='arrowupright'?'cright':'cleft',17)}</div>
-      <div class="m"><div class="t1">${esc(x.label)}</div><div class="t2">${fd(x.d)} · ${esc(x.sub)}</div></div>
-      <span class="num" style="font-weight:600;flex:none;color:${x.volne?'var(--neg)':'var(--text2)'}">${x.volne?'−':''}${fm(x.a)}</span></div>`;});
-  if(!q&&list.length>pohLimit)h+=`<button class="btn gho" style="width:100%;margin-top:10px" onclick="pohLimit+=5;R()">Načíst další</button>`;
+    <input class="inp" id="pohq" placeholder="Hledat podle názvu, částky, data…" value="${esc(pohHledej)}" oninput="pohSetQ(this.value)" style="margin-bottom:10px">`;
+  const druhy=POH_DRUHY.filter(d=>vse.some(x=>x.kind===d.k));
+  if(druhy.length>1){
+    h+=`<div class="pohchips"><button class="pchip ${pohFiltr?'':'on'}" onclick="pohSetFiltr('')">Vše</button>`
+      +druhy.map(d=>`<button class="pchip ${pohFiltr===d.k?'on':''}" onclick="pohSetFiltr('${d.k}')">${d.l}</button>`).join('')+`</div>`;
+  }
+  if(!shown.length)h+=`<div class="empty">${q||pohFiltr?'Nic jsme nenašli.':'Zatím nic k zobrazení.'}</div>`;
+  let den='';
+  shown.forEach((x,i)=>{
+    const d=pohDen(x.d);
+    if(d!==den){den=d;h+=`<div class="pohden">${esc(d)}</div>`;}
+    h+=`<div class="mv" onclick="pohClick(poh[${i}])">
+      <div class="mvi" style="background:${x.volne?'var(--neg-bg)':'var(--teal-bg)'};color:${x.volne?'var(--neg)':'var(--teal)'}">${ic(x.ikona||'coins',19)}</div>
+      <div class="m"><div class="t1">${esc(x.label)}</div><div class="t2">${esc(x.sub)}</div></div>
+      <span class="num mva" style="color:${x.volne?'var(--neg)':'var(--text2)'}">${x.volne?'−':''}${fm(x.a)}</span></div>`;});
+  if(!q&&list.length>pohLimit)h+=`<button class="btn gho" style="width:100%;margin-top:12px" onclick="pohLimit+=5;R()">Načíst další</button>`;
   h+=`</div>`;
   return h;
 }
