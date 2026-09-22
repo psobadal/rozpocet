@@ -57,7 +57,7 @@ html,body{background:var(--bg)}
 body{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:var(--text);
   min-height:100vh;-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
 .num{font-variant-numeric:tabular-nums;letter-spacing:-.01em;font-weight:500;font-family:var(--numfont)}
-.hero .big,.tile .tv,.catcard .cv{font-family:var(--numfont)}
+.mainc .big,.phero .big,.tile .tv,.catcard .cv{font-family:var(--numfont)}
 input,select,textarea,button{font-family:inherit}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 input[type=number]{-moz-appearance:textfield}
@@ -100,7 +100,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;margin-bottom:14px}
 .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px}
-.ct{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:8px}
+.ct{font-size:13px;font-weight:500;color:var(--text2);display:flex;align-items:center;gap:8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:640px){.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
@@ -108,39 +108,21 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 /* Hlavní číslo nesedí v orámované kartě na střed jako dřív, ale volně
    vlevo, jak je zvykem v bankovních appkách — oko ho najde dřív a zbyde
    místo na řadu akcí pod ním. */
-.hero{border-radius:22px;padding:8px 4px 2px;margin-bottom:14px;text-align:center;position:relative}
 .hero>*{position:relative}
-.hero .lbl{font-size:12.5px;color:var(--text3);font-weight:500;margin-bottom:4px}
-.hero .big{font-size:44px;font-weight:500;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.25}
-.hero .sub{font-size:12.5px;color:var(--text3);margin-top:7px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
-.hero .sub .pill{background:var(--teal-bg);color:var(--teal);font-weight:500;padding:3px 9px;border-radius:99px;font-size:11.5px}
-.hero .sub .pill.neg{background:var(--neg-bg);color:var(--neg)}
-.hbar{height:6px;background:var(--bg2);border-radius:4px;margin-top:15px;overflow:hidden}
-.hbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
-.hstats{display:flex;gap:10px 26px;flex-wrap:wrap;margin-top:16px;justify-content:center}
-.hstats>div{text-align:center;min-width:74px}
-
-/* Řada kulatých akcí — podpis moderních bankovních appek. */
-.acts{display:flex;gap:8px;margin-bottom:18px;max-width:420px;margin-left:auto;margin-right:auto}
-.acts button{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;
-  font-size:11px;font-weight:500;color:var(--text2);padding:0;min-width:0}
-.acts .ab{width:52px;height:52px;border-radius:50%;background:var(--white);border:1px solid var(--line);display:grid;place-items:center;color:var(--text);transition:.15s}
-.acts button:hover .ab{border-color:var(--accent);color:var(--accent)}
-.acts .prim .ab{background:var(--accent);border-color:var(--accent);color:#fff}
-.acts .prim:hover .ab{background:var(--accent-d);border-color:var(--accent-d);color:#fff}
-.acts .al{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}
-
-/* Účty jako vodorovná řada karet místo šipek — vidíš je všechny naráz. */
-.accrail{display:flex;gap:9px;overflow-x:auto;padding:0 0 4px;margin-bottom:16px;scrollbar-width:none}
-.accrail::-webkit-scrollbar{display:none}
-.acccard{flex:0 0 148px;background:var(--white);border:1px solid var(--line);border-radius:16px;padding:12px 14px;
-  cursor:pointer;text-align:left;transition:.15s;color:var(--text)}
-.acccard:hover{border-color:var(--line2)}
-.acccard.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.acccard .an{font-size:11.5px;opacity:.72;margin-top:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.acccard .av{font-size:17px;font-weight:500;font-family:var(--numfont);font-variant-numeric:tabular-nums;letter-spacing:-.3px}
-.hstats span{display:block;font-size:10.5px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
-.hstats b{font-size:15.5px;font-weight:500;font-family:var(--numfont);font-variant-numeric:tabular-nums}
+/* Hlavní karta Přehledu: všechno v jedné bílé kartě na střed. */
+.mainc{text-align:center;padding:18px 18px 16px}
+/* Hlavička podstránky ve stejném hlasu, jen bez karty. */
+.phero{text-align:center;padding:10px 4px 0;margin-bottom:14px}
+.phero .lbl{font-size:13px;color:var(--text3);margin-bottom:4px}
+.phero .big{font-weight:500;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.25}
+.phero .sub{font-size:12.5px;color:var(--text3);margin-top:3px}
+/* Tlumený přepínač účtů se šipkami v hlavě karty. */
+.accsw{display:flex;align-items:center;gap:10px;background:var(--accent-bg);border-radius:14px;padding:9px 10px;margin-bottom:18px}
+.accsw button{background:none;border:none;color:var(--accent-d);cursor:pointer;padding:6px;border-radius:9px;display:grid;place-items:center;flex:none}
+.accsw button:hover{background:var(--white)}
+.accsw .mid{flex:1;min-width:0}
+.accsw .an{font-size:12px;color:var(--text2)}
+.accsw .av{font-size:15.5px;font-weight:500;color:var(--accent-d);font-variant-numeric:tabular-nums}
 .card.go{cursor:pointer;transition:transform .12s,box-shadow .12s}
 .card.go:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
 
@@ -148,7 +130,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 @media(max-width:640px){.tiles{grid-template-columns:1fr 1fr}.tiles .tile:nth-child(3):last-child{grid-column:1/-1}}
 .tile{background:var(--white);border-radius:var(--rs);padding:14px 16px;border:1px solid var(--line);text-align:center}
 .card .tile{background:var(--bg);box-shadow:none}
-.tile .tl{font-size:10.5px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.tile .tl{font-size:11.5px;color:var(--text3);margin-bottom:5px}
 .tile .tv{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
 .pos{color:var(--teal)} .neg{color:var(--neg)} .warn{color:var(--gold)}
 
@@ -172,6 +154,24 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
   .save-pill{padding:6px 10px;font-size:11px;flex:none}
 }
 @media(min-width:641px){.tab.more{display:none}}
+
+.mainc .lbl{font-size:13px;color:var(--text3);font-weight:400;margin-bottom:4px}
+.mainc .big{font-size:42px;font-weight:500;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.25;color:var(--teal)}
+.mainc .big.neg{color:var(--neg)}
+.mainc .sub{font-size:12.5px;color:var(--text3);margin-top:4px}
+.hbar{height:6px;background:var(--bg2);border-radius:4px;margin-top:15px;overflow:hidden}
+.hbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
+.hstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px;margin-top:16px}
+.hstats>div{background:var(--bg);border-radius:12px;padding:10px 6px;text-align:center;min-width:0}
+.hstats span{display:block;font-size:11.5px;color:var(--text3);margin-bottom:3px}
+.hstats b{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
+
+.hcta{width:100%;justify-content:center;margin-top:16px;padding:13px;font-size:14.5px;border-radius:99px}
+/* Vedlejší akce pod hlavním tlačítkem — tiché, ať nepřetahují pozornost. */
+.acts{display:flex;gap:6px;margin-top:10px;justify-content:center;flex-wrap:wrap}
+.acts button{background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  font-size:12.5px;font-weight:500;color:var(--text2);padding:7px 12px;border-radius:99px}
+.acts button:hover{background:var(--bg);color:var(--accent-d)}
 
 /* Seznam pohybů: bez linek mezi řádky, jen vzduch a denní hlavičky.
    Kolečko nese ikonu kategorie nebo truhlice, barva říká, jestli to
@@ -260,7 +260,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .modal h3{font-size:18px;margin-bottom:4px}
 .modal .md{color:var(--text3);font-size:13px;margin-bottom:16px}
 .fg{margin-top:13px}
-.fg>.fl{font-size:11.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:500;margin-bottom:6px;display:block}
+.fg>.fl{font-size:12px;color:var(--text3);font-weight:500;margin-bottom:6px;display:block}
 .fr{display:flex;gap:10px}.fr>*{flex:1}
 .macts{display:flex;gap:10px;margin-top:20px}.macts .btn{flex:1;justify-content:center}
 /* Panel zápisu: na počítači obyčejný modal uprostřed, na mobilu vyjede
@@ -1213,11 +1213,14 @@ function vPrehled(p){
       <span style="color:var(--text4)">${st.ok?'':ic('cright',16)}</span></div>`;});
     h+=`</div>`;
   }
-  h+=accChips();
-  h+=`<div class="hero">
+  /* Jedna bílá karta drží celou hlavu Přehledu pohromadě — přepínač účtů,
+     číslo, pruh, statistiky i tlačítko. Rozházené bloky přímo na pozadí
+     s různým zarovnáním působily jako tři různé appky pod sebou. */
+  h+=`<div class="card mainc">
+    ${accChips()}
     <div class="lbl">Zbývá volných z výplaty</div>
     <div class="big ${free<0?'neg':''}">${fm(free)}</div>
-    <div class="sub">${left>0?`<span class="pill ${free<0?'neg':''}">${fm(perDay)} / den</span><span>${left} dní do výplaty</span>`:'<span>poslední den cyklu</span>'}</div>
+    <div class="sub">${left>0?`${fm(perDay)} / den · ${left} dní do výplaty`:'poslední den cyklu'}</div>
     <div class="hbar"><i style="width:${pct}%;background:${barCol}"></i></div>
     <div class="hstats">
       <div><span>Příjem</span><b class="pos">${fm(base)}</b></div>
@@ -1225,8 +1228,10 @@ function vPrehled(p){
       <div><span>Odloženo</span><b class="warn">${fm(saved)}</b></div>
       ${inv?`<div><span>Investováno</span><b style="color:var(--cyan)">${fm(inv)}</b></div>`:''}
       ${debt?`<div><span>Splátky</span><b style="color:var(--blue)">${fm(debt)}</b></div>`:''}
-    </div></div>`;
-  h+=actionRow();
+    </div>
+    <button class="btn fill hcta" onclick="zapisOpen(false)">${ic('plus',17)} Nový zápis</button>
+    ${actionRow()}
+  </div>`;
   const plan=sumPlan(p),afterPlan=base-plan;
   if(plan>0)h+=`<div class="tiles">
     <div class="tile"><div class="tl">Naplánováno</div><div class="tv">${fm(plan)}</div></div>
@@ -1257,8 +1262,8 @@ function vPrehled(p){
    vycentrované číslo a tichý řádek pod ním. Sjednocuje Výdaje, Obálky,
    Účty, Investice i Dluhy, které měly každá jinou skládanku karet. */
 function pageHero(lbl,val,sub,color){
-  return `<div class="hero"><div class="lbl">${lbl}</div>
-    <div class="big" style="font-size:36px${color?';color:'+color:''}">${val}</div>
+  return `<div class="phero"><div class="lbl">${lbl}</div>
+    <div class="big" style="font-size:34px${color?';color:'+color:''}">${val}</div>
     ${sub?`<div class="sub">${sub}</div>`:''}</div>`;
 }
 function vVydaje(p){
@@ -2362,24 +2367,31 @@ function saveEnvHist(){
 // (S.ui.activeAcc=''), pak jednotlivé účty v pořadí S.accounts.
 function accChips(){
   if(!S.accounts.length)return '';
-  const act=S.ui.activeAcc;
-  let h=`<div class="accrail">
-    <button class="acccard ${act?'':'on'}" onclick="setActiveAcc('')">
-      ${ic('coins',17)}<div class="an">Vše dohromady</div><div class="av">${fm(totalAccounts())}</div></button>`;
-  S.accounts.forEach(a=>{h+=`<button class="acccard ${act===a.id?'on':''}" onclick="setActiveAcc('${a.id}')">
-      ${ic(a.icon,17)}<div class="an">${esc(a.nm)}</div><div class="av">${fm(a.bal||0)}</div></button>`;});
-  h+=`<button class="acccard" onclick="go('ucty')" style="flex:0 0 58px;display:grid;place-items:center;color:var(--text3)">${ic('plus',20)}</button>`;
-  return h+`</div>`;
+  const idx=S.ui.activeAcc?S.accounts.findIndex(a=>a.id===S.ui.activeAcc)+1:0;
+  const cur=idx>0?S.accounts[idx-1]:null;
+  return `<div class="accsw">
+    <button onclick="accCycle(-1)" aria-label="Předchozí účet">${ic('cleft',18)}</button>
+    <div class="mid"><div class="an">${cur?esc(cur.nm):'Vše dohromady'}</div>
+      <div class="av">${fm(cur?cur.bal||0:totalAccounts())}</div></div>
+    <button onclick="accCycle(1)" aria-label="Další účet">${ic('cright',18)}</button>
+  </div>`;
+}
+/* Prochází se dokola: pozice 0 je souhrn všech účtů, pak jednotlivé účty. */
+function accCycle(dir){
+  const n=S.accounts.length;
+  const idx=S.ui.activeAcc?S.accounts.findIndex(a=>a.id===S.ui.activeAcc)+1:0;
+  const next=(idx+dir+n+1)%(n+1);
+  S.ui.activeAcc=next===0?'':S.accounts[next-1].id;
+  commit();
 }
 function setActiveAcc(id){S.ui.activeAcc=id;commit();}
 /* Řada akcí pod hlavním číslem. Zápis je zvýrazněný, protože je to devět
    z deseti důvodů, proč appku vůbec otvíráš. */
 function actionRow(){
   return `<div class="acts">
-    <button class="prim" onclick="zapisOpen(false)"><span class="ab">${ic('plus',23)}</span><span class="al">Zápis</span></button>
-    <button onclick="zapisOpen(true)"><span class="ab">${ic('repeat',21)}</span><span class="al">Přesun</span></button>
-    <button onclick="go('obalky')"><span class="ab">${ic('envelope',21)}</span><span class="al">Obálky</span></button>
-    <button onclick="go('ucty')"><span class="ab">${ic('wallet',21)}</span><span class="al">Účty</span></button>
+    <button onclick="zapisOpen(true)">${ic('repeat',15)} Přesun na účet</button>
+    <button onclick="go('obalky')">${ic('envelope',15)} Obálky</button>
+    <button onclick="go('ucty')">${ic('wallet',15)} Účty</button>
   </div>`;
 }
 function vUcty(p){
