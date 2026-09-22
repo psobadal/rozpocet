@@ -22,28 +22,29 @@
 <link rel="apple-touch-icon" id="favi180" href="data:,">
 <meta name="theme-color" id="themec" content="#c4694a">
 <style>
+/* Paleta: akcent je jen chrom appky (tlačítka, aktivní záložka, odkazy),
+   barvy čísel nesou význam a nesmí s ním splývat — zelená příjem, červená
+   výdaj, zlatá obálky, tyrkysová investice, modrošedá dluhy. Proto se
+   investice přebarvily z fialové: akcent je dnes fialový sám. */
 :root{
-  --bg:#f3ede4; --bg2:#eae3d7; --white:#fffdfa; --card:#fffdfa;
-  --text:#2c2520; --text2:#5c534a; --text3:#8a8078; --text4:#b3a99e;
-  --line:#e4ddd2; --line2:#d6cdbf;
-  --accent:#c4694a; --accent-d:#b0583b; --accent-bg:#fbeee8; --accent-bg2:#f4d6c8;
-  --teal:#3a8a7a; --teal-bg:#e4f1ee;
-  --plum:#7a5a8c; --plum-bg:#efe8f3;
-  --gold:#c0902f; --gold-bg:#f8f0dd;
-  --blue:#5a7fa0; --blue-bg:#e7eef4;
-  --neg:#c0453a; --neg-bg:#fbe8e6;
+  --bg:#f7f6f3; --bg2:#efedf1; --white:#ffffff; --card:#ffffff;
+  --text:#16151a; --text2:#4f4d58; --text3:#8b8994; --text4:#b0aeb8;
+  --line:#eeecf0; --line2:#e1dfe6;
+  --accent:#6d4fb3; --accent-d:#5a3fa0; --accent-bg:#f1ecfb; --accent-bg2:#ddd2f2;
+  --teal:#0f7351; --teal-bg:#e6f4ee;
+  --cyan:#2b8fa8; --cyan-bg:#e6f2f6;
+  --gold:#b07d1f; --gold-bg:#f9f1de;
+  --blue:#5a7fa0; --blue-bg:#eaeff4;
+  --neg:#c0453a; --neg-bg:#fbe9e7;
   --numfont:'Bahnschrift','Segoe UI',sans-serif;
   --r:18px; --rs:12px;
-  --sh:0 1px 2px rgba(44,37,32,.04),0 4px 14px rgba(44,37,32,.05);
-  --sh-lg:0 10px 34px rgba(44,37,32,.13);
+  --sh:0 1px 2px rgba(22,21,26,.03),0 2px 8px rgba(22,21,26,.04);
+  --sh-lg:0 12px 40px rgba(22,21,26,.14);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg)}
 body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;color:var(--text);
   min-height:100vh;-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
-body::before,body::after{content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(100px);opacity:.32}
-body::before{width:440px;height:440px;background:var(--accent-bg2);top:-140px;right:-70px}
-body::after{width:400px;height:400px;background:#d8c8ea;bottom:-100px;left:-90px}
 .num{font-variant-numeric:tabular-nums;letter-spacing:-.01em;font-weight:500;font-family:var(--numfont)}
 .hero .big,.tile .tv,.catcard .cv{font-family:var(--numfont)}
 input,select,textarea,button{font-family:inherit}
@@ -57,7 +58,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 
 .top{display:flex;align-items:center;gap:12px;padding:22px 0 14px}
 .brand{font-size:21px;font-weight:600;letter-spacing:-.4px;display:flex;align-items:center;gap:9px}
-.brand .mk{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--gold));display:grid;place-items:center;color:#fff}
+.brand .mk{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent) 0%,#2f8fa8 55%,#3f9e58 100%);display:grid;place-items:center;color:#fff}
 .sp{flex:1}
 .save-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:7px 12px;border-radius:20px;border:1.5px solid var(--line2);background:var(--white);cursor:pointer;white-space:nowrap}
 .save-pill .d{width:8px;height:8px;border-radius:50%}
@@ -65,7 +66,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .save-pill.warn{border-color:var(--accent-bg2);color:var(--accent-d)} .save-pill.warn .d{background:var(--accent);animation:pulse 1.6s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
-.period{background:var(--white);border-radius:var(--r);padding:14px 18px;margin-bottom:14px;box-shadow:var(--sh);display:flex;align-items:center;gap:12px}
+.period{background:var(--white);border:1px solid var(--line);border-radius:var(--r);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
 .period .nav{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line2);background:var(--bg);cursor:pointer;color:var(--text2);display:grid;place-items:center;flex:none}
 .period .nav:hover{border-color:var(--accent);color:var(--accent)}
 .period .nav[disabled]{opacity:.3;cursor:default}
@@ -75,29 +76,28 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .period .edit{background:none;border:none;color:var(--text3);cursor:pointer;padding:6px;border-radius:8px;display:grid;place-items:center}
 .period .edit:hover{background:var(--bg);color:var(--text)}
 
-.tabs{display:flex;gap:3px;background:var(--white);border-radius:var(--rs);padding:4px;margin-bottom:18px;box-shadow:var(--sh);overflow-x:auto;scrollbar-width:none;position:sticky;top:10px;z-index:40}
+.tabs{display:flex;gap:3px;background:var(--white);border:1px solid var(--line);border-radius:99px;padding:4px;margin-bottom:18px;overflow-x:auto;scrollbar-width:none;position:sticky;top:10px;z-index:40}
 .tabs::-webkit-scrollbar{display:none}
-.tab{flex:1;min-width:max-content;background:none;border:none;color:var(--text3);padding:10px 13px;cursor:pointer;font-size:13.5px;font-weight:600;border-radius:9px;white-space:nowrap;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px;line-height:1}
+.tab{flex:1;min-width:max-content;background:none;border:none;color:var(--text2);padding:10px 14px;cursor:pointer;font-size:13.5px;font-weight:600;border-radius:99px;white-space:nowrap;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px;line-height:1}
 .tab:hover{color:var(--text2)}
-.tab.on{background:var(--text);color:var(--bg)}
+.tab.on{background:var(--accent);color:#fff}
 
-.seg{display:flex;gap:4px;background:var(--white);border-radius:var(--rs);padding:4px;box-shadow:var(--sh)}
+.seg{display:flex;gap:4px;background:var(--white);border-radius:var(--rs);padding:4px;border:1px solid var(--line)}
 .seg button{flex:1;background:none;border:none;color:var(--text3);padding:9px 12px;cursor:pointer;font-size:13px;font-weight:600;border-radius:8px;transition:.15s}
 .seg button:hover{color:var(--text2)}
 .seg button.on{background:var(--text);color:var(--bg)}
 
-.card{background:var(--card);border-radius:var(--r);padding:22px;margin-bottom:14px;box-shadow:var(--sh)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;margin-bottom:14px}
 .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px}
 .ct{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:640px){.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
 
-.hero{background:var(--white);border-radius:22px;padding:30px 26px;margin-bottom:14px;text-align:center;box-shadow:var(--sh);position:relative;overflow:hidden}
-.hero .blob{position:absolute;width:200px;height:200px;border-radius:47% 53% 60% 40%/45% 55% 45% 55%;top:-70px;right:-40px;opacity:.13;filter:blur(6px)}
+.hero{background:var(--white);border-radius:22px;padding:30px 26px;margin-bottom:14px;text-align:center;border:1px solid var(--line);position:relative;overflow:hidden}
 .hero>*{position:relative}
-.hero .lbl{font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.hero .big{font-size:42px;font-weight:500;letter-spacing:-1.5px;font-variant-numeric:tabular-nums}
+.hero .lbl{font-size:11.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.hero .big{font-size:46px;font-weight:500;letter-spacing:-2px;font-variant-numeric:tabular-nums}
 .hero .sub{font-size:12.5px;color:var(--text3);margin-top:8px}
 .hbar{height:7px;background:var(--bg2);border-radius:4px;margin-top:16px;overflow:hidden}
 .hbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
@@ -110,7 +110,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 @media(max-width:640px){.tiles{grid-template-columns:1fr 1fr}.tiles .tile:nth-child(3):last-child{grid-column:1/-1}}
-.tile{background:var(--white);border-radius:var(--rs);padding:14px 16px;box-shadow:var(--sh);text-align:center}
+.tile{background:var(--white);border-radius:var(--rs);padding:14px 16px;border:1px solid var(--line);text-align:center}
 .card .tile{background:var(--bg);box-shadow:none}
 .tile .tl{font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
 .tile .tv{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
@@ -168,7 +168,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .catgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:760px){.catgrid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.catgrid{grid-template-columns:1fr}}
-.catcard{background:var(--white);border-radius:var(--r);padding:16px;box-shadow:var(--sh);cursor:pointer;transition:transform .12s,box-shadow .12s;position:relative}
+.catcard{background:var(--white);border-radius:var(--r);padding:16px;border:1px solid var(--line);cursor:pointer;transition:transform .12s,box-shadow .12s;position:relative}
 .catcard:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
 .catcard .cic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;margin-bottom:10px}
 .catcard .cn{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -219,7 +219,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .banner{border-radius:14px;padding:13px 16px;font-size:13px;display:flex;gap:11px;align-items:flex-start;margin-bottom:14px}
 .banner .bi{flex:none;margin-top:1px}
 .banner.info{background:var(--blue-bg);color:#3a5a72}
-.banner.tip{background:var(--plum-bg);color:#5a4470}
+.banner.tip{background:var(--cyan-bg);color:#1e6275}
 .banner.warn{background:var(--accent-bg);color:var(--accent-d);border:1.5px solid var(--accent-bg2)}
 .mini{font-size:12px;color:var(--text3)}
 .hidden{display:none!important}
@@ -240,12 +240,12 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
    ===================================================================== */
 const CONFIG={
   appName:'Můj rozpočet',
-  accent:'#c4694a',            // hlavní barva (jde měnit i v Nastavení)
+  accent:'#6d4fb3',            // hlavní barva (jde měnit i v Nastavení)
   numFont:'bahnschrift',       // font čísel (klíč z NUMFONTS)
   taxRate:15,                  // srážková daň z úroků v %
   // Synchronizace mezi zařízeními se nastavuje v appce (Nastavení → Synchronizace),
   // ne tady — vlastní Worker na Cloudflare, viz SYNC-SETUP.md.
-  accents:['#c4694a','#3a8a7a','#5a7fa0','#7a5a8c','#c0902f','#4a7a52','#b0583b','#2c2520'],
+  accents:['#6d4fb3','#9153a8','#3d6ea8','#0f7351','#2b8fa8','#c4694a','#b07d1f','#16151a'],
   categories:[   // kind: 'need' = potřeba (50 %), 'want' = přání (30 %) — pro pravidlo 50/30/20
     {nm:'Bydlení',icon:'home',kind:'need',items:['Nájem / hypotéka','Energie','Internet']},
     {nm:'Jídlo',icon:'food',kind:'need',items:['Potraviny','Obědy','Restaurace']},
@@ -367,8 +367,11 @@ function applyAccent(hex){const rs=document.documentElement.style;rs.setProperty
    se přebarví hned, jak si změníš barvu, a nepotřebuje žádný soubor. */
 function faviconSVG(hex){
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">`
+    /* Přechod jde přes modrozelenou schválně: mezi fialovou a zelenou leží
+       kalná oliva, středový stop ji obejde a značka zůstane svěží. */
     +`<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">`
-    +`<stop offset="0" stop-color="${hex}"/><stop offset="1" stop-color="#c0902f"/></linearGradient></defs>`
+    +`<stop offset="0" stop-color="${hex}"/><stop offset=".55" stop-color="#2f8fa8"/>`
+    +`<stop offset="1" stop-color="#3f9e58"/></linearGradient></defs>`
     +`<rect width="64" height="64" rx="15" fill="url(#g)"/>`
     // mince je záměrně tučnější a větší než v záhlaví — v 16px záložce by
     // se tenká kresba slila do skvrny
@@ -464,6 +467,9 @@ function migrate(s){
   s.tax=(s.tax==null?CONFIG.taxRate:s.tax);
   delete s.stockKey;   // kurzy chodí přes Worker, klíč k burze už není potřeba
   s.ui||={};s.ui.appName||=CONFIG.appName;s.ui.accent||=CONFIG.accent;s.ui.numFont||=CONFIG.numFont||'bahnschrift';
+  /* Redesign 2026: kdo si barvu nikdy sám nezměnil (má pořád starou výchozí
+     terracottu), dostane novou výchozí. Kdo si ji vybral, o ni nepřijde. */
+  if(s.ui.accent.toLowerCase()==='#c4694a'&&!s.ui.accentOwn)s.ui.accent=CONFIG.accent;
   if(!s.ui.tabs||!s.ui.tabs.length)s.ui.tabs=defTabs();
   // ensure new tabs exist (e.g. dluhy) & drop obsolete (byt)
   const have=new Set(s.ui.tabs.map(t=>t.id));
@@ -1077,10 +1083,10 @@ function vPrehled(p){
     {ok:base>0,t:'Nastav si příjem',s:'kolik čekáš / kolik přišlo tenhle cyklus',fn:'incomeModal()',c:'var(--accent-bg)',fg:'var(--accent-d)'},
     {ok:sumPlan(p)>0,t:'Naplánuj měsíční výdaje',s:'kolik chceš utratit v každé kategorii',fn:'plansModal()',c:'var(--teal-bg)',fg:'var(--teal)'},
     syncOn()
-      ? {ok:!!S.ui.codeSaved,t:'Ulož si připojovací kód',s:'mimo tenhle počítač — je to klíč k datům v cloudu',fn:'codeSavePrompt()',c:'var(--plum-bg)',fg:'var(--plum)'}
+      ? {ok:!!S.ui.codeSaved,t:'Ulož si připojovací kód',s:'mimo tenhle počítač — je to klíč k datům v cloudu',fn:'codeSavePrompt()',c:'var(--cyan-bg)',fg:'var(--cyan)'}
       : fsaSupported()
-      ? {ok:fileOK,t:'Připoj datový soubor',s:'ať se všechno samo ukládá na disk',fn:'connectFile()',c:'var(--plum-bg)',fg:'var(--plum)'}
-      : {ok:!!S.lastExport,t:'Stáhni si zálohu',s:'ať o data nikdy nepřijdeš',fn:'exportData()',c:'var(--plum-bg)',fg:'var(--plum)'},
+      ? {ok:fileOK,t:'Připoj datový soubor',s:'ať se všechno samo ukládá na disk',fn:'connectFile()',c:'var(--cyan-bg)',fg:'var(--cyan)'}
+      : {ok:!!S.lastExport,t:'Stáhni si zálohu',s:'ať o data nikdy nepřijdeš',fn:'exportData()',c:'var(--cyan-bg)',fg:'var(--cyan)'},
   ];
   const doneCount=steps.filter(s=>s.ok).length;
   if(doneCount<steps.length&&!S.ui.hideIntro){
@@ -1092,7 +1098,7 @@ function vPrehled(p){
     h+=`</div>`;
   }
   h+=accChips();
-  h+=`<div class="hero"><div class="blob" style="background:${free<0?'#e2a29a':'#a0d0c6'}"></div>
+  h+=`<div class="hero">
     <div class="lbl">Zbývá volných z výplaty</div>
     <div class="big ${free<0?'neg':''}">${fm(free)}</div>
     <div class="sub">${left>0?`≈ ${fm(perDay)} / den · ${left} dní do výplaty`:'poslední den cyklu'}</div>
@@ -1101,7 +1107,7 @@ function vPrehled(p){
       <div><span>Příjem</span><b class="pos">${fm(base)}</b></div>
       <div><span>Utraceno</span><b>${fm(exp)}</b></div>
       <div><span>Odloženo</span><b class="warn">${fm(saved)}</b></div>
-      ${inv?`<div><span>Investováno</span><b style="color:var(--plum)">${fm(inv)}</b></div>`:''}
+      ${inv?`<div><span>Investováno</span><b style="color:var(--cyan)">${fm(inv)}</b></div>`:''}
       ${debt?`<div><span>Splátky</span><b style="color:var(--blue)">${fm(debt)}</b></div>`:''}
     </div></div>`;
   const plan=sumPlan(p),afterPlan=base-plan;
@@ -1147,7 +1153,7 @@ function vPrehled(p){
   h+=`</div>`;
   h+=`<div class="grid3">
     <div class="card go" style="margin-bottom:0" onclick="go('obalky')"><div class="ch" style="margin-bottom:8px"><span class="ct">${ic('envelope',14)} Obálky</span><span style="color:var(--text4)">${ic('cright',15)}</span></div><div class="num" style="font-size:22px;color:var(--gold)">${fm(totalEnvelopes())}</div><div class="mini">odloženo</div></div>
-    <div class="card go" style="margin-bottom:0" onclick="go('investice')"><div class="ch" style="margin-bottom:8px"><span class="ct">${ic('trending',14)} Investice</span><span style="color:var(--text4)">${ic('cright',15)}</span></div><div class="num" style="font-size:22px;color:var(--plum)">${fm(totalInvest())}</div><div class="mini">hodnota</div></div>
+    <div class="card go" style="margin-bottom:0" onclick="go('investice')"><div class="ch" style="margin-bottom:8px"><span class="ct">${ic('trending',14)} Investice</span><span style="color:var(--text4)">${ic('cright',15)}</span></div><div class="num" style="font-size:22px;color:var(--cyan)">${fm(totalInvest())}</div><div class="mini">hodnota</div></div>
     <div class="card go" style="margin-bottom:0" onclick="go('dluhy')"><div class="ch" style="margin-bottom:8px"><span class="ct">${ic('landmark',14)} Dluhy</span><span style="color:var(--text4)">${ic('cright',15)}</span></div><div class="num" style="font-size:22px;color:var(--blue)">${fm(totalDebt())}</div><div class="mini">zbývá splatit</div></div></div>`;
   return h;
 }
@@ -1249,7 +1255,7 @@ function vObalky(p){
       <div class="${hasT?'grid3':'grid2'}">
         <div style="text-align:center"><div class="mini">Zůstatek</div><div class="num" style="font-size:22px;color:${e.bal>0?'var(--gold)':'var(--text4)'}">${fm(e.bal||0)}</div></div>
         <div style="text-align:center"><div class="mini">Měsíčně</div><div class="num" style="font-size:22px">${fm(e.monthly||0)}</div></div>
-        ${hasT?`<div style="text-align:center"><div class="mini">Cíl</div><div class="num" style="font-size:22px;color:var(--plum)">${fm(e.target)}</div></div>`:``}</div>`;
+        ${hasT?`<div style="text-align:center"><div class="mini">Cíl</div><div class="num" style="font-size:22px;color:var(--cyan)">${fm(e.target)}</div></div>`:``}</div>`;
     if(hasT){const pcol=pc>=100?'var(--teal)':pc>50?'var(--gold)':'var(--accent)';h+=`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pcol}">${pc}%</span><span class="mini">${pc>=100?'splněno':'zbývá '+fm(remain)+(months?` · ~${months} měs.`:'')}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`;}
     if(e.due&&e.target>0&&remain>0){const mtd=monthsBetween(new Date(),new Date(e.due+'T00:00:00'));const req=Math.ceil(remain/mtd);h+=`<div class="mini" style="margin-top:8px">Do ${fdFull(e.due)} (~${mtd} měs.) odkládej ~<b>${fm(req)}</b>/měs${e.monthly>0?` — teď ${fm(e.monthly)}, ${e.monthly>=req?'stačí':'málo'}`:''}</div>`;}
     const histAll=e.hist||[];const hist=histAll.filter(x=>x.pid===p.id&&!x.adj).slice(-4).reverse();
@@ -1261,8 +1267,8 @@ function vObalky(p){
 /* ---------- INVESTICE ---------- */
 function vInvestice(p){
   const ti=totalInvest();
-  let h=`<div class="card" style="text-align:center;background:var(--plum-bg)"><div class="ct" style="margin-bottom:6px">Celková hodnota investic & úspor</div>
-    <div class="num" style="font-size:30px;color:var(--plum)">${fm(ti)}</div>
+  let h=`<div class="card" style="text-align:center;background:var(--cyan-bg)"><div class="ct" style="margin-bottom:6px">Celková hodnota investic & úspor</div>
+    <div class="num" style="font-size:30px;color:var(--cyan)">${fm(ti)}</div>
     <div class="mini" style="margin-top:6px">Tento cyklus vloženo: <b style="color:var(--teal)">+${fm(investedInPeriod(p.id))}</b></div></div>`;
   h+=tipBan('percent',`<b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b> — zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
   h+=`<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:14px">${S.investments.some(i=>i.stock||i.crypto)?`<button class="btn" onclick="pxOverviewModal()">${ic('list',15)} Kurzy</button>`:''}<button class="btn" onclick="invCalcModal()">${ic('percent',15)} Kalkulačka</button><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
@@ -1274,7 +1280,7 @@ function vInvestice(p){
       <div class="ic" style="background:${col(i)}22;color:${col(i)}">${ic(inv.icon,18)}</div>
       <div style="flex:1;min-width:0"><div style="font-weight:600">${esc(inv.nm)}</div>
         ${inv.crypto?`<div class="mini">${(''+inv.qty).replace('.',',')} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z CoinGecko'}</div>`:inv.stock?`<div class="mini">${(''+inv.qty).replace('.',',')} ks ${esc(inv.stock)}${inv.ccy&&inv.ccy!=='CZK'?' · '+inv.ccy:''} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z burzy'}</div>`:inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
-        <div class="prog" style="height:6px;margin-top:5px"><i style="width:${pcw}%;background:var(--plum)"></i></div></div>
+        <div class="prog" style="height:6px;margin-top:5px"><i style="width:${pcw}%;background:var(--cyan)"></i></div></div>
       <div style="text-align:right"><div class="num" style="font-size:17px">${fm(inv.val||0)}</div><div class="mini">${pcw}%</div></div>
       <div style="display:flex;flex-direction:column;gap:3px">${inv.crypto||inv.stock?'':`<button class="btn sm" onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button>`}<button class="ib" onclick="invModal('${inv.id}')">${ic('edit',15)}</button></div></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1.5px solid var(--line)">
@@ -1492,7 +1498,7 @@ let nwSub='nw';
 function setNwSub(k){nwSub=k;R();}
 const NW_SER={
   nw:  {label:'Čisté jmění',col:'var(--teal)',get:p=>p.nw,  up:1},
-  inv: {label:'Investice',  col:'var(--plum)',get:p=>p.inv, up:1},
+  inv: {label:'Investice',  col:'var(--cyan)',get:p=>p.inv, up:1},
   env: {label:'Obálky',     col:'var(--gold)',get:p=>p.env, up:1},
   debt:{label:'Dluhy',      col:'var(--blue)',get:p=>p.debt,up:-1},
 };
@@ -1529,7 +1535,7 @@ Investice: ${fm(p.inv)} · Obálky: ${fm(p.env)} · Dluhy: −${fm(p.debt)}</tit
     <div class="mini" style="margin-top:10px">Minulost se dopočítá zpětně ze zapsaných pohybů — vkladů, čerpání z obálek a splátek dluhů. Každá složka má vlastní měřítko, proto se přepíná. Najetím na graf uvidíš celý rozpad k danému dni.</div></div>`;
   return h;
 }
-function nwBlock(){return mrow([['Investice',fm(totalInvest()),'color:var(--plum)'],['Obálky',fm(totalEnvelopes()),'color:var(--gold)'],['Dluhy','−'+fm(totalDebt()),'color:var(--blue)']])+`<div class="card" style="text-align:center"><div class="ct" style="margin-bottom:6px">Čisté jmění</div><div class="num" style="font-size:28px;color:${netWorth()>=0?'var(--teal)':'var(--neg)'}">${fm(netWorth())}</div><div class="mini">investice + obálky − dluhy</div></div>`+nwChart();}
+function nwBlock(){return mrow([['Investice',fm(totalInvest()),'color:var(--cyan)'],['Obálky',fm(totalEnvelopes()),'color:var(--gold)'],['Dluhy','−'+fm(totalDebt()),'color:var(--blue)']])+`<div class="card" style="text-align:center"><div class="ct" style="margin-bottom:6px">Čisté jmění</div><div class="num" style="font-size:28px;color:${netWorth()>=0?'var(--teal)':'var(--neg)'}">${fm(netWorth())}</div><div class="mini">investice + obálky − dluhy</div></div>`+nwChart();}
 function vStat(p){
   let h=`<div class="seg" style="margin-bottom:14px"><button class="${statSub==='m'?'on':''}" onclick="setStat('m')">Tento cyklus</button><button class="${statSub==='c'?'on':''}" onclick="setStat('c')">Porovnat</button><button class="${statSub==='y'?'on':''}" onclick="setStat('y')">Ročně</button><button class="${statSub==='a'?'on':''}" onclick="setStat('a')">Průměr</button></div>`;
   h+= statSub==='c'?statCompare():statSub==='y'?statYear():statSub==='a'?statAvg():statMonth(p);
@@ -1672,7 +1678,7 @@ function statAvg(){
   const cats=Object.entries(cmap).map(([nm,a])=>({nm,a:Math.round(a/n)})).sort((x,y)=>y.a-x.a).map((x,i)=>({...x,i}));
   const fullExpAvg=cats.reduce((s,c)=>s+c.a,0);
   let h=`<div class="card"><div class="ct" style="margin-bottom:14px">Průměr na období · ${n} období</div>`+mrow([['Ø Příjem',fm(inc),'color:var(--teal)'],['Ø Výdaje',fm(exp),''],['Ø Zůstatek',fm(inc-exp),inc-exp>=0?'color:var(--teal)':'color:var(--neg)']])+`</div>`;
-  h+=mrow([['Ø Míra úspor',rate+'%',rate>=20?'color:var(--teal)':rate>=10?'color:var(--gold)':'color:var(--neg)'],['Ø Odloženo',fm(saved),'color:var(--gold)'],['Ø Investováno',fm(invv),'color:var(--plum)']]);
+  h+=mrow([['Ø Míra úspor',rate+'%',rate>=20?'color:var(--teal)':rate>=10?'color:var(--gold)':'color:var(--neg)'],['Ø Odloženo',fm(saved),'color:var(--gold)'],['Ø Investováno',fm(invv),'color:var(--cyan)']]);
   h+=catShare(cats,fullExpAvg,'Ø Podíl kategorií');
   return h;
 }
@@ -2587,14 +2593,14 @@ function invCalcRun(){
   const X=i=>PL+i*(W-PL-PR)/Math.max(1,yearly.length-1),Y=v=>PT+(1-v/mx)*(H-PT-PB);
   const p=(f)=>yearly.map((x,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(f(x)).toFixed(1)).join(' ');
   const valP=p(x=>x.val),putP=p(x=>x.put);
-  out.innerHTML=`<div style="text-align:center;padding:14px 0;background:var(--plum-bg);border-radius:var(--rs)">
+  out.innerHTML=`<div style="text-align:center;padding:14px 0;background:var(--cyan-bg);border-radius:var(--rs)">
       <div class="mini">Za ${yr} ${yr===1?'rok':yr<5?'roky':'let'} budeš mít</div>
-      <div class="num" style="font-size:26px;color:var(--plum)">${fm(c.val)}</div></div>
+      <div class="num" style="font-size:26px;color:var(--cyan)">${fm(c.val)}</div></div>
     <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;margin-top:12px">
-      <path d="${valP} L ${X(yearly.length-1).toFixed(1)} ${H-PB} L ${X(0).toFixed(1)} ${H-PB} Z" fill="var(--plum)" opacity=".12"/>
+      <path d="${valP} L ${X(yearly.length-1).toFixed(1)} ${H-PB} L ${X(0).toFixed(1)} ${H-PB} Z" fill="var(--cyan)" opacity=".12"/>
       <path d="${putP} L ${X(yearly.length-1).toFixed(1)} ${H-PB} L ${X(0).toFixed(1)} ${H-PB} Z" fill="var(--text3)" opacity=".12"/>
       <path d="${putP}" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-dasharray="4 3"/>
-      <path d="${valP}" fill="none" stroke="var(--plum)" stroke-width="2.5" stroke-linejoin="round"/></svg>
+      <path d="${valP}" fill="none" stroke="var(--cyan)" stroke-width="2.5" stroke-linejoin="round"/></svg>
     <div style="display:flex;gap:10px;margin-top:12px">
       <div class="tile" style="flex:1"><div class="tl">Vložil jsi</div><div class="tv" style="font-size:15px">${fm(c.put)}</div></div>
       <div class="tile" style="flex:1"><div class="tl">Vydělaly peníze</div><div class="tv" style="font-size:15px;color:${c.gain>=0?'var(--teal)':'var(--neg)'}">${c.gain>=0?'+':'−'}${fm(Math.abs(c.gain))}</div></div></div>
@@ -2796,7 +2802,7 @@ function hideIntro(){S.ui.hideIntro=true;toast('Skryto — vrátíš v Nastaven�
 function toggleTips(){if(S.ui.hideTips)delete S.ui.hideTips;else S.ui.hideTips=true;
   toast(S.ui.hideTips?'Vysvětlivky skryté':'Vysvětlivky zpátky');commit();}
 function showIntro(){S.ui.hideIntro=false;go('prehled');}
-function setAccent(hex){S.ui.accent=hex;applyAccent(hex);commit();}
+function setAccent(hex){S.ui.accent=hex;S.ui.accentOwn=true;applyAccent(hex);commit();}
 function renameTab(id,v){const t=S.ui.tabs.find(x=>x.id===id);if(t){t.label=v.trim()||t.label;persist();}}
 function toggleTab(id){const t=S.ui.tabs.find(x=>x.id===id);if(t&&t.id!=='nastaveni'){t.visible=!t.visible;commit();}}
 function moveTab(id,dir){const i=S.ui.tabs.findIndex(x=>x.id===id);const j=i+dir;if(j<0||j>=S.ui.tabs.length)return;const t=S.ui.tabs.splice(i,1)[0];S.ui.tabs.splice(j,0,t);commit();}
