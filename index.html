@@ -1129,7 +1129,8 @@ function vPrehled(p){
       <button class="btn fill" id="qadd" onclick="quickAdd()">${qaFixAmt(p)?'Zaplatit':'Přidat'}</button></div>
     ${!qaXfer&&qaCur(p).startsWith('cat:')?`<input class="inp" id="qnote" placeholder="Poznámka (nepovinné)" style="margin-top:8px;width:100%" onkeydown="if(event.key==='Enter')document.getElementById('qamt').focus()">`:''}
     ${qaFixAmt(p)?`<div class="mini" style="margin-top:8px">${ic('check',13)} Pevná částka ${fmEx(qaFixAmt(p))} je předvyplněná z plánu — stačí kliknout. Přepsat ji můžeš.</div>`:''}
-    ${accById(S.ui.activeAcc)?`<div class="mini" style="margin-top:8px">${ic('wallet',13)} ${qaXfer?'Připíše se na účet':'Odečte se z účtu'}: <b>${esc(accById(S.ui.activeAcc).nm)}</b></div>`:''}
+    ${accById(S.ui.activeAcc)?`<div class="mini" style="margin-top:8px">${ic('wallet',13)} ${qaXfer?'Připíše se na účet':'Odečte se z účtu'}: <b>${esc(accById(S.ui.activeAcc).nm)}</b></div>`
+      :S.accounts.length?`<div class="mini" style="margin-top:8px;color:var(--text4)">${ic('wallet',13)} Bez vybraného účtu (přepni si ho šipkou nahoře) se tenhle zápis do žádného účtu nezapočítá.</div>`:''}
     </div>`;
   h+=vPohybyList();
   h+=fixedBlock(p);
@@ -1210,7 +1211,12 @@ function catDetail(p,c){
       h+=`<div class="logadd"><input class="inp" type="date" id="ld-${it.id}" value="${todayISO()}" style="flex:0 0 130px">
         <input class="inp" id="ln-${it.id}" placeholder="Poznámka" style="flex:1;min-width:80px">
         <input class="inp num" id="la-${it.id}" type="number" placeholder="Kč" style="flex:0 0 90px" onkeydown="if(event.key==='Enter')addLog('${c.id}','${it.id}')">
+        ${S.accounts.length?`<select class="inp" id="lacc-${it.id}" style="flex:0 0 130px">
+          <option value="">— bez účtu —</option>
+          ${S.accounts.map(a=>`<option value="${a.id}" ${(it.defAcc||S.ui.activeAcc)===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
+        </select>`:''}
         <button class="btn fill sm" onclick="addLog('${c.id}','${it.id}')">${ic('plus',15)}</button></div>
+      ${it.defAcc&&accById(it.defAcc)?`<div class="mini" style="margin-top:6px">${ic('wallet',13)} Vždycky z účtu „${esc(accById(it.defAcc).nm)}" (nastaveno v Nastavení položky) — jde přepsat výše.</div>`:''}
       <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
         <button class="btn gho sm" onclick="itemModal('${c.id}','${it.id}')">${ic('edit',14)} Nastavení položky</button>
         <div class="mini" style="flex:1;min-width:120px">${[
@@ -1980,7 +1986,7 @@ function quickModal(){go('prehled');setTimeout(()=>{
 function addLog(cid,iid){const c=P().cats.find(x=>x.id===cid),it=c&&c.it.find(x=>x.id===iid);if(!it)return;
   const a=Math.abs(num(document.getElementById('la-'+iid).value));if(!a){toast('Zadej částku');return;}
   const le={id:uid(),d:document.getElementById('ld-'+iid).value||todayISO(),a,n:document.getElementById('ln-'+iid).value.trim()};
-  const acc=S.ui.activeAcc;if(acc){le.acc=acc;accBump(acc,-a);}
+  const accEl=document.getElementById('lacc-'+iid),acc=accEl?accEl.value:'';if(acc){le.acc=acc;accBump(acc,-a);}
   const r=logToDate(c,it,le);openItem=iid;
   const lt=linkTarget(it);toast(`${it.nm}: +${fm(a)}`+(lt?` → ${lt.obj.nm}`:'')+(r.jinam?` · zapsáno do „${r.period.nm}"`:'')+(acc&&accById(acc)?` · z ${accById(acc).nm}`:''));commit();}
 function delLog(cid,iid,li,pid){const per=pid?(S.periods.find(x=>x.id===pid)||P()):P();const it=per.cats.find(c=>c.id===cid)?.it.find(x=>x.id===iid);if(!it)return;const le=it.log[li];if(le&&le.id)removeLinked(le.id);if(le&&le.acc)accBump(le.acc,le.a);it.log.splice(li,1);openItem=iid;closeModal();commit();}
@@ -2047,6 +2053,12 @@ function itemModal(cid,iid){
         <option value="want" ${it.kind==='want'?'selected':''}>Přání</option>
         <option value="save" ${it.kind==='save'?'selected':''}>Úspora či splátka</option>
       </select></div>
+    ${S.accounts.length?`<div class="fg"><span class="fl">Vždycky platit z účtu</span>
+      <select class="inp" id="m_defacc">
+        <option value="">— podle toho, co je zrovna aktivní —</option>
+        ${S.accounts.map(a=>`<option value="${a.id}" ${it.defAcc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
+      </select>
+      <div class="mini" style="margin-top:5px">Hodí se na pravidelnou platbu, co vždycky jde ze stejného účtu (internet z mBank, nájem z Raiffky…), bez ohledu na to, jaký účet je zrovna vybraný na Přehledu.</div></div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveItemCfg()">Uložit</button></div>
     <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)">
       <button class="btn dgr sm" onclick="delItem('${cid}','${iid}')">${ic('trash',14)} Smazat položku</button>
@@ -2061,6 +2073,7 @@ function saveItemCfg(){
   const linkPred=it.link||'';
   it.nm=nm;it.pl=num(document.getElementById('m_pl').value);
   if(document.getElementById('m_fix').checked)it.fixAmt=true;else delete it.fixAmt;
+  const defAcc=document.getElementById('m_defacc')?.value;if(defAcc)it.defAcc=defAcc;else delete it.defAcc;
   it.link=link||'';
   if(kind)it.kind=kind;else delete it.kind;
   /* Změna propojení musí přerovnat i to, co je zapsané. Bez tohohle
@@ -2245,7 +2258,9 @@ function saveAcc(){const nm=document.getElementById('m_nm').value.trim();if(!nm)
   closeModal();commit();}
 function delAcc(id){const a=S.accounts.find(x=>x.id===id);if(!a)return;
   if(a.bal&&!confirm(`Na účtu je ${fm(a.bal)}. Opravdu smazat?`))return;if(!a.bal&&!confirm('Smazat účet?'))return;
-  if(S.ui.activeAcc===id)S.ui.activeAcc='';S.accounts=S.accounts.filter(x=>x.id!==id);commit();}
+  if(S.ui.activeAcc===id)S.ui.activeAcc='';
+  S.periods.forEach(per=>per.cats.forEach(c=>c.it.forEach(it=>{if(it.defAcc===id)delete it.defAcc;})));   // smazaný účet nesmí zůstat "výchozí" u položky naslepo
+  S.accounts=S.accounts.filter(x=>x.id!==id);commit();}
 function accXferModal(id){
   const a=S.accounts.find(x=>x.id===id);if(!a)return;
   const others=S.accounts.filter(x=>x.id!==id);
