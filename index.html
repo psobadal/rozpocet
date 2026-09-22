@@ -30,7 +30,7 @@
   --bg:#f7f6f3; --bg2:#efedf1; --white:#ffffff; --card:#ffffff;
   --text:#16151a; --text2:#4f4d58; --text3:#8b8994; --text4:#b0aeb8;
   --line:#eeecf0; --line2:#e1dfe6;
-  --accent:#6d4fb3; --accent-d:#5a3fa0; --accent-bg:#f1ecfb; --accent-bg2:#ddd2f2;
+  --accent:#6d4fb3; --accent-d:#5a3fa0; --accent-l:#9d7ee0; --accent-bg:#f1ecfb; --accent-bg2:#ddd2f2;
   --teal:#0f7351; --teal-bg:#e6f4ee;
   --cyan:#2b8fa8; --cyan-bg:#e6f2f6;
   --gold:#b07d1f; --gold-bg:#f9f1de;
@@ -58,7 +58,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 
 .top{display:flex;align-items:center;gap:12px;padding:22px 0 14px}
 .brand{font-size:21px;font-weight:600;letter-spacing:-.4px;display:flex;align-items:center;gap:9px}
-.brand .mk{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent) 0%,#2f8fa8 55%,#3f9e58 100%);display:grid;place-items:center;color:#fff}
+.brand .mk{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent-d),var(--accent-l));display:grid;place-items:center;color:#fff}
 .sp{flex:1}
 .save-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:7px 12px;border-radius:20px;border:1.5px solid var(--line2);background:var(--white);cursor:pointer;white-space:nowrap}
 .save-pill .d{width:8px;height:8px;border-radius:50%}
@@ -126,6 +126,27 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 @media(max-width:640px){
   .qa-row>*{flex:1 1 calc(50% - 4px)!important;min-width:0!important}
   .qa-row>#qadd{flex:1 1 100%!important}}
+
+/* Navigace se řídí šířkou okna, ne zařízením: na širokém pilulky nahoře
+   (appka běží i na dvou počítačích), na úzkém spodní lišta jako v bankovních
+   appkách. Značky v HTML jsou pro obojí stejné, přepíná to jen CSS — kromě
+   toho, že se na mobilu schovají záložky za čtvrtou a nabídne se „Více". */
+@media(max-width:640px){
+  .tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;margin:0;gap:0;padding:5px 2px;
+    border:none;border-top:1px solid var(--line);border-radius:0;overflow:visible;
+    box-shadow:0 -2px 14px rgba(22,21,26,.06)}
+  .tab{flex:1;flex-direction:column;gap:3px;font-size:10px;font-weight:600;padding:7px 2px;border-radius:12px;min-width:0}
+  .tab .tl{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}
+  .tab.on{background:none;color:var(--accent)}
+  .tab.ov:not(.on){display:none}
+  .app{padding-bottom:108px}
+  .fab{bottom:calc(96px + env(safe-area-inset-bottom));right:16px;width:52px;height:52px;border-radius:17px}
+  .top{padding:16px 0 10px}
+  .brand{font-size:17px;gap:8px;min-width:0}
+  .brand span:not(.mk){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .save-pill{padding:6px 10px;font-size:11px;flex:none}
+}
+@media(min-width:641px){.tab.more{display:none}}
 
 .inp{width:100%;background:var(--white);border:1.5px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s}
 .inp:focus{border-color:var(--accent)}
@@ -329,6 +350,7 @@ const ICON={
   down:'<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
   coin:'<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>',
   check:'<path d="M20 6 9 17l-5-5"/>',
+  menu:'<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>',
 };
 function ic(name,size,color){const p=ICON[name]||ICON.dot;const s=size||20;return `<svg class="i" viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="${color||'currentColor'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;}
 const CAT_ICONS=['home','food','cart','bus','car','film','repeat','droplet','heart','activity','shirt','gift','zap','coffee','beer','phone','bulb','book','dumbbell','gamepad','paw','graduation','plane','umbrella','wallet','card','receipt','bag','key','banknote','coins'];
@@ -360,23 +382,33 @@ const fdFull=s=>{if(!s)return'—';const p=s.split('-');return +p[2]+'. '+ +p[1]
 const esc=s=>(s==null?'':''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>parseFloat((''+(v==null?'':v)).replace(',','.'))||0;
 function shade(hex,p){let n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;const f=t=>Math.round(p<0?t*(1+p/100):t+(255-t)*p/100);r=Math.max(0,Math.min(255,f(r)));g=Math.max(0,Math.min(255,f(g)));b=Math.max(0,Math.min(255,f(b)));return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);}
-function applyAccent(hex){const rs=document.documentElement.style;rs.setProperty('--accent',hex);rs.setProperty('--accent-d',shade(hex,-14));rs.setProperty('--accent-bg',shade(hex,90));rs.setProperty('--accent-bg2',shade(hex,72));applyFavicon(hex);}
+function applyAccent(hex){const rs=document.documentElement.style;rs.setProperty('--accent',hex);rs.setProperty('--accent-d',shade(hex,-14));rs.setProperty('--accent-bg',shade(hex,90));rs.setProperty('--accent-bg2',shade(hex,72));rs.setProperty('--accent-l',shade(hex,42));applyFavicon(hex);}
 /* ---------- ikona v záložce ----------
    Stejná značka jako v záhlaví appky: kulatý čtverec s přechodem z tvého
    akcentu do zlaté a mince uprostřed. Kreslí se v SVG přímo tady, takže
    se přebarví hned, jak si změníš barvu, a nepotřebuje žádný soubor. */
 function faviconSVG(hex){
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">`
-    /* Přechod jde přes modrozelenou schválně: mezi fialovou a zelenou leží
-       kalná oliva, středový stop ji obejde a značka zůstane svěží. */
+    /* Jednobarevný přechod: akcent do své světlejší podoby. Drží se tak
+       jakékoliv barvy, kterou si uživatel zvolí, a nikdy se nezkalí. */
     +`<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">`
-    +`<stop offset="0" stop-color="${hex}"/><stop offset=".55" stop-color="#2f8fa8"/>`
-    +`<stop offset="1" stop-color="#3f9e58"/></linearGradient></defs>`
+    +`<stop offset="0" stop-color="${shade(hex,-12)}"/>`
+    +`<stop offset="1" stop-color="${shade(hex,42)}"/></linearGradient></defs>`
     +`<rect width="64" height="64" rx="15" fill="url(#g)"/>`
-    // mince je záměrně tučnější a větší než v záhlaví — v 16px záložce by
-    // se tenká kresba slila do skvrny
-    +`<g transform="translate(10 10) scale(1.833)" fill="none" stroke="#fffdfa" stroke-width="2.6"`
-    +` stroke-linecap="round" stroke-linejoin="round">${ICON.coin}</g></svg>`;
+    // mince je záměrně tučnější a větší než v appce — v 16px záložce by se
+    // tenká kresba slila do skvrny. Uvnitř je Kč, ne dolar: je to česká appka.
+    +`<circle cx="32" cy="32" r="20" fill="none" stroke="#fff" stroke-width="3.4"/>`
+    +`<text x="32" y="33" text-anchor="middle" dominant-baseline="central" fill="#fff"`
+    +` font-family="Segoe UI,system-ui,sans-serif" font-size="19" font-weight="600"`
+    +` letter-spacing="-.5">Kč</text></svg>`;
+}
+/* Mince se znakem Kč — stejná kresba v záhlaví appky i v ikoně záložky.
+   Dřív tu byl dolar z ikonové sady, což v české appce nedávalo smysl. */
+function markGlyph(size){
+  return `<svg class="i" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">`
+    +`<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.9"/>`
+    +`<text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" fill="currentColor"`
+    +` font-family="Segoe UI,system-ui,sans-serif" font-size="9" font-weight="600" letter-spacing="-.3">Kč</text></svg>`;
 }
 function applyFavicon(hex){
   const svg=faviconSVG(hex),url='data:image/svg+xml,'+encodeURIComponent(svg);
@@ -1004,7 +1036,7 @@ function R(){
   const visTabs=S.ui.tabs.filter(t=>t.visible||t.id==='nastaveni');
   if(!visTabs.some(t=>t.id===tab))tab='prehled';
   let h=`<div class="top">
-    <div class="brand"><span class="mk">${ic('coin',18,'#fff')}</span> ${esc(S.ui.appName)}</div><div class="sp"></div>
+    <div class="brand"><span class="mk">${markGlyph(19)}</span> <span>${esc(S.ui.appName)}</span></div><div class="sp"></div>
     <button class="save-pill" id="savepill"><span class="d"></span></button>
   </div>`;
   const idx=periodIndex();
@@ -1014,7 +1046,8 @@ function R(){
     <button class="nav" ${idx>=S.periods.length-1?'disabled':''} onclick="switchPeriod(1)">${ic('cright',18)}</button>
     <button class="edit" title="Upravit období" onclick="periodEditModal()">${ic('edit',17)}</button>
   </div>`;
-  h+=`<div class="tabs">`+visTabs.map(t=>`<button class="tab ${tab===t.id?'on':''}" onclick="go('${t.id}')">${ic(t.icon,16)} ${esc(t.label)}</button>`).join('')+`</div>`;
+  h+=`<div class="tabs">`+visTabs.map((t,i)=>`<button class="tab ${tab===t.id?'on':''}${i>=4?' ov':''}" onclick="go('${t.id}')">${ic(t.icon,16)} <span class="tl">${esc(t.label)}</span></button>`).join('')
+    +`<button class="tab more" onclick="navMoreModal()">${ic('menu',16)} <span class="tl">Více</span></button></div>`;
   h+=(VIEWS[tab]||vPrehled)(p);
   document.getElementById('app').innerHTML=h;
   document.querySelector('.fab').innerHTML=ic('plus',26,'#fff');
@@ -1980,6 +2013,14 @@ function vPohybyList(){
   return h;
 }
 // kurzor patří na první nevyplněné pole — bez kategorie se stejně nic nezapíše
+// Na mobilu se do spodní lišty vejdou čtyři záložky, zbytek je tady.
+function navMoreModal(){
+  const vis=S.ui.tabs.filter(t=>t.visible||t.id==='nastaveni');
+  openModal(`<h3>Další</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px">
+    ${vis.map(t=>`<button onclick="closeModal();go('${t.id}')" style="background:${tab===t.id?'var(--accent-bg)':'var(--bg)'};border:1px solid ${tab===t.id?'var(--accent-bg2)':'var(--line)'};color:${tab===t.id?'var(--accent-d)':'var(--text)'};border-radius:14px;padding:14px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12px;font-weight:600">
+      ${ic(t.icon,21)}<span>${esc(t.label)}</span></button>`).join('')}</div>`);
+}
 function quickModal(){go('prehled');setTimeout(()=>{
   const from=document.getElementById('qfrom');
   if(from&&!from.value)return from.focus();
