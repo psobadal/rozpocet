@@ -36,14 +36,14 @@
   --gold:#b07d1f; --gold-bg:#f9f1de;
   --blue:#5a7fa0; --blue-bg:#eaeff4;
   --neg:#c0453a; --neg-bg:#fbe9e7;
-  --numfont:'Bahnschrift','Segoe UI',sans-serif;
+  --numfont:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Text','Segoe UI',Inter,system-ui,Roboto,Helvetica,Arial,sans-serif;
   --r:18px; --rs:12px;
   --sh:0 1px 2px rgba(22,21,26,.03),0 2px 8px rgba(22,21,26,.04);
   --sh-lg:0 12px 40px rgba(22,21,26,.14);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg)}
-body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;color:var(--text);
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Text','Segoe UI',Inter,system-ui,Roboto,Helvetica,Arial,sans-serif;color:var(--text);
   min-height:100vh;-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
 .num{font-variant-numeric:tabular-nums;letter-spacing:-.01em;font-weight:500;font-family:var(--numfont)}
 .hero .big,.tile .tv,.catcard .cv{font-family:var(--numfont)}
@@ -94,30 +94,24 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:640px){.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
 
-/* Hlavní číslo nesedí v orámované kartě na střed jako dřív, ale volně
-   vlevo, jak je zvykem v bankovních appkách — oko ho najde dřív a zbyde
-   místo na řadu akcí pod ním. */
-.hero{border-radius:22px;padding:4px 4px 2px;margin-bottom:16px;text-align:left;position:relative}
-.hero>*{position:relative}
-.hero .lbl{font-size:12.5px;color:var(--text3);font-weight:500;margin-bottom:4px}
-.hero .big{font-size:44px;font-weight:500;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.08}
-.hero .sub{font-size:12.5px;color:var(--text3);margin-top:7px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.hero .sub .pill{background:var(--teal-bg);color:var(--teal);font-weight:600;padding:3px 9px;border-radius:99px;font-size:11.5px}
-.hero .sub .pill.neg{background:var(--neg-bg);color:var(--neg)}
-.hbar{height:6px;background:var(--bg2);border-radius:4px;margin-top:15px;overflow:hidden}
+/* Hlavní číslo sedí v bílé kartě na střed. Zkoušel jsem ho pustit volně
+   vlevo na pozadí jako v některých bankovních appkách, ale bez rámu se
+   celý blok ztrácel a působil, jako by tam spadl omylem. */
+.hero{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:26px 22px 20px;margin-bottom:16px;text-align:center}
+.hero .lbl{font-size:12.5px;color:var(--text3);font-weight:500;margin-bottom:5px}
+.hero .big{font-size:44px;font-weight:500;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.08;color:var(--teal)}
+.hero .big.neg{color:var(--neg)}
+.hero .sub{font-size:12.5px;color:var(--text3);margin-top:8px}
+.hbar{height:6px;background:var(--bg2);border-radius:4px;margin-top:18px;overflow:hidden}
 .hbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
-.hstats{display:flex;gap:10px 26px;flex-wrap:wrap;margin-top:16px}
-.hstats>div{text-align:left;min-width:74px}
-
-/* Řada kulatých akcí — podpis moderních bankovních appek. */
-.acts{display:flex;gap:8px;margin-bottom:18px;max-width:400px}
-.acts button{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;
-  font-size:11px;font-weight:600;color:var(--text2);padding:0;min-width:0}
-.acts .ab{width:52px;height:52px;border-radius:50%;background:var(--white);border:1px solid var(--line);display:grid;place-items:center;color:var(--text);transition:.15s}
-.acts button:hover .ab{border-color:var(--accent);color:var(--accent)}
-.acts .prim .ab{background:var(--accent);border-color:var(--accent);color:#fff}
-.acts .prim:hover .ab{background:var(--accent-d);border-color:var(--accent-d);color:#fff}
-.acts .al{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}
+.hstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:16px}
+.hstats>div{background:var(--bg);border-radius:13px;padding:10px 8px;text-align:center;min-width:0}
+.hcta{width:100%;justify-content:center;margin-top:16px;padding:14px;font-size:15px;border-radius:99px}
+/* Vedlejší akce pod hlavním tlačítkem — tiché, ať nepřetahují pozornost. */
+.acts{display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap}
+.acts button{background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  font-size:12.5px;font-weight:600;color:var(--text2);padding:7px 12px;border-radius:99px}
+.acts button:hover{background:var(--bg);color:var(--accent-d)}
 
 /* Účty jako vodorovná řada karet místo šipek — vidíš je všechny naráz. */
 .accrail{display:flex;gap:9px;overflow-x:auto;padding:0 0 4px;margin-bottom:16px;scrollbar-width:none}
@@ -325,7 +319,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 const CONFIG={
   appName:'Můj rozpočet',
   accent:'#7a5a8c',            // hlavní barva (jde měnit i v Nastavení)
-  numFont:'bahnschrift',       // font čísel (klíč z NUMFONTS)
+  numFont:'system',            // font čísel (klíč z NUMFONTS)
   taxRate:15,                  // srážková daň z úroků v %
   // Synchronizace mezi zařízeními se nastavuje v appce (Nastavení → Synchronizace),
   // ne tady — vlastní Worker na Cloudflare, viz SYNC-SETUP.md.
@@ -480,15 +474,15 @@ function applyFavicon(hex){
   }catch(e){}
 }
 const NUMFONTS={
+  system:{label:'Stejný jako zbytek appky (výchozí)',stack:"-apple-system,BlinkMacSystemFont,'Segoe UI Variable Text','Segoe UI',Inter,system-ui,Roboto,Helvetica,Arial,sans-serif"},
   bahnschrift:{label:'Bahnschrift — moderní, technická',stack:"'Bahnschrift','Segoe UI',sans-serif"},
   cascadia:{label:'Cascadia — vývojářská (mono)',stack:"'Cascadia Code','Cascadia Mono','Consolas',monospace"},
   consolas:{label:'Consolas — klasická mono',stack:"'Consolas','Courier New',monospace"},
   corbel:{label:'Corbel — hravé číslice',stack:"'Corbel','Candara',sans-serif"},
   century:{label:'Century Gothic — kulaté',stack:"'Century Gothic','Futura','Segoe UI',sans-serif"},
-  system:{label:'Systémový (výchozí)',stack:"'Segoe UI',-apple-system,sans-serif"},
 };
-function applyNumFont(key){const f=NUMFONTS[key]||NUMFONTS.bahnschrift;document.documentElement.style.setProperty('--numfont',f.stack);}
-function setNumFont(key){S.ui.numFont=key;applyNumFont(key);commit();}
+function applyNumFont(key){const f=NUMFONTS[key]||NUMFONTS.system;document.documentElement.style.setProperty('--numfont',f.stack);}
+function setNumFont(key){S.ui.numFont=key;S.ui.numFontOwn=true;applyNumFont(key);commit();}
 function applyTheme(){applyAccent(S.ui.accent);applyNumFont(S.ui.numFont);
   document.title=S.ui.appName||'Můj rozpočet';}   // záložka ať se jmenuje jako appka
 
@@ -556,7 +550,9 @@ function migrate(s){
     gm.fees||=[];});
   s.tax=(s.tax==null?CONFIG.taxRate:s.tax);
   delete s.stockKey;   // kurzy chodí přes Worker, klíč k burze už není potřeba
-  s.ui||={};s.ui.appName||=CONFIG.appName;s.ui.accent||=CONFIG.accent;s.ui.numFont||=CONFIG.numFont||'bahnschrift';
+  s.ui||={};s.ui.appName||=CONFIG.appName;s.ui.accent||=CONFIG.accent;s.ui.numFont||=CONFIG.numFont||'system';
+  // Bahnschrift byl výchozí, ale je jen na Windows — na Macu z něj padala Helvetica
+  if(s.ui.numFont==='bahnschrift'&&!s.ui.numFontOwn)s.ui.numFont='system';
   /* Redesign 2026: kdo si barvu nikdy sám nezměnil (má pořád starou výchozí
      terracottu), dostane novou výchozí. Kdo si ji vybral, o ni nepřijde. */
   if(['#c4694a','#6d4fb3'].includes(s.ui.accent.toLowerCase())&&!s.ui.accentOwn)s.ui.accent=CONFIG.accent;
@@ -1192,7 +1188,7 @@ function vPrehled(p){
   h+=`<div class="hero">
     <div class="lbl">Zbývá volných z výplaty</div>
     <div class="big ${free<0?'neg':''}">${fm(free)}</div>
-    <div class="sub">${left>0?`<span class="pill ${free<0?'neg':''}">${fm(perDay)} / den</span><span>${left} dní do výplaty</span>`:'<span>poslední den cyklu</span>'}</div>
+    <div class="sub">${left>0?`${fm(perDay)} / den · ${left} dní do výplaty`:'poslední den cyklu'}</div>
     <div class="hbar"><i style="width:${pct}%;background:${barCol}"></i></div>
     <div class="hstats">
       <div><span>Příjem</span><b class="pos">${fm(base)}</b></div>
@@ -1200,8 +1196,9 @@ function vPrehled(p){
       <div><span>Odloženo</span><b class="warn">${fm(saved)}</b></div>
       ${inv?`<div><span>Investováno</span><b style="color:var(--cyan)">${fm(inv)}</b></div>`:''}
       ${debt?`<div><span>Splátky</span><b style="color:var(--blue)">${fm(debt)}</b></div>`:''}
-    </div></div>`;
-  h+=actionRow();
+    </div>
+    <button class="btn fill hcta" onclick="zapisOpen(false)">${ic('plus',17)} Nový zápis</button>
+    ${actionRow()}</div>`;
   const plan=sumPlan(p),afterPlan=base-plan;
   if(plan>0)h+=`<div class="tiles">
     <div class="tile"><div class="tl">Naplánováno</div><div class="tv">${fm(plan)}</div></div>
@@ -2348,10 +2345,9 @@ function setActiveAcc(id){S.ui.activeAcc=id;commit();}
    z deseti důvodů, proč appku vůbec otvíráš. */
 function actionRow(){
   return `<div class="acts">
-    <button class="prim" onclick="zapisOpen(false)"><span class="ab">${ic('plus',23)}</span><span class="al">Zápis</span></button>
-    <button onclick="zapisOpen(true)"><span class="ab">${ic('repeat',21)}</span><span class="al">Přesun</span></button>
-    <button onclick="go('obalky')"><span class="ab">${ic('envelope',21)}</span><span class="al">Obálky</span></button>
-    <button onclick="go('ucty')"><span class="ab">${ic('wallet',21)}</span><span class="al">Účty</span></button>
+    <button onclick="zapisOpen(true)">${ic('repeat',16)} Přesun na účet</button>
+    <button onclick="go('obalky')">${ic('envelope',16)} Obálky</button>
+    <button onclick="go('ucty')">${ic('wallet',16)} Účty</button>
   </div>`;
 }
 function vUcty(p){
