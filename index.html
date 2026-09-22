@@ -92,10 +92,10 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .tab:hover{color:var(--text2)}
 .tab.on{background:var(--accent);color:#fff}
 
-.seg{display:flex;gap:4px;background:var(--white);border-radius:var(--rs);padding:4px;border:1px solid var(--line)}
-.seg button{flex:1;background:none;border:none;color:var(--text3);padding:9px 12px;cursor:pointer;font-size:13px;font-weight:600;border-radius:8px;transition:.15s}
+.seg{display:flex;gap:4px;background:var(--white);border-radius:99px;padding:4px;border:1px solid var(--line)}
+.seg button{flex:1;background:none;border:none;color:var(--text3);padding:9px 12px;cursor:pointer;font-size:13px;font-weight:600;border-radius:99px;transition:.15s}
 .seg button:hover{color:var(--text2)}
-.seg button.on{background:var(--text);color:var(--bg)}
+.seg button.on{background:var(--accent);color:#fff}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;margin-bottom:14px}
 .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px}
@@ -104,34 +104,77 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:640px){.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
 
-/* Hlavní číslo stojí vycentrované volně na ploše, bez rámu a bílé karty.
-   Karta kolem něj působila jako blok navíc a ubírala mu prostor. */
-.hero{padding:10px 4px 2px;margin-bottom:14px;text-align:center}
-.hero .lbl{font-size:12.5px;color:var(--text3);font-weight:500;margin-bottom:5px}
-.hero .big{font-size:46px;font-weight:500;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.08;color:var(--teal)}
-.hero .big.neg{color:var(--neg)}
-.hero .sub{font-size:12.5px;color:var(--text3);margin-top:8px}
-.hbar{height:7px;background:var(--bg2);border-radius:4px;margin-top:18px;overflow:hidden}
+/* Hlavní číslo nesedí v orámované kartě na střed jako dřív, ale volně
+   vlevo, jak je zvykem v bankovních appkách — oko ho najde dřív a zbyde
+   místo na řadu akcí pod ním. */
+.hero{border-radius:22px;padding:4px 4px 2px;margin-bottom:16px;text-align:left;position:relative}
+.hero>*{position:relative}
+.hero .lbl{font-size:12.5px;color:var(--text3);font-weight:500;margin-bottom:4px}
+.hero .big{font-size:44px;font-weight:500;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.25}
+.hero .sub{font-size:12.5px;color:var(--text3);margin-top:7px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.hero .sub .pill{background:var(--teal-bg);color:var(--teal);font-weight:600;padding:3px 9px;border-radius:99px;font-size:11.5px}
+.hero .sub .pill.neg{background:var(--neg-bg);color:var(--neg)}
+.hbar{height:6px;background:var(--bg2);border-radius:4px;margin-top:15px;overflow:hidden}
 .hbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
-.hstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:16px}
-.hstats>div{background:var(--white);border:1px solid var(--line);border-radius:13px;padding:10px 8px;text-align:center;min-width:0}
+.hstats{display:flex;gap:10px 26px;flex-wrap:wrap;margin-top:16px}
+.hstats>div{text-align:left;min-width:74px}
+
+/* Řada kulatých akcí — podpis moderních bankovních appek. */
+.acts{display:flex;gap:8px;margin-bottom:18px;max-width:400px}
+.acts button{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;
+  font-size:11px;font-weight:600;color:var(--text2);padding:0;min-width:0}
+.acts .ab{width:52px;height:52px;border-radius:50%;background:var(--white);border:1px solid var(--line);display:grid;place-items:center;color:var(--text);transition:.15s}
+.acts button:hover .ab{border-color:var(--accent);color:var(--accent)}
+.acts .prim .ab{background:var(--accent);border-color:var(--accent);color:#fff}
+.acts .prim:hover .ab{background:var(--accent-d);border-color:var(--accent-d);color:#fff}
+.acts .al{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}
+
+/* Účty jako vodorovná řada karet místo šipek — vidíš je všechny naráz. */
+.accrail{display:flex;gap:9px;overflow-x:auto;padding:0 0 4px;margin-bottom:16px;scrollbar-width:none}
+.accrail::-webkit-scrollbar{display:none}
+.acccard{flex:0 0 148px;background:var(--white);border:1px solid var(--line);border-radius:16px;padding:12px 14px;
+  cursor:pointer;text-align:left;transition:.15s;color:var(--text)}
+.acccard:hover{border-color:var(--line2)}
+.acccard.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.acccard .an{font-size:11.5px;opacity:.72;margin-top:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acccard .av{font-size:17px;font-weight:500;font-family:var(--numfont);font-variant-numeric:tabular-nums;letter-spacing:-.3px}
 .hstats span{display:block;font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
-.hstats b{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
-.hcta{width:100%;justify-content:center;margin-top:16px;padding:14px;font-size:15px;border-radius:99px}
-/* Vedlejší akce pod hlavním tlačítkem — tiché, ať nepřetahují pozornost. */
-.acts{display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap}
-.acts button{background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
-  font-size:12.5px;font-weight:600;color:var(--text2);padding:7px 12px;border-radius:99px}
-.acts button:hover{background:var(--white);color:var(--accent-d)}
+.hstats b{font-size:15.5px;font-weight:500;font-family:var(--numfont);font-variant-numeric:tabular-nums}
+.card.go{cursor:pointer;transition:transform .12s,box-shadow .12s}
+.card.go:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
 
-/* Výběr účtu: tlumený pruh se šipkami, ne bílá karta ani řada dlaždic. */
-.accsw{display:flex;align-items:center;gap:12px;background:var(--accent-bg);border-radius:16px;padding:11px 12px;margin-bottom:14px}
-.accsw button{background:none;border:none;color:var(--accent-d);cursor:pointer;padding:5px;border-radius:9px;display:grid;place-items:center;flex:none}
-.accsw button:hover{background:var(--white)}
-.accsw .mid{flex:1;text-align:center;min-width:0}
-.accsw .an{font-size:12.5px;color:var(--text2)}
-.accsw .av{font-size:16px;font-weight:600;color:var(--accent-d);font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:640px){.tiles{grid-template-columns:1fr 1fr}.tiles .tile:nth-child(3):last-child{grid-column:1/-1}}
+.tile{background:var(--white);border-radius:var(--rs);padding:14px 16px;border:1px solid var(--line);text-align:center}
+.card .tile{background:var(--bg);box-shadow:none}
+.tile .tl{font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.tile .tv{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
+.pos{color:var(--teal)} .neg{color:var(--neg)} .warn{color:var(--gold)}
 
+/* Navigace se řídí šířkou okna, ne zařízením: na širokém pilulky nahoře
+   (appka běží i na dvou počítačích), na úzkém spodní lišta jako v bankovních
+   appkách. Značky v HTML jsou pro obojí stejné, přepíná to jen CSS — kromě
+   toho, že se na mobilu schovají záložky za čtvrtou a nabídne se „Více". */
+@media(max-width:640px){
+  .tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;margin:0;gap:0;padding:5px 2px;
+    border:none;border-top:1px solid var(--line);border-radius:0;overflow:visible;
+    box-shadow:0 -2px 14px rgba(22,21,26,.06)}
+  .tab{flex:1;flex-direction:column;gap:3px;font-size:10px;font-weight:600;padding:7px 2px;border-radius:12px;min-width:0}
+  .tab .tl{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}
+  .tab.on{background:none;color:var(--accent)}
+  .tab.tov:not(.on){display:none}
+  .app{padding-bottom:108px}
+  .fab{bottom:calc(96px + env(safe-area-inset-bottom));right:16px;width:52px;height:52px;border-radius:17px}
+  .top{padding:16px 0 10px}
+  .brand{font-size:17px;gap:8px;min-width:0}
+  .brand span:not(.mk){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .save-pill{padding:6px 10px;font-size:11px;flex:none}
+}
+@media(min-width:641px){.tab.more{display:none}}
+
+/* Seznam pohybů: bez linek mezi řádky, jen vzduch a denní hlavičky.
+   Kolečko nese ikonu kategorie nebo truhlice, barva říká, jestli to
+   ukrojilo z volných peněz, nebo jen přesunulo. */
 .pohchips{display:flex;gap:6px;overflow-x:auto;margin-bottom:4px;padding-bottom:4px;scrollbar-width:none}
 .pohchips::-webkit-scrollbar{display:none}
 .pchip{flex:none;background:var(--bg);border:1px solid var(--line);color:var(--text2);font-size:12px;font-weight:600;
@@ -146,16 +189,16 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .mv .t2{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mva{font-size:14.5px;font-weight:600;flex:none}
 
-.inp{width:100%;background:var(--white);border:1.5px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s}
+.inp{width:100%;background:var(--white);border:1.5px solid var(--line2);border-radius:12px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s}
 .inp:focus{border-color:var(--accent)}
 select.inp{appearance:none;padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8078' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
 .inp.num{font-variant-numeric:tabular-nums}
 
-.btn{background:var(--white);border:1.5px solid var(--line2);color:var(--text2);border-radius:10px;padding:9px 15px;cursor:pointer;font-size:13.5px;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn{background:var(--white);border:1.5px solid var(--line2);color:var(--text2);border-radius:99px;padding:9px 16px;cursor:pointer;font-size:13.5px;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{color:var(--text);background:var(--bg)}
 .btn.fill{background:var(--accent);border-color:var(--accent);color:#fff}.btn.fill:hover{background:var(--accent-d);color:#fff}
 .btn.dark{background:var(--text);border-color:var(--text);color:var(--bg)}.btn.dark:hover{opacity:.88;color:var(--bg)}
-.btn.sm{padding:6px 11px;font-size:12.5px;border-radius:9px}
+.btn.sm{padding:6px 12px;font-size:12.5px;border-radius:99px}
 .btn.dgr{color:var(--neg);border-color:#ecc7c4}.btn.dgr:hover{background:var(--neg-bg);color:var(--neg)}
 .btn.gho{background:none;border-color:transparent;color:var(--text3)}.btn.gho:hover{background:var(--bg);color:var(--text)}
 .ib{background:none;border:none;color:var(--text4);cursor:pointer;padding:5px 6px;border-radius:8px;line-height:0;display:inline-grid;place-items:center}
@@ -269,8 +312,8 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 @keyframes tin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 .banner{border-radius:14px;padding:13px 16px;font-size:13px;display:flex;gap:11px;align-items:flex-start;margin-bottom:14px}
 .banner .bi{flex:none;margin-top:1px}
-.banner.info{background:var(--blue-bg);color:#3a5a72}
-.banner.tip{background:var(--cyan-bg);color:#1e6275}
+.banner.info{background:var(--white);border:1px solid var(--line);color:var(--text2)}
+.banner.tip{background:var(--white);border:1px solid var(--line);color:var(--text2)}
 .banner.warn{background:var(--accent-bg);color:var(--accent-d);border:1.5px solid var(--accent-bg2)}
 .mini{font-size:12px;color:var(--text3)}
 .hidden{display:none!important}
@@ -393,12 +436,21 @@ const DEBT_ICONS=['landmark','home','key','car','card','banknote','coins','gradu
    UTIL
    ===================================================================== */
 const LS='rozpocet-v2';
-const czk=new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:0});
-const fm=n=>czk.format(Math.round(n||0));
+/* Měna je jen zobrazení — čísla v datech se nepřepočítávají. Kdo vede
+   rozpočet v eurech, zapisuje eura a vidí eura; kurzy akcií a krypta se
+   ale pořád stahují v korunách, takže dávají smysl jen s Kč. */
+const MENY={CZK:'Koruna česká (Kč)',EUR:'Euro (€)',USD:'Dolar ($)',GBP:'Libra (£)',PLN:'Zlotý (zł)',CHF:'Frank (CHF)'};
+let _fm0,_fm2;
+function applyMena(c){
+  const o={style:'currency',currency:c||'CZK',currencyDisplay:'narrowSymbol'};
+  _fm0=new Intl.NumberFormat('cs-CZ',{...o,maximumFractionDigits:0});
+  _fm2=new Intl.NumberFormat('cs-CZ',{...o,minimumFractionDigits:2});
+}
+applyMena('CZK');   // S tady ještě neexistuje — skutečná volba se dosadí v applyTheme
+const fm=n=>_fm0.format(Math.round(n||0));
 // přesná částka i s haléři — pro čísla, která si uživatel sám nastavil
 // (obvyklá částka u položky), ať nevidí 329 Kč tam, kde zadal 329,35
-const czk2=new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',minimumFractionDigits:2});
-const fmEx=n=>Number.isInteger(+n||0)?fm(n):czk2.format(+n||0);
+const fmEx=n=>Number.isInteger(+n||0)?fm(n):_fm2.format(+n||0);
 // číslo bez měny — na kurzy v cizí měně, kde by „Kč“ lhalo
 const nfx=new Intl.NumberFormat('cs-CZ',{maximumFractionDigits:2});
 const fmCcy=(n,c)=>nfx.format(+n||0)+(c&&c!=='CZK'?' '+c:' Kč');
@@ -456,7 +508,8 @@ const NUMFONTS={
 };
 function applyNumFont(key){const f=NUMFONTS[key]||NUMFONTS.system;document.documentElement.style.setProperty('--numfont',f.stack);}
 function setNumFont(key){S.ui.numFont=key;S.ui.numFontOwn=true;applyNumFont(key);commit();}
-function applyTheme(){applyAccent(S.ui.accent);applyNumFont(S.ui.numFont);
+function setMena(c){S.ui.mena=c;applyMena(c);commit();}
+function applyTheme(){applyAccent(S.ui.accent);applyNumFont(S.ui.numFont);applyMena(S.ui.mena);
   document.title=S.ui.appName||'Můj rozpočet';}   // záložka ať se jmenuje jako appka
 
 /* ---------- defaults ---------- */
@@ -523,8 +576,8 @@ function migrate(s){
     gm.fees||=[];});
   s.tax=(s.tax==null?CONFIG.taxRate:s.tax);
   delete s.stockKey;   // kurzy chodí přes Worker, klíč k burze už není potřeba
-  s.ui||={};s.ui.appName||=CONFIG.appName;s.ui.accent||=CONFIG.accent;s.ui.numFont||=CONFIG.numFont||'system';
-  // Bahnschrift byl výchozí, ale je jen na Windows — na Macu z něj padala Helvetica
+  s.ui||={};s.ui.appName||=CONFIG.appName;s.ui.accent||=CONFIG.accent;s.ui.numFont||=CONFIG.numFont||'system';s.ui.mena||='CZK';
+  // Bahnschrift býval výchozí, ale je jen na Windows — kdo si ho sám nevybral, jede v Interu
   if(s.ui.numFont==='bahnschrift'&&!s.ui.numFontOwn)s.ui.numFont='system';
   /* Redesign 2026: kdo si barvu nikdy sám nezměnil (má pořád starou výchozí
      terracottu), dostane novou výchozí. Kdo si ji vybral, o ni nepřijde. */
@@ -1161,7 +1214,7 @@ function vPrehled(p){
   h+=`<div class="hero">
     <div class="lbl">Zbývá volných z výplaty</div>
     <div class="big ${free<0?'neg':''}">${fm(free)}</div>
-    <div class="sub">${left>0?`${fm(perDay)} / den · ${left} dní do výplaty`:'poslední den cyklu'}</div>
+    <div class="sub">${left>0?`<span class="pill ${free<0?'neg':''}">${fm(perDay)} / den</span><span>${left} dní do výplaty</span>`:'<span>poslední den cyklu</span>'}</div>
     <div class="hbar"><i style="width:${pct}%;background:${barCol}"></i></div>
     <div class="hstats">
       <div><span>Příjem</span><b class="pos">${fm(base)}</b></div>
@@ -1169,9 +1222,8 @@ function vPrehled(p){
       <div><span>Odloženo</span><b class="warn">${fm(saved)}</b></div>
       ${inv?`<div><span>Investováno</span><b style="color:var(--cyan)">${fm(inv)}</b></div>`:''}
       ${debt?`<div><span>Splátky</span><b style="color:var(--blue)">${fm(debt)}</b></div>`:''}
-    </div>
-    <button class="btn fill hcta" onclick="zapisOpen(false)">${ic('plus',17)} Nový zápis</button>
-    ${actionRow()}</div>`;
+    </div></div>`;
+  h+=actionRow();
   const plan=sumPlan(p),afterPlan=base-plan;
   if(plan>0)h+=`<div class="tiles">
     <div class="tile"><div class="tl">Naplánováno</div><div class="tv">${fm(plan)}</div></div>
@@ -1285,8 +1337,8 @@ function vObalky(p){
   h+=`<div style="text-align:right;margin-bottom:14px"><button class="btn fill" onclick="envModal()">${ic('plus',15)} Nová obálka</button></div>`;
   if(!S.envelopes.length)h+=`<div class="card"><div class="empty">Zatím žádné obálky.</div></div>`;
   S.envelopes.forEach((e,i)=>{const hasT=e.target>0,pc=hasT?Math.min(100,Math.round(e.bal/e.target*100)):0;const remain=Math.max(0,(e.target||0)-e.bal),months=e.monthly>0?Math.ceil(remain/e.monthly):null;
-    h+=`<div class="card" style="border-left:4px solid ${col(i)}">
-      <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:9px"><span style="color:${col(i)}">${ic(e.icon,18)}</span>${esc(e.nm)}</span>
+    h+=`<div class="card">
+      <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(e.icon,18)}</span>${esc(e.nm)}</span>
         <div style="display:flex;gap:4px">
           <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="envMove('${e.id}','in')">${ic('plus',14)} Vložit</button>
           <button class="btn sm" onclick="envMove('${e.id}','out')">Čerpat</button>
@@ -1371,7 +1423,7 @@ function vDluhy(p){
     // kolik to fakticky vyjde vč. úroků: vklady (bez úroku) + u každého dluhu jistina+odhad úroků za celou dobu
     const lifetimeTotal=ownPaid+arr.reduce((s,x)=>s+debtLifetimeCost(x.d).total,0);
     const lifetimeInterest=arr.reduce((s,x)=>{const lc=debtLifetimeCost(x.d);return s+(lc.interest||0);},0);
-    h+=`<div class="card" style="border-left:4px solid ${gcol};background:linear-gradient(180deg,${gcol}0e,transparent 60%)">
+    h+=`<div class="card" style="background:linear-gradient(180deg,${gcol}0e,transparent 60%)">
       <div class="ch" style="margin-bottom:12px"><span style="font-size:17px;font-weight:600;display:flex;align-items:center;gap:9px"><span style="color:${gcol}">${ic('home',19)}</span>${esc(g)}</span>
         <div style="display:flex;align-items:center;gap:8px"><span class="tag" style="background:var(--bg2);color:var(--text3)">${arr.length===0?'zatím bez dluhu':arr.length===1?'1 dluh':arr.length<5?arr.length+' dluhy':arr.length+' dluhů'}</span>
         <button class="ib" title="Cena a vklady" onclick="groupModal('${encodeURIComponent(g)}')">${ic('edit',15)}</button><button class="ib" title="Smazat projekt" onclick="delGroupMeta('${encodeURIComponent(g)}')">${ic('trash',15)}</button></div></div>
@@ -1401,8 +1453,8 @@ function vDluhy(p){
 function debtCard(d,i,inGroup){
   let h='';
   {const rem=debtRemaining(d),paid=debtPaid(d),pc=d.principal>0?Math.min(100,Math.round(paid/d.principal*100)):0;const mInt=d.rate>0?Math.round(rem*d.rate/100/12):0;const pcol=pc>=100?'var(--teal)':'var(--blue)';
-    h+=`<div class="card" style="border-left:4px solid ${col(i)}${inGroup?';margin-left:22px':''}">
-      <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:9px"><span style="color:${col(i)}">${ic(d.icon||'landmark',18)}</span>${esc(d.nm)}${d.type?` <span class="tag" style="background:var(--bg2);color:var(--text3)">${esc(d.type)}</span>`:''}${inGroup?(d.paidToPrice?`<span class="tag ok">šlo do koupě</span>`:`<span class="tag wr">ještě nečerpáno</span>`):''}</span>
+    h+=`<div class="card" style="${inGroup?'margin-left:22px':''}">
+      <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(d.icon||'landmark',18)}</span>${esc(d.nm)}${d.type?` <span class="tag" style="background:var(--bg2);color:var(--text3)">${esc(d.type)}</span>`:''}${inGroup?(d.paidToPrice?`<span class="tag ok">šlo do koupě</span>`:`<span class="tag wr">ještě nečerpáno</span>`):''}</span>
         <div style="display:flex;gap:4px"><button class="btn sm fill" onclick="debtPayModal('${d.id}')">Splátka</button><button class="ib" onclick="debtModal('${d.id}')">${ic('edit',15)}</button><button class="ib" onclick="delDebt('${d.id}')">${ic('trash',15)}</button></div></div>
       <div class="grid3">
         <div style="text-align:center"><div class="mini">Zbývá</div><div class="num" style="font-size:22px;color:var(--blue)">${fm(rem)}</div></div>
@@ -1765,7 +1817,9 @@ function vNastaveni(p){
       <div class="mini" style="margin-top:6px">Varování o datech a chybách se tím neskryjou — ta uvidíš vždycky.</div>
       <div style="margin-top:10px">${S.ui.hideIntro?`<button class="btn sm" onclick="showIntro()">${ic('rocket',14)} Zobrazit průvodce začátkem</button>`:`<span class="mini">Průvodce začátkem se ukazuje na Přehledu, dokud ho nedokončíš.</span>`}</div></div>
     <div class="fg"><span class="fl">Font čísel</span><select class="inp" onchange="setNumFont(this.value)">${Object.entries(NUMFONTS).map(([k,f])=>`<option value="${k}" ${S.ui.numFont===k?'selected':''}>${f.label}</option>`).join('')}</select>
-      <div class="mini" style="margin-top:8px">Ukázka: <span class="num" style="font-size:20px;color:var(--text)">1&nbsp;234&nbsp;567&nbsp;Kč · 28&nbsp;000 · 15,5&nbsp;%</span></div></div>
+      <div class="mini" style="margin-top:8px">Ukázka: <span class="num" style="font-size:20px;color:var(--text)">${fm(1234567)} · 28&nbsp;000 · 15,5&nbsp;%</span></div></div>
+    <div class="fg"><span class="fl">Měna</span><select class="inp" onchange="setMena(this.value)">${Object.entries(MENY).map(([k,l])=>`<option value="${k}" ${(S.ui.mena||'CZK')===k?'selected':''}>${l}</option>`).join('')}</select>
+      <div class="mini" style="margin-top:8px">Jen zobrazení — čísla se nepřepočítávají. Kurzy akcií a krypta se stahují v korunách, takže dávají smysl jen s Kč.</div></div>
     <div class="fg"><span class="fl">Záložky v menu (přejmenuj, skryj, přeřaď)</span><div style="margin-top:2px">`;
   S.ui.tabs.forEach((t,i)=>{const locked=t.id==='nastaveni';h+=`<div class="cfgrow">
     <span style="color:var(--text3)">${ic(t.icon,17)}</span>
@@ -2304,32 +2358,24 @@ function saveEnvHist(){
 // (S.ui.activeAcc=''), pak jednotlivé účty v pořadí S.accounts.
 function accChips(){
   if(!S.accounts.length)return '';
-  const idx=S.ui.activeAcc?S.accounts.findIndex(a=>a.id===S.ui.activeAcc)+1:0;
-  const cur=idx>0?S.accounts[idx-1]:null;
-  return `<div class="accsw">
-    <button onclick="accCycle(-1)" aria-label="Předchozí účet">${ic('cleft',18)}</button>
-    <div class="mid">
-      <div class="an">${cur?esc(cur.nm):'Vše dohromady'}</div>
-      <div class="av">${fm(cur?cur.bal||0:totalAccounts())}</div></div>
-    <button onclick="accCycle(1)" aria-label="Další účet">${ic('cright',18)}</button>
-  </div>`;
-}
-/* Prochází se dokola: pozice 0 je souhrn všech účtů, pak jednotlivé účty. */
-function accCycle(dir){
-  const n=S.accounts.length;
-  const idx=S.ui.activeAcc?S.accounts.findIndex(a=>a.id===S.ui.activeAcc)+1:0;
-  const next=(idx+dir+n+1)%(n+1);
-  S.ui.activeAcc=next===0?'':S.accounts[next-1].id;
-  commit();
+  const act=S.ui.activeAcc;
+  let h=`<div class="accrail">
+    <button class="acccard ${act?'':'on'}" onclick="setActiveAcc('')">
+      ${ic('coins',17)}<div class="an">Vše dohromady</div><div class="av">${fm(totalAccounts())}</div></button>`;
+  S.accounts.forEach(a=>{h+=`<button class="acccard ${act===a.id?'on':''}" onclick="setActiveAcc('${a.id}')">
+      ${ic(a.icon,17)}<div class="an">${esc(a.nm)}</div><div class="av">${fm(a.bal||0)}</div></button>`;});
+  h+=`<button class="acccard" onclick="go('ucty')" style="flex:0 0 58px;display:grid;place-items:center;color:var(--text3)">${ic('plus',20)}</button>`;
+  return h+`</div>`;
 }
 function setActiveAcc(id){S.ui.activeAcc=id;commit();}
 /* Řada akcí pod hlavním číslem. Zápis je zvýrazněný, protože je to devět
    z deseti důvodů, proč appku vůbec otvíráš. */
 function actionRow(){
   return `<div class="acts">
-    <button onclick="zapisOpen(true)">${ic('repeat',16)} Přesun na účet</button>
-    <button onclick="go('obalky')">${ic('envelope',16)} Obálky</button>
-    <button onclick="go('ucty')">${ic('wallet',16)} Účty</button>
+    <button class="prim" onclick="zapisOpen(false)"><span class="ab">${ic('plus',23)}</span><span class="al">Zápis</span></button>
+    <button onclick="zapisOpen(true)"><span class="ab">${ic('repeat',21)}</span><span class="al">Přesun</span></button>
+    <button onclick="go('obalky')"><span class="ab">${ic('envelope',21)}</span><span class="al">Obálky</span></button>
+    <button onclick="go('ucty')"><span class="ab">${ic('wallet',21)}</span><span class="al">Účty</span></button>
   </div>`;
 }
 function vUcty(p){
@@ -2338,8 +2384,8 @@ function vUcty(p){
   h+=`<div style="text-align:right;margin-bottom:14px"><button class="btn fill" onclick="accModal()">${ic('plus',15)} Nový účet</button></div>`;
   if(!S.accounts.length)h+=`<div class="card"><div class="empty">Zatím žádné účty.</div></div>`;
   S.accounts.forEach((a,i)=>{
-    h+=`<div class="card" style="border-left:4px solid ${col(i)}">
-      <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:9px"><span style="color:${col(i)}">${ic(a.icon,18)}</span>${esc(a.nm)}</span>
+    h+=`<div class="card">
+      <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(a.icon,18)}</span>${esc(a.nm)}</span>
         <div style="display:flex;gap:4px">
           <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="accDepositModal('${a.id}')">${ic('plus',14)} Vklad</button>
           <button class="btn sm" onclick="accXferModal('${a.id}')">${ic('repeat',14)} Přesun</button>
