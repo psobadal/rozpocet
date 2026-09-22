@@ -52,6 +52,7 @@ unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+
   --sh-lg:0 12px 40px rgba(22,21,26,.14);
 }
 *{margin:0;padding:0;box-sizing:border-box}
+b,strong,h1,h2,h3{font-weight:500}
 html,body{background:var(--bg)}
 body{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:var(--text);
   min-height:100vh;-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
@@ -67,10 +68,10 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .app{max-width:764px;margin:0 auto;padding:0 20px 110px;position:relative;z-index:1}
 
 .top{display:flex;align-items:center;gap:12px;padding:22px 0 14px}
-.brand{font-size:21px;font-weight:600;letter-spacing:-.4px;display:flex;align-items:center;gap:9px}
+.brand{font-size:21px;font-weight:500;letter-spacing:-.4px;display:flex;align-items:center;gap:9px}
 .brand .mk{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent-d),var(--accent-l));display:grid;place-items:center;color:#fff}
 .sp{flex:1}
-.save-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:7px 12px;border-radius:20px;border:1.5px solid var(--line2);background:var(--white);cursor:pointer;white-space:nowrap}
+.save-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;padding:7px 12px;border-radius:20px;border:1.5px solid var(--line2);background:var(--white);cursor:pointer;white-space:nowrap}
 .save-pill .d{width:8px;height:8px;border-radius:50%}
 .save-pill.ok{border-color:var(--teal-bg);color:var(--teal)} .save-pill.ok .d{background:var(--teal)}
 .save-pill.warn{border-color:var(--accent-bg2);color:var(--accent-d)} .save-pill.warn .d{background:var(--accent);animation:pulse 1.6s infinite}
@@ -81,25 +82,25 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .period .nav:hover{border-color:var(--accent);color:var(--accent)}
 .period .nav[disabled]{opacity:.3;cursor:default}
 .period .mid{flex:1;text-align:center;min-width:0}
-.period .pn{font-size:16px;font-weight:600}
+.period .pn{font-size:16px;font-weight:500}
 .period .pd{font-size:12px;color:var(--text3);margin-top:1px}
 .period .edit{background:none;border:none;color:var(--text3);cursor:pointer;padding:6px;border-radius:8px;display:grid;place-items:center}
 .period .edit:hover{background:var(--bg);color:var(--text)}
 
 .tabs{display:flex;gap:3px;background:var(--white);border:1px solid var(--line);border-radius:99px;padding:4px;margin-bottom:18px;overflow-x:auto;scrollbar-width:none;position:sticky;top:10px;z-index:40}
 .tabs::-webkit-scrollbar{display:none}
-.tab{flex:1;min-width:max-content;background:none;border:none;color:var(--text2);padding:9px 8px;cursor:pointer;font-size:12.8px;font-weight:600;border-radius:99px;white-space:nowrap;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1}
+.tab{flex:1;min-width:max-content;background:none;border:none;color:var(--text2);padding:9px 8px;cursor:pointer;font-size:12.8px;font-weight:500;border-radius:99px;white-space:nowrap;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1}
 .tab:hover{color:var(--text2)}
 .tab.on{background:var(--accent);color:#fff}
 
 .seg{display:flex;gap:4px;background:var(--white);border-radius:99px;padding:4px;border:1px solid var(--line)}
-.seg button{flex:1;background:none;border:none;color:var(--text3);padding:9px 12px;cursor:pointer;font-size:13px;font-weight:600;border-radius:99px;transition:.15s}
+.seg button{flex:1;background:none;border:none;color:var(--text3);padding:9px 12px;cursor:pointer;font-size:13px;font-weight:500;border-radius:99px;transition:.15s}
 .seg button:hover{color:var(--text2)}
 .seg button.on{background:var(--accent);color:#fff}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;margin-bottom:14px}
 .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px}
-.ct{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:8px}
+.ct{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:640px){.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
@@ -107,22 +108,22 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 /* Hlavní číslo nesedí v orámované kartě na střed jako dřív, ale volně
    vlevo, jak je zvykem v bankovních appkách — oko ho najde dřív a zbyde
    místo na řadu akcí pod ním. */
-.hero{border-radius:22px;padding:4px 4px 2px;margin-bottom:16px;text-align:left;position:relative}
+.hero{border-radius:22px;padding:8px 4px 2px;margin-bottom:14px;text-align:center;position:relative}
 .hero>*{position:relative}
 .hero .lbl{font-size:12.5px;color:var(--text3);font-weight:500;margin-bottom:4px}
 .hero .big{font-size:44px;font-weight:500;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.25}
-.hero .sub{font-size:12.5px;color:var(--text3);margin-top:7px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.hero .sub .pill{background:var(--teal-bg);color:var(--teal);font-weight:600;padding:3px 9px;border-radius:99px;font-size:11.5px}
+.hero .sub{font-size:12.5px;color:var(--text3);margin-top:7px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.hero .sub .pill{background:var(--teal-bg);color:var(--teal);font-weight:500;padding:3px 9px;border-radius:99px;font-size:11.5px}
 .hero .sub .pill.neg{background:var(--neg-bg);color:var(--neg)}
 .hbar{height:6px;background:var(--bg2);border-radius:4px;margin-top:15px;overflow:hidden}
 .hbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
-.hstats{display:flex;gap:10px 26px;flex-wrap:wrap;margin-top:16px}
-.hstats>div{text-align:left;min-width:74px}
+.hstats{display:flex;gap:10px 26px;flex-wrap:wrap;margin-top:16px;justify-content:center}
+.hstats>div{text-align:center;min-width:74px}
 
 /* Řada kulatých akcí — podpis moderních bankovních appek. */
-.acts{display:flex;gap:8px;margin-bottom:18px;max-width:400px}
+.acts{display:flex;gap:8px;margin-bottom:18px;max-width:420px;margin-left:auto;margin-right:auto}
 .acts button{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;
-  font-size:11px;font-weight:600;color:var(--text2);padding:0;min-width:0}
+  font-size:11px;font-weight:500;color:var(--text2);padding:0;min-width:0}
 .acts .ab{width:52px;height:52px;border-radius:50%;background:var(--white);border:1px solid var(--line);display:grid;place-items:center;color:var(--text);transition:.15s}
 .acts button:hover .ab{border-color:var(--accent);color:var(--accent)}
 .acts .prim .ab{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -138,7 +139,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .acccard.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .acccard .an{font-size:11.5px;opacity:.72;margin-top:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .acccard .av{font-size:17px;font-weight:500;font-family:var(--numfont);font-variant-numeric:tabular-nums;letter-spacing:-.3px}
-.hstats span{display:block;font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.hstats span{display:block;font-size:10.5px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
 .hstats b{font-size:15.5px;font-weight:500;font-family:var(--numfont);font-variant-numeric:tabular-nums}
 .card.go{cursor:pointer;transition:transform .12s,box-shadow .12s}
 .card.go:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
@@ -147,7 +148,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 @media(max-width:640px){.tiles{grid-template-columns:1fr 1fr}.tiles .tile:nth-child(3):last-child{grid-column:1/-1}}
 .tile{background:var(--white);border-radius:var(--rs);padding:14px 16px;border:1px solid var(--line);text-align:center}
 .card .tile{background:var(--bg);box-shadow:none}
-.tile .tl{font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.tile .tl{font-size:10.5px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
 .tile .tv{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
 .pos{color:var(--teal)} .neg{color:var(--neg)} .warn{color:var(--gold)}
 
@@ -159,7 +160,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
   .tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;margin:0;gap:0;padding:5px 2px;
     border:none;border-top:1px solid var(--line);border-radius:0;overflow:visible;
     box-shadow:0 -2px 14px rgba(22,21,26,.06)}
-  .tab{flex:1;flex-direction:column;gap:3px;font-size:10px;font-weight:600;padding:7px 2px;border-radius:12px;min-width:0}
+  .tab{flex:1;flex-direction:column;gap:3px;font-size:10px;font-weight:500;padding:7px 2px;border-radius:12px;min-width:0}
   .tab .tl{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}
   .tab.on{background:none;color:var(--accent)}
   .tab.tov:not(.on){display:none}
@@ -177,24 +178,24 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
    ukrojilo z volných peněz, nebo jen přesunulo. */
 .pohchips{display:flex;gap:6px;overflow-x:auto;margin-bottom:4px;padding-bottom:4px;scrollbar-width:none}
 .pohchips::-webkit-scrollbar{display:none}
-.pchip{flex:none;background:var(--bg);border:1px solid var(--line);color:var(--text2);font-size:12px;font-weight:600;
+.pchip{flex:none;background:var(--bg);border:1px solid var(--line);color:var(--text2);font-size:12px;font-weight:500;
   padding:6px 12px;border-radius:99px;cursor:pointer;white-space:nowrap}
 .pchip.on{background:var(--text);border-color:var(--text);color:var(--white)}
-.pohden{font-size:11.5px;font-weight:600;color:var(--text3);padding:12px 0 2px}
+.pohden{font-size:11.5px;font-weight:500;color:var(--text3);padding:12px 0 2px}
 .mv{display:flex;align-items:center;gap:11px;padding:9px 0;cursor:pointer;border-radius:12px}
 .mv:hover{background:var(--bg)}
 .mvi{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;flex:none}
 .mv .m{flex:1;min-width:0}
 .mv .t1{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mv .t2{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mva{font-size:14.5px;font-weight:600;flex:none}
+.mva{font-size:14.5px;font-weight:500;flex:none}
 
 .inp{width:100%;background:var(--white);border:1.5px solid var(--line2);border-radius:12px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s}
 .inp:focus{border-color:var(--accent)}
 select.inp{appearance:none;padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8078' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
 .inp.num{font-variant-numeric:tabular-nums}
 
-.btn{background:var(--white);border:1.5px solid var(--line2);color:var(--text2);border-radius:99px;padding:9px 16px;cursor:pointer;font-size:13.5px;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn{background:var(--white);border:1.5px solid var(--line2);color:var(--text2);border-radius:99px;padding:9px 16px;cursor:pointer;font-size:13.5px;font-weight:500;transition:.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{color:var(--text);background:var(--bg)}
 .btn.fill{background:var(--accent);border-color:var(--accent);color:#fff}.btn.fill:hover{background:var(--accent-d);color:#fff}
 .btn.dark{background:var(--text);border-color:var(--text);color:var(--bg)}.btn.dark:hover{opacity:.88;color:var(--bg)}
@@ -207,7 +208,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .barrow{margin-bottom:15px;cursor:pointer;border-radius:10px;padding:4px 6px;margin-left:-6px;margin-right:-6px;transition:background .12s}
 .barrow:hover{background:var(--bg)}
 .barinfo{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;margin-bottom:6px;gap:8px}
-.barinfo .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px}
+.barinfo .n{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px}
 .barinfo .v{color:var(--text3);font-size:12.5px;font-variant-numeric:tabular-nums;flex:none}
 .track{height:9px;background:var(--bg2);border-radius:5px;position:relative;overflow:hidden}
 .track .plan{position:absolute;top:0;left:0;height:100%;border-radius:5px;opacity:.2}
@@ -217,15 +218,15 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .row:first-child{border-top:none}
 .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none}
 .row .m{flex:1;min-width:0}
-.row .t1{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t1{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .t2{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .amt{font-weight:500;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .row .ax{display:flex;gap:2px;opacity:0;transition:.12s}
 .row:hover .ax{opacity:1}
 .empty{color:var(--text4);text-align:center;padding:26px 12px;font-size:13.5px}
-.tag{display:inline-block;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:500}
 .tag.ok{background:var(--teal-bg);color:var(--teal)} .tag.wr{background:var(--gold-bg);color:var(--gold)} .tag.bd{background:var(--neg-bg);color:var(--neg)}
-.totals{display:flex;justify-content:space-between;align-items:center;padding-top:14px;margin-top:8px;border-top:2px solid var(--bg2);font-size:14px;font-weight:600}
+.totals{display:flex;justify-content:space-between;align-items:center;padding-top:14px;margin-top:8px;border-top:2px solid var(--bg2);font-size:14px;font-weight:500}
 
 .catgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:760px){.catgrid{grid-template-columns:1fr 1fr}}
@@ -233,13 +234,13 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .catcard{background:var(--white);border-radius:var(--r);padding:16px;border:1px solid var(--line);cursor:pointer;transition:transform .12s,box-shadow .12s;position:relative}
 .catcard:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
 .catcard .cic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;margin-bottom:10px}
-.catcard .cn{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.catcard .cn{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .catcard .cv{font-size:20px;font-weight:500;margin:3px 0 8px;font-variant-numeric:tabular-nums}
 .catcard .cmeta{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:7px}
-.adddash{width:100%;padding:16px;background:none;border:2px dashed var(--line2);border-radius:var(--r);color:var(--text3);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.adddash{width:100%;padding:16px;background:none;border:2px dashed var(--line2);border-radius:var(--r);color:var(--text3);cursor:pointer;font-size:13px;font-weight:500;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
 .adddash:hover{border-color:var(--accent);color:var(--accent)}
 
-.back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent-d);cursor:pointer;margin-bottom:14px;padding:7px 13px;border-radius:9px;background:var(--accent-bg);border:none}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--accent-d);cursor:pointer;margin-bottom:14px;padding:7px 13px;border-radius:9px;background:var(--accent-bg);border:none}
 .back:hover{background:var(--accent-bg2)}
 .item{background:var(--bg);border-radius:var(--rs);padding:13px 15px;margin-bottom:9px}
 .item.op{background:var(--white);border:1.5px solid var(--line2)}
@@ -259,7 +260,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .modal h3{font-size:18px;margin-bottom:4px}
 .modal .md{color:var(--text3);font-size:13px;margin-bottom:16px}
 .fg{margin-top:13px}
-.fg>.fl{font-size:11.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px;display:block}
+.fg>.fl{font-size:11.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:500;margin-bottom:6px;display:block}
 .fr{display:flex;gap:10px}.fr>*{flex:1}
 .macts{display:flex;gap:10px;margin-top:20px}.macts .btn{flex:1;justify-content:center}
 /* Panel zápisu: na počítači obyčejný modal uprostřed, na mobilu vyjede
@@ -278,19 +279,19 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .zs-amt input::placeholder{color:var(--text4)}
 .zs-amt span{font-size:22px;color:var(--text3);font-weight:500}
 .zs-seg{display:flex;gap:5px;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:14px}
-.zs-seg button{flex:1;background:none;border:none;color:var(--text2);font-size:12.5px;font-weight:600;padding:7px 4px;border-radius:99px;cursor:pointer}
+.zs-seg button{flex:1;background:none;border:none;color:var(--text2);font-size:12.5px;font-weight:500;padding:7px 4px;border-radius:99px;cursor:pointer}
 .zs-seg button.on{background:var(--white);color:var(--text);border:1px solid var(--line)}
-.zs-lbl{font-size:11.5px;color:var(--text3);font-weight:600;margin:12px 0 7px}
+.zs-lbl{font-size:11.5px;color:var(--text3);font-weight:500;margin:12px 0 7px}
 .zs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:212px;overflow-y:auto}
 .zt{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 2px;color:var(--text2);min-width:0}
 .zt>svg{width:46px;height:46px;padding:12px;border-radius:15px;background:var(--bg);color:var(--text2);box-sizing:border-box}
-.zt span{font-size:10.5px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zt span{font-size:10.5px;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zt.on>svg{background:var(--accent);color:#fff}
 .zt.on{color:var(--accent-d)}
 .zs-pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
-.zp{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border-radius:99px;padding:7px 12px;font-size:12.5px;color:var(--text2);font-weight:600}
+.zp{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border-radius:99px;padding:7px 12px;font-size:12.5px;color:var(--text2);font-weight:500}
 .zp.dim{color:var(--text3)}
-.zp input{border:none;background:none;outline:none;font-size:12.5px;color:var(--text2);font-weight:600;width:104px;padding:0}
+.zp input{border:none;background:none;outline:none;font-size:12.5px;color:var(--text2);font-weight:500;width:104px;padding:0}
 .zs-note-line{font-size:12px;color:var(--text3);margin-top:12px}
 .zs-go{width:100%;justify-content:center;margin-top:16px;padding:14px;font-size:15px;border-radius:15px}
 
@@ -308,7 +309,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
   background:linear-gradient(135deg,var(--accent),var(--accent-d));color:#fff;cursor:pointer;
   box-shadow:0 10px 26px rgba(0,0,0,.22);display:grid;place-items:center}
 .fab:hover{filter:brightness(1.06)}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:11px 22px;border-radius:12px;font-size:13px;font-weight:600;z-index:200;box-shadow:var(--sh-lg);animation:tin .25s}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:11px 22px;border-radius:12px;font-size:13px;font-weight:500;z-index:200;box-shadow:var(--sh-lg);animation:tin .25s}
 @keyframes tin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 .banner{border-radius:14px;padding:13px 16px;font-size:13px;display:flex;gap:11px;align-items:flex-start;margin-bottom:14px}
 .banner .bi{flex:none;margin-top:1px}
@@ -587,6 +588,8 @@ function migrate(s){
   const have=new Set(s.ui.tabs.map(t=>t.id));
   defTabs().forEach(dt=>{if(!have.has(dt.id))s.ui.tabs.push(dt);});
   s.ui.tabs=s.ui.tabs.filter(t=>defTabs().some(d=>d.id===t.id));
+  // Nastavení patří vždycky na konec — nová záložka se jinak přilepila až za něj
+  s.ui.tabs=[...s.ui.tabs.filter(t=>t.id!=='nastaveni'),...s.ui.tabs.filter(t=>t.id==='nastaveni')];
   s.investments.forEach(i=>{i.rate=i.rate||0;if(i.lastInt===undefined)i.lastInt=null;i.hist||=[];
     // base = kolik jsi do toho vložil ze svého (bez zhodnocení); u starých dat dopočítáme
     if(i.base==null)i.base=Math.max(0,(i.val||0)-(i.hist||[]).filter(h=>!h.k).reduce((s2,h)=>s2+h.a,0));});
@@ -1205,7 +1208,7 @@ function vPrehled(p){
   if(doneCount<steps.length&&!S.ui.hideIntro){
     h+=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('rocket',15)} Začínáme — ${doneCount}/${steps.length} hotovo</span><button class="btn gho sm" onclick="hideIntro()">Skrýt</button></div>`;
     steps.forEach((st,i)=>{h+=`<div class="row" style="cursor:pointer;${st.ok?'opacity:.55':''}" onclick="${st.fn}">
-      <div class="ic" style="background:${st.ok?'var(--teal-bg)':st.c};color:${st.ok?'var(--teal)':st.fg};font-weight:600">${st.ok?ic('check',18):(i+1)}</div>
+      <div class="ic" style="background:${st.ok?'var(--teal-bg)':st.c};color:${st.ok?'var(--teal)':st.fg};font-weight:500">${st.ok?ic('check',18):(i+1)}</div>
       <div class="m"><div class="t1" style="${st.ok?'text-decoration:line-through':''}">${st.t}</div><div class="t2">${st.s}</div></div>
       <span style="color:var(--text4)">${st.ok?'':ic('cright',16)}</span></div>`;});
     h+=`</div>`;
@@ -1250,11 +1253,18 @@ function vPrehled(p){
 }
 
 /* ---------- VÝDAJE ---------- */
+/* Hlavička podstránky ve stejném stylu jako Přehled: popisek, velké
+   vycentrované číslo a tichý řádek pod ním. Sjednocuje Výdaje, Obálky,
+   Účty, Investice i Dluhy, které měly každá jinou skládanku karet. */
+function pageHero(lbl,val,sub,color){
+  return `<div class="hero"><div class="lbl">${lbl}</div>
+    <div class="big" style="font-size:36px${color?';color:'+color:''}">${val}</div>
+    ${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+}
 function vVydaje(p){
   if(detailCat){const c=p.cats.find(x=>x.id===detailCat);if(c)return catDetail(p,c);detailCat=null;}
-  let h=`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
-    <button class="btn" onclick="plansModal()">${ic('list',15)} Měsíční plány</button>
-    <div class="sp"></div><span class="mini">Plán celkem ${fm(sumPlan(p))} · utraceno ${fm(sumActualDisplay(p))}</span></div>`;
+  let h=pageHero('Utraceno tento cyklus',fm(sumActualDisplay(p)),`plán celkem ${fm(sumPlan(p))}`);
+  h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn" onclick="plansModal()">${ic('list',15)} Měsíční plány</button></div>`;
   h+=`<div class="catgrid">`;
   p.cats.forEach((c,i)=>{const a=catActualDisplay(c,p.id),pl=catPlan(c),over=a>pl&&pl>0,pu=pl>0?Math.min(100,Math.round(a/pl*100)):0;
     h+=`<div class="catcard" onclick="openCat('${c.id}')">
@@ -1265,7 +1275,7 @@ function vVydaje(p){
           <button class="ib" style="padding:4px${i===p.cats.length-1?';opacity:.25;pointer-events:none':''}" title="Posunout později" onclick="moveCat('${c.id}',1)">${ic('cright',13)}</button>
         </div></div>
       <div class="cn">${esc(c.nm)}</div><div class="cv" style="color:${over?'var(--neg)':'var(--text)'}">${fm(a)}</div>
-      <div class="cmeta"><span>Plán ${fm(pl)}</span>${pl?`<span style="font-weight:600;color:${over?'var(--neg)':pu>70?'var(--gold)':'var(--teal)'}">${pu}%</span>`:''}</div>
+      <div class="cmeta"><span>Plán ${fm(pl)}</span>${pl?`<span style="font-weight:500;color:${over?'var(--neg)':pu>70?'var(--gold)':'var(--teal)'}">${pu}%</span>`:''}</div>
       ${(pl||a)?`<div class="track" style="height:6px"><div class="plan" style="width:${pl/Math.max(a,pl,1)*100}%;background:${col(i)}"></div><div class="act" style="width:${a/Math.max(a,pl,1)*100}%;background:${over?'var(--neg)':col(i)}"></div></div>`:''}
       ${over?`<div style="margin-top:7px"><span class="tag bd">přečerpáno</span></div>`:''}</div>`;});
   h+=`</div><button class="adddash" onclick="catModal()">${ic('plus',16)} Přidat kategorii</button>`;
@@ -1285,7 +1295,7 @@ function catDetail(p,c){
       <div style="text-align:center"><div class="mini">Skutečnost</div><div class="num" style="font-size:19px;color:${a>pl&&pl>0?'var(--neg)':'var(--teal)'}">${fm(a)}</div>${envA>0?`<div class="mini">z toho ${fm(envA)} z obálek</div>`:''}</div>
       <div style="text-align:center"><div class="mini">Rozdíl</div><div class="num ${diff>=0?'pos':'neg'}" style="font-size:19px">${diff>=0?'+':''}${fm(diff)}</div></div></div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1.5px solid var(--line);flex-wrap:wrap">
-      <span class="mini" style="font-weight:600">Měsíční plán kategorie</span>
+      <span class="mini" style="font-weight:500">Měsíční plán kategorie</span>
       <input class="inp num" type="number" value="${c.pl||''}" placeholder="0" onchange="setCatPlan('${c.id}',this.value)" style="flex:0 0 120px;text-align:right">
       ${(c.pl>0&&itemsPlan(c)>0)
         ?`<span class="mini">Platí tenhle plán. Z položek by jinak vyšlo ${fm(itemsPlan(c))}.</span>`
@@ -1296,9 +1306,9 @@ function catDetail(p,c){
   if(!c.it.length)h+=`<div class="empty">Zatím žádné položky.</div>`;
   c.it.forEach(it=>{const ia=itemActual(it),d=(it.pl||0)-ia,isOpen=openItem===it.id;const logs=(it.log||[]).slice().sort((x,y)=>(y.d||'').localeCompare(x.d||''));
     h+=`<div class="item ${isOpen?'op':''}"><div class="itop" onclick="toggleItem('${it.id}')">
-      <div style="flex:1;min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:7px">
+      <div style="flex:1;min-width:0"><div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:7px">
         <span style="overflow:hidden;text-overflow:ellipsis">${esc(it.nm)}</span>
-        ${(it.kind||it.link)?`<span class="tag ${itemKind(it,c)==='save'?'ok':itemKind(it,c)==='want'?'wr':''}" style="font-weight:600;${itemKind(it,c)==='need'?'background:var(--bg2);color:var(--text3)':''}">${KIND_LABEL[itemKind(it,c)]}</span>`:''}</div>
+        ${(it.kind||it.link)?`<span class="tag ${itemKind(it,c)==='save'?'ok':itemKind(it,c)==='want'?'wr':''}" style="font-weight:500;${itemKind(it,c)==='need'?'background:var(--bg2);color:var(--text3)':''}">${KIND_LABEL[itemKind(it,c)]}</span>`:''}</div>
         <div class="mini">Plán ${fm(it.pl||0)} · <span class="${d>=0?'pos':'neg'}">${d>=0?'zbývá ':'−'}${fm(Math.abs(d))}</span>${linkTarget(it)?` · ${ic('cright',11)&&''}→ ${esc(linkTarget(it).obj.nm)}`:''}</div></div>
       <div class="num" style="font-size:16px;color:${ia>0?'var(--text)':'var(--text4)'}">${fm(ia)}</div>
       <span style="color:var(--text4);transform:rotate(${isOpen?90:0}deg);transition:.2s">${ic('cright',16)}</span></div>`;
@@ -1331,14 +1341,12 @@ function catDetail(p,c){
 /* ---------- OBÁLKY ---------- */
 function vObalky(p){
   let h=tipBan('bulb','Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky. Zapisuješ starší úspory, co jsi neodkládal teď z výplaty? Uprav zůstatek přímo v ✏️ — nesrazí ti to zbytečně tenhle cyklus.');
-  h+=`<div class="grid2" style="margin-bottom:14px">
-    <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Celkem odloženo</div><div class="num" style="font-size:24px;color:var(--gold)">${fm(totalEnvelopes())}</div></div>
-    <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Odloženo tento cyklus</div><div class="num" style="font-size:24px">${fm(savedInPeriod(p.id))}</div></div></div>`;
-  h+=`<div style="text-align:right;margin-bottom:14px"><button class="btn fill" onclick="envModal()">${ic('plus',15)} Nová obálka</button></div>`;
+  h+=pageHero('Odloženo v obálkách',fm(totalEnvelopes()),`tento cyklus ${fm(savedInPeriod(p.id))}`,'var(--gold)');
+  h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn fill" onclick="envModal()">${ic('plus',15)} Nová obálka</button></div>`;
   if(!S.envelopes.length)h+=`<div class="card"><div class="empty">Zatím žádné obálky.</div></div>`;
   S.envelopes.forEach((e,i)=>{const hasT=e.target>0,pc=hasT?Math.min(100,Math.round(e.bal/e.target*100)):0;const remain=Math.max(0,(e.target||0)-e.bal),months=e.monthly>0?Math.ceil(remain/e.monthly):null;
     h+=`<div class="card">
-      <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(e.icon,18)}</span>${esc(e.nm)}</span>
+      <div class="ch"><span style="font-size:16px;font-weight:500;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(e.icon,18)}</span>${esc(e.nm)}</span>
         <div style="display:flex;gap:4px">
           <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="envMove('${e.id}','in')">${ic('plus',14)} Vložit</button>
           <button class="btn sm" onclick="envMove('${e.id}','out')">Čerpat</button>
@@ -1347,10 +1355,10 @@ function vObalky(p){
         <div style="text-align:center"><div class="mini">Zůstatek</div><div class="num" style="font-size:22px;color:${e.bal>0?'var(--gold)':'var(--text4)'}">${fm(e.bal||0)}</div></div>
         <div style="text-align:center"><div class="mini">Měsíčně</div><div class="num" style="font-size:22px">${fm(e.monthly||0)}</div></div>
         ${hasT?`<div style="text-align:center"><div class="mini">Cíl</div><div class="num" style="font-size:22px;color:var(--cyan)">${fm(e.target)}</div></div>`:``}</div>`;
-    if(hasT){const pcol=pc>=100?'var(--teal)':pc>50?'var(--gold)':'var(--accent)';h+=`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pcol}">${pc}%</span><span class="mini">${pc>=100?'splněno':'zbývá '+fm(remain)+(months?` · ~${months} měs.`:'')}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`;}
+    if(hasT){const pcol=pc>=100?'var(--teal)':pc>50?'var(--gold)':'var(--accent)';h+=`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:500;color:${pcol}">${pc}%</span><span class="mini">${pc>=100?'splněno':'zbývá '+fm(remain)+(months?` · ~${months} měs.`:'')}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`;}
     if(e.due&&e.target>0&&remain>0){const mtd=monthsBetween(new Date(),new Date(e.due+'T00:00:00'));const req=Math.ceil(remain/mtd);h+=`<div class="mini" style="margin-top:8px">Do ${fdFull(e.due)} (~${mtd} měs.) odkládej ~<b>${fm(req)}</b>/měs${e.monthly>0?` — teď ${fm(e.monthly)}, ${e.monthly>=req?'stačí':'málo'}`:''}</div>`;}
     const histAll=e.hist||[];const hist=histAll.filter(x=>x.pid===p.id&&!x.adj).slice(-4).reverse();
-    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Tento cyklus</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span><span class="tag ${x.t==='in'?'ok':'bd'}" style="margin-right:6px">${x.t==='in'?'vklad':'čerpáno'}</span>${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:600;color:${x.t==='in'?'var(--teal)':'var(--neg)'}">${x.t==='in'?'+':'−'}${fm(x.a)}</span><button class="ib" onclick="delEnvHist('${e.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
+    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Tento cyklus</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span><span class="tag ${x.t==='in'?'ok':'bd'}" style="margin-right:6px">${x.t==='in'?'vklad':'čerpáno'}</span>${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:500;color:${x.t==='in'?'var(--teal)':'var(--neg)'}">${x.t==='in'?'+':'−'}${fm(x.a)}</span><button class="ib" onclick="delEnvHist('${e.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
     h+=`</div>`;});
   return h;
 }
@@ -1358,18 +1366,16 @@ function vObalky(p){
 /* ---------- INVESTICE ---------- */
 function vInvestice(p){
   const ti=totalInvest();
-  let h=`<div class="card" style="text-align:center;background:var(--cyan-bg)"><div class="ct" style="margin-bottom:6px">Celková hodnota investic & úspor</div>
-    <div class="num" style="font-size:30px;color:var(--cyan)">${fm(ti)}</div>
-    <div class="mini" style="margin-top:6px">Tento cyklus vloženo: <b style="color:var(--teal)">+${fm(investedInPeriod(p.id))}</b></div></div>`;
+  let h=pageHero('Hodnota investic a úspor',fm(ti),`tento cyklus vloženo ${fm(investedInPeriod(p.id))}`,'var(--cyan)');
   h+=tipBan('percent',`<b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b> — zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
-  h+=`<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:14px">${S.investments.some(i=>i.stock||i.crypto)?`<button class="btn" onclick="pxOverviewModal()">${ic('list',15)} Kurzy</button>`:''}<button class="btn" onclick="invCalcModal()">${ic('percent',15)} Kalkulačka</button><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
+  h+=`<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">${S.investments.some(i=>i.stock||i.crypto)?`<button class="btn" onclick="pxOverviewModal()">${ic('list',15)} Kurzy</button>`:''}<button class="btn" onclick="invCalcModal()">${ic('percent',15)} Kalkulačka</button><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
   if(!S.investments.length)h+=`<div class="card"><div class="empty">Zatím žádné investice.</div></div>`;
   const sorted=S.investments.map((x,i)=>({x,i})).sort((a,b)=>(b.x.val||0)-(a.x.val||0));
   sorted.forEach(({x:inv,i})=>{const pcw=ti>0?Math.round(inv.val/ti*100):0;const mInt=inv.rate>0?Math.round((inv.val||0)*inv.rate/100/12*(1-(S.tax||0)/100)):0;
     const put=invIn(inv),gain=invGain(inv),gpc=put>0?Math.round(gain/put*1000)/10:0;
     h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px">
       <div class="ic" style="background:${col(i)}22;color:${col(i)}">${ic(inv.icon,18)}</div>
-      <div style="flex:1;min-width:0"><div style="font-weight:600">${esc(inv.nm)}</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:500">${esc(inv.nm)}</div>
         ${inv.crypto?`<div class="mini">${(''+inv.qty).replace('.',',')} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z CoinGecko'}</div>`:inv.stock?`<div class="mini">${(''+inv.qty).replace('.',',')} ks ${esc(inv.stock)}${inv.ccy&&inv.ccy!=='CZK'?' · '+inv.ccy:''} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z burzy'}</div>`:inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
         <div class="prog" style="height:6px;margin-top:5px"><i style="width:${pcw}%;background:var(--cyan)"></i></div></div>
       <div style="text-align:right"><div class="num" style="font-size:17px">${fm(inv.val||0)}</div><div class="mini">${pcw}%</div></div>
@@ -1393,10 +1399,8 @@ function vInvestice(p){
 /* ---------- DLUHY ---------- */
 function vDluhy(p){
   let h=tipBan('landmark','Přidej si libovolný dluh — půjčku, hypotéku, cokoliv. Pojmenuj si ho, nastav <b>úrok % p.a.</b> (klidně 0) a zapisuj splátky. Vidíš, kolik zbývá doplatit a kolik tě stojí úrok měsíčně.');
-  h+=`<div class="grid2" style="margin-bottom:14px">
-    <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Zbývá splatit celkem</div><div class="num" style="font-size:24px;color:var(--blue)">${fm(totalDebt())}</div></div>
-    <div class="card" style="margin-bottom:0;text-align:center"><div class="ct" style="margin-bottom:6px">Splátky tento cyklus</div><div class="num" style="font-size:24px">${fm(debtPaidInPeriod(p))}</div></div></div>`;
-  h+=`<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px"><button class="btn" onclick="newGroupModal()">${ic('home',15)} Nový projekt (byt, auto…)</button><button class="btn fill" onclick="debtModal()">${ic('plus',15)} Nový dluh</button></div>`;
+  h+=pageHero('Zbývá splatit',fm(totalDebt()),`splátky tento cyklus ${fm(debtPaidInPeriod(p))}`,'var(--blue)');
+  h+=`<div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px;flex-wrap:wrap"><button class="btn" onclick="newGroupModal()">${ic('home',15)} Nový projekt (byt, auto…)</button><button class="btn fill" onclick="debtModal()">${ic('plus',15)} Nový dluh</button></div>`;
   if(!S.debts.length&&!Object.keys(S.debtGroups).length)h+=`<div class="card"><div class="empty">Zatím žádné dluhy. Přidej třeba „Půjčka od rodičů" (0 %) nebo „Hypotéka" — nebo si nejdřív založ projekt jako „Byt" a dluhy k němu přidávej postupně.</div></div>`;
   // dluhy se stejnou skupinou (např. Byt) se sčítají do společného souhrnu; projekt může existovat i bez dluhu
   const groups=new Map(),solo=[];
@@ -1424,7 +1428,7 @@ function vDluhy(p){
     const lifetimeTotal=ownPaid+arr.reduce((s,x)=>s+debtLifetimeCost(x.d).total,0);
     const lifetimeInterest=arr.reduce((s,x)=>{const lc=debtLifetimeCost(x.d);return s+(lc.interest||0);},0);
     h+=`<div class="card" style="background:linear-gradient(180deg,${gcol}0e,transparent 60%)">
-      <div class="ch" style="margin-bottom:12px"><span style="font-size:17px;font-weight:600;display:flex;align-items:center;gap:9px"><span style="color:${gcol}">${ic('home',19)}</span>${esc(g)}</span>
+      <div class="ch" style="margin-bottom:12px"><span style="font-size:17px;font-weight:500;display:flex;align-items:center;gap:9px"><span style="color:${gcol}">${ic('home',19)}</span>${esc(g)}</span>
         <div style="display:flex;align-items:center;gap:8px"><span class="tag" style="background:var(--bg2);color:var(--text3)">${arr.length===0?'zatím bez dluhu':arr.length===1?'1 dluh':arr.length<5?arr.length+' dluhy':arr.length+' dluhů'}</span>
         <button class="ib" title="Cena a vklady" onclick="groupModal('${encodeURIComponent(g)}')">${ic('edit',15)}</button><button class="ib" title="Smazat projekt" onclick="delGroupMeta('${encodeURIComponent(g)}')">${ic('trash',15)}</button></div></div>
       ${totalPrice>0?`<div style="margin-bottom:8px"><div class="barinfo"><span class="n">Cena ${esc(g).toLowerCase()}${feesSum>0?` <span class="mini" style="font-weight:400">(${fm(price)} + poplatky ${fm(feesSum)})</span>`:''}</span><span class="v">${fm(totalPrice)}</span></div>
@@ -1434,15 +1438,15 @@ function vDluhy(p){
         ${suggestedMortgage>0?`<div class="mini" style="margin-top:6px">${ic('percent',12)} Při hypotéce ${ltv} % z kupní ceny (bez poplatků): jistina by měla být ~<b class="num">${fm(suggestedMortgage)}</b></div>`:''}</div>`
         :ownPaid>0?`<div class="mini" style="margin-bottom:12px">Vlastní vklady (hotovo, mimo dluhy): <b class="num" style="color:var(--text2)">${fm(ownPaid)}</b></div>`:''}
       ${lifetimeInterest>0?`<div class="banner warn" style="margin:0 0 12px;padding:11px 14px"><span class="bi">${ic('percent',15)}</span><div>Se současnými splátkami a úroky <b>reálně zaplatíš ~${fm(lifetimeTotal)}</b>${totalPrice>0?` — o <b>${fm(lifetimeInterest)}</b> víc než cena ${esc(g).toLowerCase()}`:` (z toho úroky ~${fm(lifetimeInterest)})`}. Zatím zaplaceno <b>${fm(ownPaid+paid)}</b> (${lifetimeTotal>0?Math.round((ownPaid+paid)/lifetimeTotal*100):0} %).</div></div>`:''}
-      ${contribs.length?`<div style="margin-bottom:8px"><div class="mini" style="margin-bottom:4px;font-weight:600">Vklady</div>${contribs.slice(-3).reverse().map((c,ri)=>{const oi=contribs.length-1-ri;return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:2px 0"><span class="mini">${fd(c.d)} ${esc(c.n||'Vklad')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="color:var(--teal)">+${fm(c.a)}</span><button class="ib" onclick="delContrib('${encodeURIComponent(g)}',${oi})">${ic('x',12)}</button></span></div>`;}).join('')}</div>`:''}
-      ${feeList.length?`<div style="margin-bottom:12px"><div class="mini" style="margin-bottom:4px;font-weight:600">Poplatky</div>${feeList.slice(-3).reverse().map((c,ri)=>{const oi=feeList.length-1-ri;return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:2px 0"><span class="mini">${fd(c.d)} ${esc(c.n||'Poplatek')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="color:var(--gold)">+${fm(c.a)}</span><button class="ib" onclick="delFee('${encodeURIComponent(g)}',${oi})">${ic('x',12)}</button></span></div>`;}).join('')}</div>`:''}
+      ${contribs.length?`<div style="margin-bottom:8px"><div class="mini" style="margin-bottom:4px;font-weight:500">Vklady</div>${contribs.slice(-3).reverse().map((c,ri)=>{const oi=contribs.length-1-ri;return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:2px 0"><span class="mini">${fd(c.d)} ${esc(c.n||'Vklad')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="color:var(--teal)">+${fm(c.a)}</span><button class="ib" onclick="delContrib('${encodeURIComponent(g)}',${oi})">${ic('x',12)}</button></span></div>`;}).join('')}</div>`:''}
+      ${feeList.length?`<div style="margin-bottom:12px"><div class="mini" style="margin-bottom:4px;font-weight:500">Poplatky</div>${feeList.slice(-3).reverse().map((c,ri)=>{const oi=feeList.length-1-ri;return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:2px 0"><span class="mini">${fd(c.d)} ${esc(c.n||'Poplatek')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="color:var(--gold)">+${fm(c.a)}</span><button class="ib" onclick="delFee('${encodeURIComponent(g)}',${oi})">${ic('x',12)}</button></span></div>`;}).join('')}</div>`:''}
       <div style="display:flex;gap:8px;margin-bottom:12px"><button class="btn sm" onclick="contribModal('${encodeURIComponent(g)}')">${ic('plus',14)} Přidat vklad</button><button class="btn sm" onclick="feeModal('${encodeURIComponent(g)}')">${ic('plus',14)} Přidat poplatek</button></div>
       ${arr.length===0?`<div class="empty" style="padding:14px 0 4px">Zatím k tomu nemáš žádný dluh.</div><button class="btn sm fill" onclick="debtModal(null,'${encodeURIComponent(g)}')">${ic('plus',14)} Přidat dluh do „${esc(g)}"</button>`:`
       <div class="grid3">
         <div style="text-align:center"><div class="mini">Zbývá splatit</div><div class="num" style="font-size:24px;color:var(--blue)">${fm(rem)}</div></div>
         <div style="text-align:center"><div class="mini">Splaceno z dluhů</div><div class="num" style="font-size:24px;color:var(--teal)">${fm(paid)}</div></div>
         <div style="text-align:center"><div class="mini">Dluhy celkem</div><div class="num" style="font-size:24px">${fm(principal)}</div></div></div>
-      ${principal>0?`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pc>=100?'var(--teal)':gcol}">${pc}% dluhů splaceno</span><span class="mini">${monthly>0?fm(monthly)+' / měs':''}</span></div><div class="prog"><i style="width:${pc}%;background:${pc>=100?'var(--teal)':gcol}"></i></div></div>`:''}
+      ${principal>0?`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:500;color:${pc>=100?'var(--teal)':gcol}">${pc}% dluhů splaceno</span><span class="mini">${monthly>0?fm(monthly)+' / měs':''}</span></div><div class="prog"><i style="width:${pc}%;background:${pc>=100?'var(--teal)':gcol}"></i></div></div>`:''}
       ${monthly>0&&anyOpen&&!never?`<div class="mini" style="margin-top:8px">Při ${fm(monthly)}/měs máš dluhy splacené ~<b>${futureMonthStr(maxN)}</b></div>`:''}
       ${!anyOpen&&principal>0&&rem<=0?`<div class="mini" style="margin-top:8px;color:var(--teal)">${ic('check',13)} Dluhy doplaceny</div>`:''}`}</div>`;
     arr.forEach(x=>h+=debtCard(x.d,x.i,true));
@@ -1454,21 +1458,21 @@ function debtCard(d,i,inGroup){
   let h='';
   {const rem=debtRemaining(d),paid=debtPaid(d),pc=d.principal>0?Math.min(100,Math.round(paid/d.principal*100)):0;const mInt=d.rate>0?Math.round(rem*d.rate/100/12):0;const pcol=pc>=100?'var(--teal)':'var(--blue)';
     h+=`<div class="card" style="${inGroup?'margin-left:22px':''}">
-      <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(d.icon||'landmark',18)}</span>${esc(d.nm)}${d.type?` <span class="tag" style="background:var(--bg2);color:var(--text3)">${esc(d.type)}</span>`:''}${inGroup?(d.paidToPrice?`<span class="tag ok">šlo do koupě</span>`:`<span class="tag wr">ještě nečerpáno</span>`):''}</span>
+      <div class="ch"><span style="font-size:16px;font-weight:500;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(d.icon||'landmark',18)}</span>${esc(d.nm)}${d.type?` <span class="tag" style="background:var(--bg2);color:var(--text3)">${esc(d.type)}</span>`:''}${inGroup?(d.paidToPrice?`<span class="tag ok">šlo do koupě</span>`:`<span class="tag wr">ještě nečerpáno</span>`):''}</span>
         <div style="display:flex;gap:4px"><button class="btn sm fill" onclick="debtPayModal('${d.id}')">Splátka</button><button class="ib" onclick="debtModal('${d.id}')">${ic('edit',15)}</button><button class="ib" onclick="delDebt('${d.id}')">${ic('trash',15)}</button></div></div>
       <div class="grid3">
         <div style="text-align:center"><div class="mini">Zbývá</div><div class="num" style="font-size:22px;color:var(--blue)">${fm(rem)}</div></div>
         <div style="text-align:center"><div class="mini">Splaceno</div><div class="num" style="font-size:22px;color:var(--teal)">${fm(paid)}</div></div>
         <div style="text-align:center" title="Kolik tě úrok stojí za jeden měsíc z aktuálního zůstatku — i kdybys teď nic nesplácel."><div class="mini">${d.rate>0?'Úrok teď/měs.':'Celkem'}</div><div class="num" style="font-size:22px">${d.rate>0?fm(mInt):fm(d.principal||0)}</div></div></div>
-      ${d.principal>0?`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:600;color:${pcol}">${pc}% splaceno</span><span class="mini">${d.rate>0?(''+d.rate).replace('.',',')+' % p.a.':'bez úroku'} · z ${fm(d.principal)}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`:''}`;
+      ${d.principal>0?`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:500;color:${pcol}">${pc}% splaceno</span><span class="mini">${d.rate>0?(''+d.rate).replace('.',',')+' % p.a.':'bez úroku'} · z ${fm(d.principal)}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`:''}`;
     if((d.paid0||0)>0)h+=`<div class="mini" style="margin-top:10px">Dříve splaceno (bez data): <b>${fm(d.paid0)}</b></div>`;
     if(d.fixDate)h+=`<div class="mini" style="margin-top:8px">${ic('percent',12)} Fixace do ${fdFull(d.fixDate)}, pak úrok ${(''+(d.rateAfter||0)).replace('.',',')} % p.a.</div>`;
     const po=debtPayoff(d),lc=debtLifetimeCost(d);
     if(d.monthly>0&&po)h+=`<div class="mini" style="margin-top:8px">${po.done?'Doplaceno':po.never?`Splátka ${fm(d.monthly)}/měs nepokryje měsíční úrok`:`Při ${fm(d.monthly)}/měs doplatíš ~<b>${po.date}</b>${po.interest>0?` · zbývající úroky ~${fm(po.interest)}`:''}`}</div>`;
-    if(d.monthly>0&&!lc.unknown&&!lc.never&&lc.total>0)h+=`<div class="mini" style="margin-top:6px;font-weight:600;color:var(--text2)">${ic('percent',12)} Na tomhle dluhu od začátku do konce zaplatíš celkem ~${fm(lc.total)}${lc.interest>0?` (jistina ${fm(d.principal)} + úroky ${fm(lc.interest)})`:''}</div>`;
+    if(d.monthly>0&&!lc.unknown&&!lc.never&&lc.total>0)h+=`<div class="mini" style="margin-top:6px;font-weight:500;color:var(--text2)">${ic('percent',12)} Na tomhle dluhu od začátku do konce zaplatíš celkem ~${fm(lc.total)}${lc.interest>0?` (jistina ${fm(d.principal)} + úroky ${fm(lc.interest)})`:''}</div>`;
     else if(!(d.monthly>0)&&d.principal>0)h+=`<div class="mini" style="margin-top:6px">Zadej měsíční splátku (nebo dobu splácení v úpravě), ať spočítám, kolik na tomhle dluhu celkem zaplatíš.</div>`;
     const pays=(d.pay||[]).slice().sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,5);
-    if(pays.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Poslední splátky</div>`;pays.forEach(x=>{const oi=d.pay.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span style="display:flex;align-items:center;gap:8px"><span class="num" style="font-weight:600;color:var(--teal)">−${fm(x.a)}</span><button class="ib" onclick="delDebtPay('${d.id}',${oi})">${ic('x',13)}</button></span></div>`;});h+=`</div>`;}
+    if(pays.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Poslední splátky</div>`;pays.forEach(x=>{const oi=d.pay.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span style="display:flex;align-items:center;gap:8px"><span class="num" style="font-weight:500;color:var(--teal)">−${fm(x.a)}</span><button class="ib" onclick="delDebtPay('${d.id}',${oi})">${ic('x',13)}</button></span></div>`;});h+=`</div>`;}
     h+=`</div>`;}
   return h;
 }
@@ -1535,7 +1539,7 @@ function rule503020(p){
         <span>${hasPlan?`plán ${fm(r.pl)}`:''}</span><span>utraceno ${fm(r.a)} · ${pcA} %</span></div></div>`;});
   if(hasPlan){const tot=needsP+wantsP+savP,totPc=Math.round(tot/planBase*100),rest=planBase-tot;
     h+=`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;margin-top:4px;border-top:1.5px solid var(--line);font-size:13px">
-      <span style="font-weight:600">Plán celkem</span>
+      <span style="font-weight:500">Plán celkem</span>
       <span><b class="num">${fm(tot)}</b> <span class="mini">z příjmu ${fm(planBase)} · ${totPc} %</span> <span class="tag ${rest<0?'bd':rest>0?'ok':'wr'}" style="margin-left:6px">${rest<0?'chybí '+fm(-rest):rest>0?'volných '+fm(rest):'přesně'}</span></span></div>`;}
   h+=`<div class="mini" style="margin-top:10px">Svislá čárka = cíl. Úspory zahrnují obálky (měsíční odkládání), investice a splátky dluhů.${hasPlan?'':' Nastav si plány a uvidíš dopředu, jestli ti rozpočet sedí.'}</div></div>`;
   return h;
@@ -2269,7 +2273,7 @@ function plansModal(){const p=P();
       <span style="color:var(--text3)">${ic(c.icon,17)}</span>
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">${esc(c.nm)}</span>
       <input class="inp num" type="number" data-cid="${c.id}" value="${catPlan(c)||''}" placeholder="0" style="flex:0 0 110px;text-align:right"></div>`).join('')}</div>
-    <div style="display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line);font-size:14px;font-weight:600">
+    <div style="display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line);font-size:14px;font-weight:500">
       <span>Celkem za cyklus</span><span class="num" id="pltot">${fm(sumPlan(p))}</span></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="savePlans()">Uložit plány</button></div>`);
   const upd=()=>{let s=0;document.querySelectorAll('#plrows [data-cid]').forEach(i=>s+=num(i.value));document.getElementById('pltot').textContent=fm(s);};
@@ -2380,19 +2384,19 @@ function actionRow(){
 }
 function vUcty(p){
   let h=tipBan('wallet','<b>Účty</b> = kde peníze fyzicky leží (Raiffka, mBank, spořák...). Přesun mezi účty se nikdy nepočítá do „zbývá volných" — je to pořád tvoje volná peníze, jen mění místo. Vyber si aktivní účet dole v Přehledu a běžné zápisy se z něj budou samy odečítat, bez vybírání.');
-  h+=`<div class="card" style="text-align:center;margin-bottom:14px"><div class="ct" style="margin-bottom:6px">Celkem na účtech</div><div class="num" style="font-size:28px">${fm(totalAccounts())}</div></div>`;
-  h+=`<div style="text-align:right;margin-bottom:14px"><button class="btn fill" onclick="accModal()">${ic('plus',15)} Nový účet</button></div>`;
+  h+=pageHero('Celkem na účtech',fm(totalAccounts()),'');
+  h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn fill" onclick="accModal()">${ic('plus',15)} Nový účet</button></div>`;
   if(!S.accounts.length)h+=`<div class="card"><div class="empty">Zatím žádné účty.</div></div>`;
   S.accounts.forEach((a,i)=>{
     h+=`<div class="card">
-      <div class="ch"><span style="font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(a.icon,18)}</span>${esc(a.nm)}</span>
+      <div class="ch"><span style="font-size:16px;font-weight:500;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(a.icon,18)}</span>${esc(a.nm)}</span>
         <div style="display:flex;gap:4px">
           <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="accDepositModal('${a.id}')">${ic('plus',14)} Vklad</button>
           <button class="btn sm" onclick="accXferModal('${a.id}')">${ic('repeat',14)} Přesun</button>
           <button class="ib" onclick="accModal('${a.id}')">${ic('edit',15)}</button><button class="ib" onclick="delAcc('${a.id}')">${ic('trash',15)}</button></div></div>
       <div style="text-align:center"><div class="mini">Zůstatek</div><div class="num" style="font-size:24px;color:${(a.bal||0)>0?'var(--teal)':(a.bal||0)<0?'var(--neg)':'var(--text4)'}">${fm(a.bal||0)}</div></div>`;
     const histAll=a.hist||[];const hist=histAll.slice(-4).reverse();
-    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Poslední pohyby</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:600;color:${x.a>=0?'var(--teal)':'var(--neg)'}">${x.a>=0?'+':''}${fm(x.a)}</span><button class="ib" onclick="accHistModal('${a.id}',${oi})">${ic('edit',12)}</button><button class="ib" onclick="delAccHist('${a.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
+    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Poslední pohyby</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:500;color:${x.a>=0?'var(--teal)':'var(--neg)'}">${x.a>=0?'+':''}${fm(x.a)}</span><button class="ib" onclick="accHistModal('${a.id}',${oi})">${ic('edit',12)}</button><button class="ib" onclick="delAccHist('${a.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
     h+=`</div>`;});
   return h;
 }
@@ -2622,11 +2626,11 @@ function pxOverviewModal(){
     return `<div class="row" style="cursor:default;align-items:flex-start">
       <div class="m"><div class="t1">${esc(i.nm)}${i.pxBad?` <span class="mini" style="color:var(--gold)">· kurz nenačten</span>`:''}</div>
         <div class="t2" style="white-space:normal;overflow:visible;text-overflow:clip"><b>${esc(i.stock||i.crypto||'')}</b> · ${q} ks × ${kurz}${fx}</div></div>
-      <div class="num" style="font-weight:600;white-space:nowrap">${fm(i.val||0)}</div></div>`;};
+      <div class="num" style="font-weight:500;white-space:nowrap">${fm(i.val||0)}</div></div>`;};
   const sumA=akcie.reduce((s2,i)=>s2+(i.val||0),0),sumK=krypto.reduce((s2,i)=>s2+(i.val||0),0);
   const kdy=[...akcie,...krypto].map(i=>i.pxAt).filter(Boolean).sort().pop();
   const sekce=(t,list,sum)=>list.length?`<div class="ch" style="margin:16px 0 4px"><span class="ct">${t}</span>
-      <span class="num" style="font-weight:600">${fm(sum)}</span></div>${list.map(radek).join('')}`:'';
+      <span class="num" style="font-weight:500">${fm(sum)}</span></div>${list.map(radek).join('')}`:'';
   openModal(`<h3>Kurzy k porovnání s brokerem</h3>
     ${akcie.length?`<div style="background:var(--accent-bg);border-radius:var(--r);padding:14px;text-align:center;margin-bottom:6px">
       <div class="mini">Akcie a ETF celkem</div>
