@@ -1988,10 +1988,6 @@ function quickAdd(){const p=P();
   // fyzicky žádný účet neprochází.
   const accEl=document.getElementById('qacc');
   const acc=accEl?accEl.value:(S.ui.activeAcc||'');
-  // zaškrtnuté „Výchozí" si účet zapamatuje pro příští zápisy, odškrtnuté zapomene
-  const defChk=document.getElementById('qaccdef');
-  if(defChk&&defChk.checked&&acc)S.ui.defAcc=acc;
-  else if(defChk&&!defChk.checked&&S.ui.defAcc===acc)S.ui.defAcc='';
   let srcEntry=null;
 
   if(from.startsWith('env:')){
@@ -2182,13 +2178,6 @@ let zapisNote='';
 function zapisSeg2(k){zapisSeg=k;qaSel='';qaItem='';zapisRe();}
 function zapisPick(v){qaSel=v;qaItem='';zapisRe();}
 function zapisFrom(v){qaFrom=v;zapisRe();}
-function zapisAccChange(){
-  const sel=document.getElementById('qacc'),chk=document.getElementById('qaccdef');
-  if(!sel||!chk)return;
-  chk.disabled=!sel.value;
-  if(!sel.value)chk.checked=false;
-  chk.parentElement.classList.toggle('dim',!sel.value);
-}
 function zapisSubmit(){if(quickAdd()===true){zapisAmt='';zapisNote='';closeModal();}}
 function zapisHTML(){
   const p=P(),cur=qaCur(p),acc=accById(S.ui.activeAcc);
@@ -2229,12 +2218,11 @@ function zapisHTML(){
   if(!qaXfer&&cur.startsWith('cat:'))h+=`<input class="inp" id="qnote" placeholder="Poznámka (nepovinné)" value="${esc(zapisNote)}" style="margin-top:8px">`;
   h+=`<div class="zs-pills">
     <label class="zp">${ic('calendar',15)}<input id="qdate" type="date" value="${qaDate||todayISO()}"></label>
-    ${!qaXfer&&S.accounts.length?`<label class="zp">${ic('wallet',15)}<select id="qacc" onchange="zapisAccChange()">
+    ${!qaXfer&&S.accounts.length?`<label class="zp">${ic('wallet',15)}<select id="qacc">
       <option value="" ${predvolAcc?'':'selected'}>Bez účtu</option>
       ${S.accounts.map(a=>`<option value="${a.id}" ${predvolAcc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
     </select></label>
-    <label class="zp ${predvolAcc?'':'dim'}" title="Příště se tenhle účet předvybere sám">
-      <input type="checkbox" id="qaccdef" ${S.ui.defAcc&&S.ui.defAcc===predvolAcc?'checked':''} ${predvolAcc?'':'disabled'}>Výchozí</label>`:''}
+`:''}
     ${qaXfer&&acc?`<span class="zp">${ic('wallet',15)}${esc(acc.nm)}</span>`:''}</div>
     <button class="btn fill zs-go" onclick="zapisSubmit()">${qaXfer?'Přesunout':'Zapsat'}</button>`;
   return h;
@@ -2507,7 +2495,6 @@ function vUcty(p){
         <div style="display:flex;gap:4px">
           <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="accDepositModal('${a.id}')">${ic('plus',14)} Vklad</button>
           <button class="btn sm" onclick="accXferModal('${a.id}')">${ic('repeat',14)} Přesun</button>
-          <button class="ib" title="${S.ui.defAcc===a.id?'Zrušit jako výchozí':'Nastavit jako výchozí'}" style="${S.ui.defAcc===a.id?'color:var(--gold)':''}" onclick="setDefAcc('${a.id}')">${ic('check',15)}</button>
           <button class="ib" onclick="accModal('${a.id}')">${ic('edit',15)}</button><button class="ib" onclick="delAcc('${a.id}')">${ic('trash',15)}</button></div></div>
       ${S.ui.defAcc===a.id?`<div class="mini" style="color:var(--gold);margin-bottom:8px">${ic('check',13)} Výchozí účet — předvybere se v novém zápisu.</div>`:''}
       <div style="text-align:center"><div class="mini">Zůstatek</div><div class="num" style="font-size:24px;color:${(a.bal||0)>0?'var(--teal)':(a.bal||0)<0?'var(--neg)':'var(--text4)'}">${fm(a.bal||0)}</div></div>`;
@@ -2516,25 +2503,21 @@ function vUcty(p){
     h+=`</div>`;});
   return h;
 }
-/* Výchozí účet jde nastavit tady i zaškrtnutím v panelu zápisu. Kliknutí
-   na už výchozí ho zruší, ať se nedá zaseknout. */
-function setDefAcc(id){
-  S.ui.defAcc=S.ui.defAcc===id?'':id;
-  const a=accById(id);
-  toast(S.ui.defAcc?`Výchozí účet: ${a.nm}`:'Výchozí účet zrušen');
-  commit();
-}
 function accModal(id){const a=id?S.accounts.find(x=>x.id===id):null;mctx={id,icon:a?a.icon:'landmark'};
   openModal(`<h3>${a?'Upravit':'Nový'} účet</h3>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${a?esc(a.nm):''}" placeholder="např. Raiffka"></div>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(ACC_ICONS,mctx.icon)}</div>
     <div class="fg"><span class="fl">${a?'Zůstatek':'Počáteční zůstatek'}</span><input class="inp num" id="m_bal" type="number" value="${a?a.bal||0:''}" placeholder="0"></div>
     ${a?`<p class="mini" style="margin-top:2px">Uprav, jen když neodpovídá skutečnosti — je to jen oprava čísla, žádný pohyb se nezapočítá.</p>`:''}
+    <label class="mini" style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer"><input type="checkbox" id="m_def" ${a&&S.ui.defAcc===a.id?'checked':''} style="width:auto"> Výchozí účet — předvybere se v novém zápisu</label>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveAcc()">${a?'Uložit':'Vytvořit'}</button></div>`);}
 function saveAcc(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const bal=num(document.getElementById('m_bal').value);
+  const jeVych=document.getElementById('m_def')?.checked;
   if(mctx.id){const a=S.accounts.find(x=>x.id===mctx.id);a.nm=nm;a.icon=mctx.icon;
-    const diff=bal-(a.bal||0);if(diff){a.bal=bal;a.hist.push({id:uid(),d:todayISO(),a:diff,n:'Oprava zůstatku'});}}
-  else{const a={id:uid(),nm,icon:mctx.icon,bal:0,hist:[]};if(bal){a.bal=bal;a.hist.push({id:uid(),d:todayISO(),a:bal,n:'Počáteční zůstatek'});}S.accounts.push(a);}
+    const diff=bal-(a.bal||0);if(diff){a.bal=bal;a.hist.push({id:uid(),d:todayISO(),a:diff,n:'Oprava zůstatku'});}
+    if(jeVych)S.ui.defAcc=a.id;else if(S.ui.defAcc===a.id)S.ui.defAcc='';}
+  else{const a={id:uid(),nm,icon:mctx.icon,bal:0,hist:[]};if(bal){a.bal=bal;a.hist.push({id:uid(),d:todayISO(),a:bal,n:'Počáteční zůstatek'});}S.accounts.push(a);
+    if(jeVych)S.ui.defAcc=a.id;}
   closeModal();commit();}
 function delAcc(id){const a=S.accounts.find(x=>x.id===id);if(!a)return;
   if(a.bal&&!confirm(`Na účtu je ${fm(a.bal)}. Opravdu smazat?`))return;if(!a.bal&&!confirm('Smazat účet?'))return;
