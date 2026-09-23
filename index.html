@@ -2261,7 +2261,12 @@ function logModal(cid,iid,li,pid){
       <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${le.a||0}" onkeydown="if(event.key==='Enter')saveLog()"></div></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(le.n||'')}" onkeydown="if(event.key==='Enter')saveLog()"></div>
     ${linkTarget(it)?`<div class="mini" style="margin-top:10px">${ic('check',13)} Propisuje se do „${esc(linkTarget(it).obj.nm)}" — oprava se přenese i tam.</div>`:''}
-    ${le.acc&&accById(le.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} Zaplaceno z účtu „${esc(accById(le.acc).nm)}" — oprava se přenese i tam.</div>`:''}
+    ${S.accounts.length?`<div class="fg"><span class="fl">Zaplaceno z účtu</span>
+      <select class="inp" id="m_acc">
+        <option value="" ${le.acc?'':'selected'}>— bez účtu —</option>
+        ${S.accounts.map(a=>`<option value="${a.id}" ${le.acc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
+      </select>
+      <div class="mini" style="margin-top:5px">Změna účtu peníze přesune: vrátí je tam, odkud odešly, a odečte z nově vybraného.</div></div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveLog()">Uložit</button></div>
     <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delLog('${cid}','${iid}',${li},'${per.id}')">${ic('trash',14)} Smazat zápis</button></div>`);
   setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
@@ -2275,7 +2280,11 @@ function saveLog(){
   removeLinked(le.id);
   it.log.splice(mctx.li,1);
   const novy={id:le.id,d,a,n};
-  if(le.acc){accBump(le.acc,le.a);novy.acc=le.acc;accBump(le.acc,-a);}   // starý dopad na účet vrátit, nový znovu odečíst
+  /* Účet se dá v úpravě přepnout, takže se nejdřív vrátí původní částka
+     na původní účet a teprve pak se odečte nová z toho vybraného. */
+  const accEl=document.getElementById('m_acc'),novyAcc=accEl?accEl.value:(le.acc||'');
+  if(le.acc)accBump(le.acc,le.a);
+  if(novyAcc&&accById(novyAcc)){novy.acc=novyAcc;accBump(novyAcc,-a);}
   const r=logToDate(c,it,novy);
   openItem=mctx.iid;closeModal();toast('Upraveno'+(r.jinam?` · přesunuto do „${r.period.nm}"`:''));commit();
 }
@@ -2498,12 +2507,22 @@ function vUcty(p){
         <div style="display:flex;gap:4px">
           <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="accDepositModal('${a.id}')">${ic('plus',14)} Vklad</button>
           <button class="btn sm" onclick="accXferModal('${a.id}')">${ic('repeat',14)} Přesun</button>
+          <button class="ib" title="${S.ui.defAcc===a.id?'Zrušit jako výchozí':'Nastavit jako výchozí'}" style="${S.ui.defAcc===a.id?'color:var(--gold)':''}" onclick="setDefAcc('${a.id}')">${ic('check',15)}</button>
           <button class="ib" onclick="accModal('${a.id}')">${ic('edit',15)}</button><button class="ib" onclick="delAcc('${a.id}')">${ic('trash',15)}</button></div></div>
+      ${S.ui.defAcc===a.id?`<div class="mini" style="color:var(--gold);margin-bottom:8px">${ic('check',13)} Výchozí účet — předvybere se v novém zápisu.</div>`:''}
       <div style="text-align:center"><div class="mini">Zůstatek</div><div class="num" style="font-size:24px;color:${(a.bal||0)>0?'var(--teal)':(a.bal||0)<0?'var(--neg)':'var(--text4)'}">${fm(a.bal||0)}</div></div>`;
     const histAll=a.hist||[];const hist=histAll.slice(-4).reverse();
     if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Poslední pohyby</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:500;color:${x.a>=0?'var(--teal)':'var(--neg)'}">${x.a>=0?'+':''}${fm(x.a)}</span><button class="ib" onclick="accHistModal('${a.id}',${oi})">${ic('edit',12)}</button><button class="ib" onclick="delAccHist('${a.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
     h+=`</div>`;});
   return h;
+}
+/* Výchozí účet jde nastavit tady i zaškrtnutím v panelu zápisu. Kliknutí
+   na už výchozí ho zruší, ať se nedá zaseknout. */
+function setDefAcc(id){
+  S.ui.defAcc=S.ui.defAcc===id?'':id;
+  const a=accById(id);
+  toast(S.ui.defAcc?`Výchozí účet: ${a.nm}`:'Výchozí účet zrušen');
+  commit();
 }
 function accModal(id){const a=id?S.accounts.find(x=>x.id===id):null;mctx={id,icon:a?a.icon:'landmark'};
   openModal(`<h3>${a?'Upravit':'Nový'} účet</h3>
