@@ -354,6 +354,9 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .zp{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border-radius:99px;padding:7px 12px;font-size:12.5px;color:var(--text2);font-weight:500}
 .zp.dim{color:var(--text3)}
 .zp input{border:none;background:none;outline:none;font-size:12.5px;color:var(--text2);font-weight:500;width:104px;padding:0}
+.zp select{border:none;background:none;outline:none;font-size:12.5px;color:var(--text2);font-weight:500;padding:0;cursor:pointer;max-width:130px}
+.zp input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent)}
+.zp:has(input:disabled){cursor:default}
 .zs-note-line{font-size:12px;color:var(--text3);margin-top:12px}
 .zs-go{width:100%;justify-content:center;margin-top:16px;padding:14px;font-size:15px;border-radius:15px}
 
@@ -626,6 +629,8 @@ function migrate(s){
   s.periods||=[];s.envelopes||=[];s.investments||=[];s.debts||=[];s.accounts||=[];
   s.ui=s.ui||{};
   s.ui.activeAcc=s.ui.activeAcc||'';
+  s.ui.defAcc=s.ui.defAcc||'';
+  if(s.ui.defAcc&&!s.accounts.some(a=>a.id===s.ui.defAcc))s.ui.defAcc='';
   if(s.ui.activeAcc&&!s.accounts.some(a=>a.id===s.ui.activeAcc))s.ui.activeAcc='';   // smazaný účet nesmí zůstat "aktivní" naslepo
   /* Kdy appka začala vést sjednocený seznam Pohybů. Schválně se NEDOTAHUJE
      starší historie zpětně — appka ukazuje jen pohyby od tohohle data,
@@ -1981,7 +1986,12 @@ function quickAdd(){const p=P();
   // z něj (odečte se), "peníze zpět na účet" mu je připíše. Přesun mezi
   // obálkou/investicí a kategorií/jinou truhlicí se účtu nedotýká — tam
   // fyzicky žádný účet neprochází.
-  const acc=S.ui.activeAcc||'';
+  const accEl=document.getElementById('qacc');
+  const acc=accEl?accEl.value:(S.ui.activeAcc||'');
+  // zaškrtnuté „Výchozí" si účet zapamatuje pro příští zápisy, odškrtnuté zapomene
+  const defChk=document.getElementById('qaccdef');
+  if(defChk&&defChk.checked&&acc)S.ui.defAcc=acc;
+  else if(defChk&&!defChk.checked&&S.ui.defAcc===acc)S.ui.defAcc='';
   let srcEntry=null;
 
   if(from.startsWith('env:')){
@@ -2172,9 +2182,20 @@ let zapisNote='';
 function zapisSeg2(k){zapisSeg=k;qaSel='';qaItem='';zapisRe();}
 function zapisPick(v){qaSel=v;qaItem='';zapisRe();}
 function zapisFrom(v){qaFrom=v;zapisRe();}
+function zapisAccChange(){
+  const sel=document.getElementById('qacc'),chk=document.getElementById('qaccdef');
+  if(!sel||!chk)return;
+  chk.disabled=!sel.value;
+  if(!sel.value)chk.checked=false;
+  chk.parentElement.classList.toggle('dim',!sel.value);
+}
 function zapisSubmit(){if(quickAdd()===true){zapisAmt='';zapisNote='';closeModal();}}
 function zapisHTML(){
   const p=P(),cur=qaCur(p),acc=accById(S.ui.activeAcc);
+  /* Účet se vybírá tady v panelu, ne jen přepínačem na Přehledu — platí se
+     z různých účtů a zpětně to nikdo nedohledá. Předvybere se ten, co je
+     zrovna nahoře, jinak zapamatovaný výchozí. */
+  const predvolAcc=(S.ui.activeAcc&&accById(S.ui.activeAcc)?S.ui.activeAcc:(accById(S.ui.defAcc)?S.ui.defAcc:''));
   const seg=cur.startsWith('env:')?'env':cur.startsWith('inv:')?'inv':cur.startsWith('debt:')?'debt':zapisSeg;
   const cile=qaXfer?[]:seg==='env'?S.envelopes.map(e=>({v:'env:'+e.id,nm:e.nm,ik:e.icon}))
     :seg==='inv'?S.investments.map(i=>({v:'inv:'+i.id,nm:i.nm,ik:i.icon}))
@@ -2208,8 +2229,13 @@ function zapisHTML(){
   if(!qaXfer&&cur.startsWith('cat:'))h+=`<input class="inp" id="qnote" placeholder="Poznámka (nepovinné)" value="${esc(zapisNote)}" style="margin-top:8px">`;
   h+=`<div class="zs-pills">
     <label class="zp">${ic('calendar',15)}<input id="qdate" type="date" value="${qaDate||todayISO()}"></label>
-    ${!qaXfer&&acc?`<span class="zp">${ic('wallet',15)}${esc(acc.nm)}</span>`:''}
-    ${!qaXfer&&!acc&&S.accounts.length?`<span class="zp dim">${ic('wallet',15)}Bez účtu</span>`:''}</div>
+    ${!qaXfer&&S.accounts.length?`<label class="zp">${ic('wallet',15)}<select id="qacc" onchange="zapisAccChange()">
+      <option value="" ${predvolAcc?'':'selected'}>Bez účtu</option>
+      ${S.accounts.map(a=>`<option value="${a.id}" ${predvolAcc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
+    </select></label>
+    <label class="zp ${predvolAcc?'':'dim'}" title="Příště se tenhle účet předvybere sám">
+      <input type="checkbox" id="qaccdef" ${S.ui.defAcc&&S.ui.defAcc===predvolAcc?'checked':''} ${predvolAcc?'':'disabled'}>Výchozí</label>`:''}
+    ${qaXfer&&acc?`<span class="zp">${ic('wallet',15)}${esc(acc.nm)}</span>`:''}</div>
     <button class="btn fill zs-go" onclick="zapisSubmit()">${qaXfer?'Přesunout':'Zapsat'}</button>`;
   return h;
 }
@@ -2494,6 +2520,7 @@ function saveAcc(){const nm=document.getElementById('m_nm').value.trim();if(!nm)
 function delAcc(id){const a=S.accounts.find(x=>x.id===id);if(!a)return;
   if(a.bal&&!confirm(`Na účtu je ${fm(a.bal)}. Opravdu smazat?`))return;if(!a.bal&&!confirm('Smazat účet?'))return;
   if(S.ui.activeAcc===id)S.ui.activeAcc='';
+  if(S.ui.defAcc===id)S.ui.defAcc='';
   S.periods.forEach(per=>per.cats.forEach(c=>c.it.forEach(it=>{if(it.defAcc===id)delete it.defAcc;})));   // smazaný účet nesmí zůstat "výchozí" u položky naslepo
   S.accounts=S.accounts.filter(x=>x.id!==id);commit();}
 function accXferModal(id){
