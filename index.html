@@ -429,6 +429,38 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .ddring{position:relative;width:88px;height:88px;margin:0 auto 8px}
 .ddring>span{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:500;color:var(--teal)}
 .cdacts .in{background:var(--teal-bg);border-color:var(--teal-bg);color:var(--teal)}
+/* Statistiky: trend po cyklech, karta vybraného cyklu, koláč kategorií. */
+.sttr{padding:16px 18px 14px}
+.stbars{display:flex;gap:8px;align-items:stretch;height:150px}
+.stb{flex:1;display:flex;flex-direction:column;gap:6px;background:none;border:none;cursor:pointer;padding:0;min-width:0;font-family:inherit}
+.stb .bb{flex:1;display:flex;align-items:flex-end;gap:3px;border-radius:8px;padding:0 2px}
+.stb .bb i{flex:1;display:block;border-radius:5px 5px 2px 2px;min-height:2px;transition:height .4s}
+.stb .in{background:var(--teal-bg);box-shadow:inset 0 0 0 1px rgba(15,115,81,.25)}
+.stb .ex{background:var(--accent-bg2)}
+.stb.on .ex{background:var(--accent)}
+.stb.on .bb{background:var(--bg)}
+.stb .lb{font-size:11px;color:var(--text3);text-align:center}
+.stb.on .lb{color:var(--text);font-weight:500}
+.stb:hover .ex{background:var(--accent-l)}
+.stleg{display:flex;gap:14px;justify-content:center;margin-top:10px;font-size:11.5px;color:var(--text3)}
+.stleg span{display:inline-flex;align-items:center;gap:6px}
+.stleg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.stdet{padding:16px 18px}
+.sth{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.sth>span:first-child{font-size:15px;font-weight:500}
+.sth>span:last-child{font-size:12.5px;font-weight:500}
+.stg{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:14px 10px}
+.stg .l{font-size:11.5px;color:var(--text3)}
+.stg .v{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.shr{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.shr>svg{flex:none;margin:0 auto}
+.shl{flex:1;min-width:200px}
+.shrow{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--line)}
+.shrow:last-child{border-bottom:none}
+.shrow .dot{width:9px;height:9px;border-radius:3px;flex:none}
+.shrow .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.shrow .p{color:var(--text3);font-size:12px;width:38px;text-align:right}
+.shrow .v{font-weight:500;font-variant-numeric:tabular-nums;width:84px;text-align:right}
 .logline{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
 .logline:last-child{border-bottom:none}
 .logline .ld{color:var(--text3);font-size:12px;flex:0 0 62px;font-variant-numeric:tabular-nums}
@@ -1133,7 +1165,10 @@ function loanPreview(principal,rate,monthly,fixDate,rateAfter){
   const r=amortizeFix(principal,monthly,rate,fixDate,rateAfter);
   if(!r)return{unknown:true};if(r.never)return{never:true};
   return{n:r.n,date:futureMonthStr(r.n),interest:r.interest,total:r.total};}
-const COLS=['#c4694a','#3a8a7a','#7a5a8c','#c0902f','#5a7fa0','#a0604f','#5c8a5c','#8a6a9a','#b08a3a','#6a8f99','#9a6a7a','#7a9a5a'];
+/* Barvy kategorií: pestřejší a čistší než původní teplá paleta a bez
+   švestkové, která je dnes akcentem appky — výseč v koláči nesmí vypadat
+   jako tlačítko. */
+const COLS=['#5b7fd6','#2a9d8f','#e9a23b','#d9667a','#8a6cc9','#5aa469','#e07b4f','#4aa3c8','#b8972e','#9b6a4f','#6c7a89','#c7609f'];
 const col=i=>COLS[i%COLS.length];
 function toast(m,ms){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),ms||2200);}
 
@@ -1955,13 +1990,20 @@ const periodStats=p=>({inc:incBase(p),exp:sumActual(p),saved:savedInPeriod(p.id)
 function allItemsOf(p){const out=[];p.cats.forEach(c=>c.it.forEach(it=>{const a=itemActual(it);if(a>0)out.push({n:it.nm,a,cat:c.nm});}));S.envelopes.forEach(e=>(e.hist||[]).forEach(h=>{if(h.t==='out'&&h.pid===p.id&&h.a>0)out.push({n:h.n||('Obálka: '+e.nm),a:h.a,cat:h.cat||('Obálka '+e.nm)});}));return out.sort((x,y)=>y.a-x.a);}
 function spendByCategory(p){const m={};p.cats.forEach(c=>{const a=catActualDisplay(c,p.id);if(a)m[c.nm]=a;});return m;}
 const netWorth=()=>totalInvest()+totalEnvelopes()-totalDebt();
+// barva kategorie podle jejího místa v otevřeném cyklu — ať je Jídlo ve Výdajích i ve Statistikách stejné
+function catColByName(nm,zaloha){const i=P().cats.findIndex(c=>c.nm===nm);return col(i>=0?i:(zaloha||0));}
 function catIconByName(nm){for(const pp of S.periods){const c=pp.cats.find(x=>x.nm===nm);if(c)return c.icon;}return 'dot';}
 /* Vysvětlivky u záložek jdou vypnout (Nastavení → Přizpůsobení). Jde
    jen o tutoriálové texty — varování a stavové hlášky přes tohle NIKDY
    neposílat, ty musí být vidět, i když si je člověk nepřeje. */
 const tipBan=(icon,html,cls)=>S.ui.hideTips?'':`<div class="banner ${cls||'tip'}"><span class="bi">${ic(icon,18)}</span><div>${html}</div></div>`;
 function mrow(arr){return `<div style="display:grid;grid-template-columns:repeat(${arr.length>3?2:arr.length},1fr);gap:10px;margin-bottom:14px">`+arr.map(t=>`<div class="tile"><div class="tl">${t[0]}</div><div class="tv" style="${t[2]||''}">${t[1]}</div></div>`).join('')+`</div>`;}
-function catShare(rows,total,label){if(!rows.length)return '';let h=`<div class="card"><div class="ct" style="margin-bottom:14px">${label}</div>`;rows.forEach(r=>{const pc=total>0?r.a/total*100:0;h+=`<div class="barrow" style="cursor:default"><div class="barinfo"><span class="n"><span style="color:${col(r.i||0)}">${ic(catIconByName(r.nm),15)}</span>${esc(r.nm)}</span><span class="v">${Math.round(pc)}% · ${fm(r.a)}</span></div><div class="track"><div class="act" style="width:${pc}%;background:${col(r.i||0)}"></div></div></div>`;});return h+`</div>`;}
+function catShare(rows,total,label){if(!rows.length)return '';
+  const R=40,C=2*Math.PI*R;let off=0;
+  const vys=total>0?rows.map((r,k)=>{const l=r.a/total*C,x=`<circle cx="50" cy="50" r="${R}" fill="none" stroke="${catColByName(r.nm,k)}" stroke-width="13" stroke-dasharray="${Math.max(0,l-(rows.length>1?1.2:0))} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 50 50)"/>`;off+=l;return x;}).join(''):'';
+  return `<div class="card"><div class="ct" style="margin-bottom:12px">${label}</div>
+    <div class="shr"><svg viewBox="0 0 100 100" width="132" height="132" aria-hidden="true"><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="13"/>${vys}</svg>
+    <div class="shl">${rows.map((r,k)=>`<div class="shrow"><span class="dot" style="background:${catColByName(r.nm,k)}"></span><span class="n">${esc(r.nm)}</span><span class="p">${total>0?Math.round(r.a/total*100):0} %</span><span class="v">${fm(r.a)}</span></div>`).join('')}</div></div></div>`;}
 function topItems(items,n,label){if(!items.length)return '';let h=`<div class="card"><div class="ct" style="margin-bottom:14px">${label}</div>`;items.slice(0,n).forEach((it,k)=>{h+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;border-top:${k?'1px solid var(--line)':'none'}"><span style="color:var(--text4);width:18px">${k+1}.</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.n)} <span class="mini">${esc(it.cat)}</span></span><span class="num">${fm(it.a)}</span></div>`;});return h+`</div>`;}
 function overUnder(over,under){let h=`<div class="grid2" style="margin-bottom:14px"><div class="card" style="margin-bottom:0"><div class="ct" style="margin-bottom:10px;color:var(--neg)">Přečerpané</div>`;
   if(over.length)over.forEach(x=>h+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0"><span>${esc(x.nm)}</span><span class="num neg">${fm(x.d)}</span></div>`);else h+=`<div class="mini" style="text-align:center;padding:8px">Žádné</div>`;
@@ -2107,6 +2149,22 @@ function vStat(p){
   h+= statSub==='c'?statCompare():statSub==='y'?statYear():statSub==='a'?statAvg():statMonth(p);
   return h;
 }
+/* Trend po cyklech: příjem a výdaje za posledních až osm cyklů vedle
+   sebe. Klik na sloupec otevře ten cyklus (jako šipky nahoře), takže
+   statistiky pod grafem se přepnou na něj. */
+function statTrend(p){
+  const ps=S.periods.slice().sort((a,b)=>a.from.localeCompare(b.from)),i=ps.findIndex(x=>x.id===p.id);
+  let od=Math.max(0,ps.length-8);if(i<od)od=Math.max(0,i-3);
+  const okno=ps.slice(od,od+8);
+  const mx=Math.max(1,...okno.map(q=>Math.max(incBase(q),sumActual(q))));
+  const mes=q=>(+q.from.slice(5,7))+'/'+q.from.slice(2,4);
+  return `<div class="card sttr"><div class="ct" style="margin-bottom:12px">Příjem a výdaje po cyklech</div>
+    <div class="stbars">${okno.map(q=>{const on=q.id===p.id;return `<button class="stb ${on?'on':''}" title="${esc(q.nm)}" onclick="S.curId='${q.id}';detailCat=null;openItem=null;commit()">
+      <span class="bb"><i class="in" style="height:${incBase(q)/mx*100}%"></i><i class="ex" style="height:${sumActual(q)/mx*100}%"></i></span>
+      <span class="lb">${mes(q)}</span></button>`;}).join('')}</div>
+    <div class="stleg"><span><i style="background:var(--teal-bg);border:1px solid var(--teal)"></i> příjem</span><span><i style="background:var(--accent)"></i> výdaje</span></div>
+  </div>`;
+}
 function statMonth(p){
   const {inc,exp,saved,inv}=periodStats(p);
   const savingsRate=inc>0?Math.round((saved+inv)/inc*100):0;
@@ -2118,8 +2176,13 @@ function statMonth(p){
   const over=p.cats.map(c=>({nm:c.nm,d:catActual(c)-catPlan(c),pl:catPlan(c)})).filter(x=>x.d>0&&x.pl>0).sort((a,b)=>b.d-a.d);
   const under=p.cats.map(c=>({nm:c.nm,d:catPlan(c)-catActual(c),pl:catPlan(c)})).filter(x=>x.d>0&&x.pl>0).sort((a,b)=>b.d-a.d);
   const items=allItemsOf(p);
-  let h=`<div class="card"><div class="ct" style="margin-bottom:14px">${esc(p.nm)}</div>`+mrow([['Příjem',fm(inc),'color:var(--teal)'],['Výdaje',fm(exp),''],['Zůstatek',fm(freeLeft(p)),freeLeft(p)>=0?'color:var(--teal)':'color:var(--neg)']])+`</div>`;
-  h+=mrow([['Míra úspor',savingsRate+'%',savingsRate>=20?'color:var(--teal)':savingsRate>=10?'color:var(--gold)':'color:var(--neg)'],['Plnění plánu',planFill+'%',''],['Denně',fm(daily),''],['Týdně',fm(weekly),'']]);
+  let h=statTrend(p);
+  // vybraný cyklus: srovnání celku s minulým a klíčová čísla
+  const pv=prevPeriodOf(p),bezi=todayISO()<p.to,rz=pv?exp-sumActual(pv):0;
+  h+=`<div class="card stdet"><div class="sth"><span>${esc(p.nm)}</span>${pv&&rz?`<span class="${rz<0?'pos':'neg'}">${bezi?'zatím ':''}o ${fm(Math.abs(rz))} ${rz<0?'méně':'víc'} než minulý cyklus</span>`:''}</div>
+    <div class="stg">${[['Příjem',fm(inc),'var(--teal)'],['Výdaje',fm(exp),''],['Zůstatek',fm(freeLeft(p)),freeLeft(p)>=0?'var(--teal)':'var(--neg)'],
+      ['Míra úspor',savingsRate+' %',savingsRate>=20?'var(--teal)':savingsRate>=10?'var(--gold)':'var(--neg)'],['Plnění plánu',planFill+' %',''],['Denně',fm(daily),''],['Týdně',fm(weekly),'']]
+      .map(x=>`<div><div class="l">${x[0]}</div><div class="v" style="${x[2]?'color:'+x[2]:''}">${x[1]}</div></div>`).join('')}</div></div>`;
   h+=rule503020(p);
   h+=catShare(cats,fullExp,'Podíl kategorií'+(fullExp>exp?' (vč. obálek)':''));
   h+=topItems(items,8,'Největší položky');
