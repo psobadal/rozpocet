@@ -284,15 +284,27 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .tag.ok{background:var(--teal-bg);color:var(--teal)} .tag.wr{background:var(--gold-bg);color:var(--gold)} .tag.bd{background:var(--neg-bg);color:var(--neg)}
 .totals{display:flex;justify-content:space-between;align-items:center;padding-top:14px;margin-top:8px;border-top:2px solid var(--bg2);font-size:14px;font-weight:500}
 
-.catgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-@media(max-width:760px){.catgrid{grid-template-columns:1fr 1fr}}
-@media(max-width:480px){.catgrid{grid-template-columns:1fr}}
-.catcard{background:var(--white);border-radius:var(--r);padding:16px;border:1px solid var(--line);cursor:pointer;transition:transform .12s,box-shadow .12s;position:relative}
-.catcard:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
-.catcard .cic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;margin-bottom:10px}
-.catcard .cn{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.catcard .cv{font-size:20px;font-weight:500;margin:3px 0 8px;font-variant-numeric:tabular-nums}
-.catcard .cmeta{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:7px}
+/* Výdaje: koláč nahoře, pod ním seznam kategorií s pruhy. */
+.vkolac{text-align:center;padding:6px 0 4px;margin-bottom:10px}
+.vk-in{position:relative;width:180px;height:180px;margin:0 auto}
+.vk-mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.vk-mid .l{font-size:11.5px;color:var(--text3)}
+.vk-mid .v{font-size:22px;font-weight:500;letter-spacing:-.6px;font-variant-numeric:tabular-nums;line-height:1.25}
+.vk-zb{font-size:13px;margin-top:8px;font-weight:500}
+.catlist{padding:4px 16px}
+.catrow{padding:12px 0;cursor:pointer;border-bottom:1px solid var(--line)}
+.catrow:last-child{border-bottom:none}
+.catrow .top{display:flex;align-items:center;gap:12px}
+.catrow .cic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none}
+.catrow .m{flex:1;min-width:0}
+.catrow .n{font-size:14.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.catrow .s{font-size:12px;color:var(--text3)}
+.catrow .r{text-align:right;flex:none}
+.catrow .v{font-size:14.5px;font-weight:500;font-variant-numeric:tabular-nums}
+.catrow .p{font-size:12px;font-weight:500}
+.catrow .bar{height:4px;background:var(--bg2);border-radius:4px;margin:9px 0 0 48px;overflow:hidden}
+.catrow .bar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
+.catrow:hover .n{color:var(--accent-d)}
 .adddash{width:100%;padding:16px;background:none;border:2px dashed var(--line2);border-radius:var(--r);color:var(--text3);cursor:pointer;font-size:13px;font-weight:500;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
 .adddash:hover{border-color:var(--accent);color:var(--accent)}
 
@@ -513,6 +525,8 @@ const fm=n=>_fm0.format(Math.round(n||0));
 const fmEx=n=>Number.isInteger(+n||0)?fm(n):_fm2.format(+n||0);
 // číslo bez měny — na kurzy v cizí měně, kde by „Kč“ lhalo
 const nfx=new Intl.NumberFormat('cs-CZ',{maximumFractionDigits:2});
+const nf0=new Intl.NumberFormat('cs-CZ',{maximumFractionDigits:0});
+const fmN=n=>nf0.format(Math.round(n||0));   // celé číslo bez měny, kde je na ni málo místa
 const fmCcy=(n,c)=>nfx.format(+n||0)+(c&&c!=='CZK'?' '+c:' Kč');
 const agoTxt=ts=>{const m=Math.round((Date.now()-ts)/60000);
   return m<1?'právě teď':m<60?'před '+m+' min':m<1440?'před '+Math.round(m/60)+' h':'před '+Math.round(m/1440)+' dny';};
@@ -1327,23 +1341,46 @@ function pageHero(lbl,val,sub,color){
 }
 function vVydaje(p){
   if(detailCat){const c=p.cats.find(x=>x.id===detailCat);if(c)return catDetail(p,c);detailCat=null;}
-  let h=pageHero('Utraceno tento cyklus',fm(sumActualDisplay(p)),`plán celkem ${fm(sumPlan(p))}`);
-  h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn" onclick="plansModal()">${ic('list',15)} Měsíční plány</button></div>`;
-  h+=`<div class="catgrid">`;
-  p.cats.forEach((c,i)=>{const a=catActualDisplay(c,p.id),pl=catPlan(c),over=a>pl&&pl>0,pu=pl>0?Math.min(100,Math.round(a/pl*100)):0;
-    h+=`<div class="catcard" onclick="openCat('${c.id}')">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div class="cic" style="background:${col(i)}22;color:${col(i)};margin-bottom:0">${ic(c.icon,20)}</div>
-        <div style="display:flex;gap:1px" onclick="event.stopPropagation()">
-          <button class="ib" style="padding:4px${i===0?';opacity:.25;pointer-events:none':''}" title="Posunout dřív" onclick="moveCat('${c.id}',-1)">${ic('cleft',13)}</button>
-          <button class="ib" style="padding:4px${i===p.cats.length-1?';opacity:.25;pointer-events:none':''}" title="Posunout později" onclick="moveCat('${c.id}',1)">${ic('cright',13)}</button>
-        </div></div>
-      <div class="cn">${esc(c.nm)}</div><div class="cv" style="color:${over?'var(--neg)':'var(--text)'}">${fm(a)}</div>
-      <div class="cmeta"><span>Plán ${fm(pl)}</span>${pl?`<span style="font-weight:500;color:${over?'var(--neg)':pu>70?'var(--gold)':'var(--teal)'}">${pu}%</span>`:''}</div>
-      ${(pl||a)?`<div class="track" style="height:6px"><div class="plan" style="width:${pl/Math.max(a,pl,1)*100}%;background:${col(i)}"></div><div class="act" style="width:${a/Math.max(a,pl,1)*100}%;background:${over?'var(--neg)':col(i)}"></div></div>`:''}
-      ${over?`<div style="margin-top:7px"><span class="tag bd">přečerpáno</span></div>`:''}</div>`;});
-  h+=`</div><button class="adddash" onclick="catModal()">${ic('plus',16)} Přidat kategorii</button>`;
+  const rows=p.cats.map((c,i)=>({c,i,a:catActualDisplay(c,p.id),pl:catPlan(c)}));
+  const tot=sumActualDisplay(p),plan=sumPlan(p);
+  let h=vydajeKolac(rows,tot,plan);
+  h+=`<div style="text-align:center;margin-bottom:14px"><button class="btn" onclick="plansModal()">${ic('list',15)} Měsíční plány</button></div>`;
+  h+=`<div class="card catlist">`+rows.map(catRow).join('')+`</div>`;
+  h+=`<button class="adddash" onclick="catModal()">${ic('plus',16)} Přidat kategorii</button>`;
   return h;
+}
+/* Koláč nad seznamem: výseče mají stejné barvy jako ikony kategorií pod
+   ním, takže seznam slouží zároveň jako legenda. Uprostřed je souhrn,
+   pod koláčem kolik z plánu zbývá (nebo o kolik je přes). */
+function vydajeKolac(rows,tot,plan){
+  const R=57,C=2*Math.PI*R,s=rows.filter(r=>r.a>0);
+  let off=0;
+  const vysece=tot>0?s.map(r=>{const len=r.a/tot*C,mez=s.length>1?2:0;
+    const x=`<circle cx="75" cy="75" r="${R}" fill="none" stroke="${col(r.i)}" stroke-width="13" stroke-dasharray="${Math.max(0,len-mez)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 75 75)"/>`;
+    off+=len;return x;}).join(''):'';
+  const zb=plan-tot;
+  return `<div class="vkolac">
+    <div class="vk-in">
+      <svg viewBox="0 0 150 150" width="180" height="180" aria-hidden="true">
+        <circle cx="75" cy="75" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="13"/>${vysece}</svg>
+      <div class="vk-mid"><div class="l">utraceno</div><div class="v">${fmN(tot)}</div><div class="l">${plan>0?'z '+fmN(plan):'bez plánu'}</div></div>
+    </div>
+    ${plan>0?`<div class="vk-zb ${zb<0?'neg':'pos'}">${zb<0?'přes plán o '+fm(-zb):'zbývá '+fm(zb)+' do výplaty'}</div>`:''}
+  </div>`;
+}
+/* Řádek kategorie: pruh se barví podle stavu (v pořádku / blízko plánu /
+   přečerpáno), ne podle kategorie — ta má svou barvu v ikoně. */
+function catRow({c,i,a,pl}){
+  const pu=pl>0?Math.round(a/pl*100):0,over=pl>0&&a>pl;
+  const stav=over?'var(--neg)':pu>85?'var(--gold)':'var(--teal)';
+  return `<div class="catrow" onclick="openCat('${c.id}')">
+    <div class="top">
+      <div class="cic" style="background:${col(i)}1f;color:${col(i)}">${ic(c.icon,18)}</div>
+      <div class="m"><div class="n">${esc(c.nm)}</div><div class="s">${pl>0?'z '+fm(pl):'bez plánu'}</div></div>
+      <div class="r"><div class="v" style="${over?'color:var(--neg)':a?'':'color:var(--text4)'}">${fm(a)}</div>${pl>0?`<div class="p" style="color:${stav}">${pu} %</div>`:''}</div>
+    </div>
+    ${pl>0?`<div class="bar"><i style="width:${Math.min(100,pu)}%;background:${stav}"></i></div>`:''}
+  </div>`;
 }
 function catDetail(p,c){
   const aDirect=catActual(c),envA=envSpendForCat(c.nm,p.id),a=aDirect+envA,pl=catPlan(c),diff=pl-a;
