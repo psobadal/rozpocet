@@ -485,7 +485,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 /* Počet kategorií si volí každý sám, takže poslední řádek nemusí být plný —
    je vycentrovaný, ať nevisí vlevo. */
 .zs-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 0;max-height:212px;overflow-y:auto}
-.zs-grid>.zt{flex:0 0 25%}
+.zs-grid>.zt{flex:0 0 calc(100% / var(--zc,4))}
 .zt{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 2px;color:var(--text2);min-width:0}
 .zt>svg{width:46px;height:46px;padding:12px;border-radius:15px;background:var(--bg);color:var(--text2);box-sizing:border-box}
 .zt span{font-size:10.5px;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -501,7 +501,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .zs-note-line{font-size:12px;color:var(--text3);margin-top:12px}
 .zs-go{width:100%;justify-content:center;margin-top:16px;padding:14px;font-size:15px;border-radius:15px}
 
-.iconpick{display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow:auto}
+.iconpick{display:grid;grid-template-columns:repeat(auto-fill,40px);gap:6px;max-height:180px;overflow:auto}
 .iconpick button{width:40px;height:40px;border-radius:10px;border:1.5px solid var(--line2);background:var(--white);cursor:pointer;display:grid;place-items:center;color:var(--text2)}
 .iconpick button.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-d)}
 .swatches{display:flex;gap:8px;flex-wrap:wrap}
@@ -1231,7 +1231,8 @@ function stateEmpty(s){
     (p.cats||[]).some(c=>(c.pl||0)||(c.it||[]).some(i=>(i.log||[]).length||(i.pl||0))));
   const envHas=(s.envelopes||[]).some(e=>(e.bal||0)||(e.hist||[]).length);
   const invHas=(s.investments||[]).some(i=>(i.val||0)||(i.hist||[]).length);
-  return !perHas&&!envHas&&!invHas&&!(s.debts||[]).length&&!Object.keys(s.debtGroups||{}).length;}
+  // účty se v čerstvé appce nezakládají, takže každý založený účet už jsou data
+  return !perHas&&!envHas&&!invHas&&!(s.debts||[]).length&&!Object.keys(s.debtGroups||{}).length&&!(s.accounts||[]).length;}
 const netErr=e=>/Failed to fetch|NetworkError|Load failed/i.test((e&&e.message)||'');
 const CLOUD_DOWN='Cloud je nedostupný — projekt může být pozastavený nebo offline. Data máš zatím jen v tomhle zařízení.';
 
@@ -2618,6 +2619,8 @@ function vPohybyList(){
    Motor je pořád quickAdd() — panel jen doplňuje ta samá pole, která
    četl dosavadní řádek, takže všechny pojistky platí dál. */
 let zapisAmt='', zapisSeg='cat';
+// nejvýš 4 v řadě, ale řady vyrovnané: 5 = 3+2, 6 = 3+3, ne 4+1 a 4+2
+const zsCols=n=>Math.max(1,Math.ceil(n/Math.max(1,Math.ceil(n/4))));
 const ZSEG=[{k:'cat',l:'Výdaj',i:'cart'},{k:'env',l:'Obálka',i:'envelope'},{k:'inv',l:'Investice',i:'trending'},{k:'debt',l:'Dluh',i:'landmark'}];
 // Na mobilu se do spodní lišty vejdou čtyři záložky, zbytek je tady.
 function navMoreModal(){
@@ -2661,13 +2664,13 @@ function zapisHTML(){
     ${qaXfer?`<input type="hidden" id="qfrom" value="${esc(qaFrom)}">`:''}
     <div class="zs-amt"><input id="qamt" type="number" step="0.01" inputmode="decimal" placeholder="0" value="${esc(zapisAmt||(fix?String(fix):''))}" onkeydown="if(event.key==='Enter')zapisSubmit()"><span>Kč</span></div>`;
   if(qaXfer){
-    h+=`<div class="zs-lbl">Odkud</div><div class="zs-grid">`
+    h+=`<div class="zs-lbl">Odkud</div><div class="zs-grid" style="--zc:${zsCols(zdroje.length)}">`
       +zdroje.map(z=>`<button class="zt ${qaFrom===z.v?'on':''}" onclick="zapisFrom('${z.v}')">${ic(z.ik,21)}<span>${esc(z.nm)}</span></button>`).join('')
       +`</div><div class="zs-note-line">${ic('cright',13)} Připíše se na účet${acc?`: <b>${esc(acc.nm)}</b>`:''}</div>`;
   }else{
     h+=`<div class="zs-seg">`+ZSEG.filter(x=>x.k==='cat'||(x.k==='env'&&S.envelopes.length)||(x.k==='inv'&&S.investments.length)||(x.k==='debt'&&S.debts.length))
       .map(x=>`<button class="${seg===x.k?'on':''}" onclick="zapisSeg2('${x.k}')">${esc(x.l)}</button>`).join('')+`</div>`;
-    h+=`<div class="zs-grid">`+cile.map(c=>`<button class="zt ${cur===c.v?'on':''}" onclick="zapisPick('${c.v}')">${ic(c.ik,21)}<span>${esc(c.nm)}</span></button>`).join('')+`</div>`;
+    h+=`<div class="zs-grid" style="--zc:${zsCols(cile.length)}">`+cile.map(c=>`<button class="zt ${cur===c.v?'on':''}" onclick="zapisPick('${c.v}')">${ic(c.ik,21)}<span>${esc(c.nm)}</span></button>`).join('')+`</div>`;
     if(cur.startsWith('cat:')){
       const c=p.cats.find(x=>'cat:'+x.id===cur),its=(c&&c.it)||[];
       h+=`<div class="zs-lbl">Položka</div>`;
@@ -2809,7 +2812,15 @@ function saveItemCfg(){
 function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
 
 /* modal infra */
-function openModal(html,cls){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov'+(cls?' ov-'+cls:'');ov.id='ov';ov.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);}
+function openModal(html,cls){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov'+(cls?' ov-'+cls:'');ov.id='ov';ov.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);iconPickFit(ov);}
+/* Výběr ikon: počet sloupců se volí podle počtu ikon, ať poslední řádek
+   nezůstane poloprázdný (14 ikon = 7+7, ne 9+5). */
+function iconPickFit(root){
+  (root||document).querySelectorAll('.iconpick').forEach(el=>{
+    const n=el.children.length,w=el.clientWidth;if(!n||!w)return;
+    const max=Math.max(1,Math.floor((w+6)/46)),rady=Math.ceil(n/max);
+    el.style.gridTemplateColumns=`repeat(${Math.ceil(n/rady)},40px)`;});
+}
 function closeModal(){document.getElementById('ov')?.remove();}
 function iconPicker(list,cur){return `<div class="iconpick" id="m_ic">${list.map(n=>`<button class="${cur===n?'on':''}" data-ic="${n}" onclick="mctx.icon='${n}';document.querySelectorAll('#m_ic button').forEach(b=>b.classList.toggle('on',b.dataset.ic==='${n}'))">${ic(n,20)}</button>`).join('')}</div>`;}
 
