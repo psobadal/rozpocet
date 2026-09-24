@@ -310,9 +310,32 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 
 .back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--accent-d);cursor:pointer;margin-bottom:14px;padding:7px 13px;border-radius:9px;background:var(--accent-bg);border:none}
 .back:hover{background:var(--accent-bg2)}
-.item{background:var(--bg);border-radius:var(--rs);padding:13px 15px;margin-bottom:9px}
-.item.op{background:var(--white);border:1.5px solid var(--line2)}
+/* Detail kategorie: hlava ve stejném hlasu jako přehled Výdajů. */
+.cdhead{text-align:center;padding:4px 0 6px;margin-bottom:12px}
+.cdhead .cic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;margin:0 auto 10px}
+.cdhead .nm{font-size:15px;font-weight:500;color:var(--text2)}
+.cdhead .big{font-size:36px;font-weight:500;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:2px}
+.cdhead .sub{font-size:12.5px;color:var(--text3);margin-top:3px}
+.cdbar{height:6px;background:var(--bg2);border-radius:4px;overflow:hidden;max-width:420px;margin:14px auto 0}
+.cdbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
+.cdacts{display:flex;gap:6px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.cdacts button{background:var(--white);border:1px solid var(--line);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  font-size:12.5px;font-weight:500;padding:7px 12px;border-radius:99px}
+.cdacts button:hover:not(:disabled){border-color:var(--line2);color:var(--accent-d)}
+.cdacts button:disabled{opacity:.35;cursor:default}
+.cdacts .dng:hover{color:var(--neg)!important}
+/* Položky jako seznam, rozbalená dostane světlý podklad. */
+.itlist{padding:16px 16px 14px}
+.item{padding:11px 0;border-bottom:1px solid var(--line)}
+.item.op{background:var(--bg);border-radius:14px;padding:12px 12px;margin:4px -6px;border-bottom:none}
 .itop{display:flex;align-items:center;gap:10px;cursor:pointer}
+.itn{font-size:14.5px;font-weight:500;display:flex;align-items:center;gap:7px;overflow:hidden;white-space:nowrap}
+.its{font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.itv{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;flex:none}
+.itbar{height:3px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-top:9px}
+.itbar>i{display:block;height:100%;border-radius:3px}
+.itop:hover .itn{color:var(--accent-d)}
+.cdplan .inp{background:var(--bg)}
 .logline{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
 .logline:last-child{border-bottom:none}
 .logline .ld{color:var(--text3);font-size:12px;flex:0 0 62px;font-variant-numeric:tabular-nums}
@@ -1385,34 +1408,36 @@ function catRow({c,i,a,pl}){
 function catDetail(p,c){
   const aDirect=catActual(c),envA=envSpendForCat(c.nm,p.id),a=aDirect+envA,pl=catPlan(c),diff=pl-a;
   const ci=p.cats.findIndex(x=>x.id===c.id);
-  let h=`<button class="back" onclick="closeCat()">${ic('cleft',15)} Zpět na výdaje</button>`;
-  h+=`<div class="card"><div class="ch"><span class="ct"><span style="color:var(--accent)">${ic(c.icon,17)}</span> ${esc(c.nm)}</span>
-    <div style="display:flex;gap:4px">
-      <button class="ib" title="Posunout dřív" ${ci===0?'disabled style=opacity:.3':''} onclick="moveCat('${c.id}',-1)">${ic('cleft',15)}</button>
-      <button class="ib" title="Posunout později" ${ci===p.cats.length-1?'disabled style=opacity:.3':''} onclick="moveCat('${c.id}',1)">${ic('cright',15)}</button>
-      <button class="btn sm" onclick="catModal('${c.id}')">${ic('edit',15)} Upravit</button><button class="ib" title="Smazat" onclick="delCat('${c.id}')">${ic('trash',16)}</button></div></div>
-    <div class="grid3" style="margin-bottom:6px">
-      <div style="text-align:center"><div class="mini">Plán</div><div class="num" style="font-size:19px">${fm(pl)}</div></div>
-      <div style="text-align:center"><div class="mini">Skutečnost</div><div class="num" style="font-size:19px;color:${a>pl&&pl>0?'var(--neg)':'var(--teal)'}">${fm(a)}</div>${envA>0?`<div class="mini">z toho ${fm(envA)} z obálek</div>`:''}</div>
-      <div style="text-align:center"><div class="mini">Rozdíl</div><div class="num ${diff>=0?'pos':'neg'}" style="font-size:19px">${diff>=0?'+':''}${fm(diff)}</div></div></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1.5px solid var(--line);flex-wrap:wrap">
-      <span class="mini" style="font-weight:500">Měsíční plán kategorie</span>
-      <input class="inp num" type="number" value="${c.pl||''}" placeholder="0" onchange="setCatPlan('${c.id}',this.value)" style="flex:0 0 120px;text-align:right">
-      ${(c.pl>0&&itemsPlan(c)>0)
-        ?`<span class="mini">Platí tenhle plán. Z položek by jinak vyšlo ${fm(itemsPlan(c))}.</span>`
-        :itemsPlan(c)>0
-          ?`<span class="mini">Nech 0 — plán se sčítá z položek. Zadej číslo, jen když chceš jeden plán za celou kategorii místo nich.</span>`
-          :`<span class="mini">Nechceš rozepisovat položky? Zadej sem jeden plán za celou kategorii.</span>`}</div></div>`;
-  h+=`<div class="card"><div class="ct" style="margin-bottom:14px">Položky</div>`;
+  const pu=pl>0?Math.round(a/pl*100):0,over=pl>0&&a>pl;
+  const stav=over?'var(--neg)':pu>85?'var(--gold)':'var(--teal)';
+  /* Hlava detailu mluví stejně jako přehled Výdajů: ikona v barvě
+     kategorie, velká částka, pruh obarvený podle stavu. Ovládání
+     kategorie je tichá řada pod ní, ať nepřekřikuje čísla. */
+  let h=`<button class="back" onclick="closeCat()">${ic('cleft',15)} Výdaje</button>`;
+  h+=`<div class="cdhead">
+    <div class="cic" style="background:${col(ci)}1f;color:${col(ci)}">${ic(c.icon,24)}</div>
+    <div class="nm">${esc(c.nm)}</div>
+    <div class="big" style="${over?'color:var(--neg)':''}">${fm(a)}</div>
+    <div class="sub">${pl>0?(over?`přes plán ${fm(pl)} o ${fm(-diff)}`:`z plánu ${fm(pl)} · zbývá ${fm(diff)}`):'bez plánu'}${envA>0?` · z toho ${fm(envA)} z obálek`:''}</div>
+    ${pl>0?`<div class="cdbar"><i style="width:${Math.min(100,pu)}%;background:${stav}"></i></div>`:''}
+    <div class="cdacts">
+      <button onclick="catModal('${c.id}')">${ic('edit',14)} Upravit</button>
+      <button ${ci===0?'disabled':''} title="Posunout dřív" onclick="moveCat('${c.id}',-1)">${ic('cleft',14)}</button>
+      <button ${ci===p.cats.length-1?'disabled':''} title="Posunout později" onclick="moveCat('${c.id}',1)">${ic('cright',14)}</button>
+      <button class="dng" title="Smazat kategorii" onclick="delCat('${c.id}')">${ic('trash',14)}</button>
+    </div></div>`;
+  h+=`<div class="card itlist"><div class="ct" style="margin-bottom:4px">Položky</div>`;
   if(!c.it.length)h+=`<div class="empty">Zatím žádné položky.</div>`;
   c.it.forEach(it=>{const ia=itemActual(it),d=(it.pl||0)-ia,isOpen=openItem===it.id;const logs=(it.log||[]).slice().sort((x,y)=>(y.d||'').localeCompare(x.d||''));
+    const ipu=it.pl>0?Math.round(ia/it.pl*100):0,istav=it.pl>0&&ia>it.pl?'var(--neg)':ipu>85?'var(--gold)':'var(--teal)';
     h+=`<div class="item ${isOpen?'op':''}"><div class="itop" onclick="toggleItem('${it.id}')">
-      <div style="flex:1;min-width:0"><div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:7px">
+      <div style="flex:1;min-width:0"><div class="itn">
         <span style="overflow:hidden;text-overflow:ellipsis">${esc(it.nm)}</span>
-        ${(it.kind||it.link)?`<span class="tag ${itemKind(it,c)==='save'?'ok':itemKind(it,c)==='want'?'wr':''}" style="font-weight:500;${itemKind(it,c)==='need'?'background:var(--bg2);color:var(--text3)':''}">${KIND_LABEL[itemKind(it,c)]}</span>`:''}</div>
-        <div class="mini">Plán ${fm(it.pl||0)} · <span class="${d>=0?'pos':'neg'}">${d>=0?'zbývá ':'−'}${fm(Math.abs(d))}</span>${linkTarget(it)?` · ${ic('cright',11)&&''}→ ${esc(linkTarget(it).obj.nm)}`:''}</div></div>
-      <div class="num" style="font-size:16px;color:${ia>0?'var(--text)':'var(--text4)'}">${fm(ia)}</div>
-      <span style="color:var(--text4);transform:rotate(${isOpen?90:0}deg);transition:.2s">${ic('cright',16)}</span></div>`;
+        ${(it.kind||it.link)?`<span class="tag ${itemKind(it,c)==='save'?'ok':itemKind(it,c)==='want'?'wr':''}" style="${itemKind(it,c)==='need'?'background:var(--bg2);color:var(--text3)':''}">${KIND_LABEL[itemKind(it,c)]}</span>`:''}</div>
+        <div class="its">${it.pl>0?`z ${fm(it.pl)} · <span class="${d>=0?'pos':'neg'}">${d>=0?'zbývá ':'přes o '}${fm(Math.abs(d))}</span>`:'bez plánu'}${linkTarget(it)?` · → ${esc(linkTarget(it).obj.nm)}`:''}</div></div>
+      <div class="itv" style="color:${ia>0?(it.pl>0&&ia>it.pl?'var(--neg)':'var(--text)'):'var(--text4)'}">${fm(ia)}</div>
+      <span style="color:var(--text4);transform:rotate(${isOpen?90:0}deg);transition:.2s;display:grid">${ic('cright',16)}</span></div>
+      ${it.pl>0&&!isOpen?`<div class="itbar"><i style="width:${Math.min(100,ipu)}%;background:${istav}"></i></div>`:''}`;
     if(isOpen){h+=`<div style="margin-top:12px;padding-top:10px;border-top:1.5px solid var(--line)">`;
       if(logs.length)logs.forEach(le=>{const li=it.log.indexOf(le);h+=`<div class="logline"><span class="ld">${fd(le.d)}</span><span class="ln">${esc(le.n||'—')}</span><span class="la">${fm(le.a)}</span><button class="ib" title="Upravit zápis" onclick="logModal('${c.id}','${it.id}',${li})">${ic('edit',14)}</button><button class="ib" title="Smazat zápis" onclick="delLog('${c.id}','${it.id}',${li})">${ic('x',14)}</button></div>`;});
       else h+=`<div class="mini" style="text-align:center;padding:6px 0">Žádné záznamy</div>`;
@@ -1435,7 +1460,15 @@ function catDetail(p,c){
         ].filter(Boolean).join(' · ')}</div></div>
       ${it.fixAmt&&!(it.pl>0)?`<div class="mini" style="margin-top:6px;color:var(--gold)">${ic('zap',13)} Pevná částka bez plánu — není co předvyplnit.</div>`:''}</div>`;}
     h+=`</div>`;});
-  h+=`<div class="logadd" style="border-top:1.5px dashed var(--line2);margin-top:10px;padding-top:14px"><input class="inp" id="nit-${c.id}" placeholder="Nová položka" style="flex:2"><input class="inp num" id="nitp-${c.id}" type="number" placeholder="Plán" style="flex:1"><button class="btn fill sm" onclick="addItem('${c.id}')">${ic('plus',15)} Položka</button></div></div>`;
+  h+=`<div class="logadd" style="border-top:1px solid var(--line);margin-top:6px;padding-top:14px"><input class="inp" id="nit-${c.id}" placeholder="Nová položka" style="flex:2"><input class="inp num" id="nitp-${c.id}" type="number" placeholder="Plán" style="flex:1"><button class="btn fill sm" onclick="addItem('${c.id}')">${ic('plus',15)} Položka</button></div></div>`;
+  h+=`<div class="card cdplan"><div class="ct" style="margin-bottom:10px">Měsíční plán kategorie</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <input class="inp num" type="number" value="${c.pl||''}" placeholder="0" onchange="setCatPlan('${c.id}',this.value)" style="flex:0 0 120px;text-align:right">
+      ${(c.pl>0&&itemsPlan(c)>0)
+        ?`<span class="mini">Platí tenhle plán. Z položek by jinak vyšlo ${fm(itemsPlan(c))}.</span>`
+        :itemsPlan(c)>0
+          ?`<span class="mini">Nech 0 — plán se sčítá z položek. Zadej číslo, jen když chceš jeden plán za celou kategorii místo nich.</span>`
+          :`<span class="mini">Nechceš rozepisovat položky? Zadej sem jeden plán za celou kategorii.</span>`}</div></div>`;
   return h;
 }
 
