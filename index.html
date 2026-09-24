@@ -107,7 +107,7 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 /* Hlavní číslo nesedí v orámované kartě na střed jako dřív, ale volně
    vlevo, jak je zvykem v bankovních appkách — oko ho najde dřív a zbyde
    místo na řadu akcí pod ním. */
-.hero>*{position:relative}
+
 /* Hlavní číslo nesedí v orámované kartě na střed jako dřív, ale volně
    vlevo, jak je zvykem v bankovních appkách — oko ho najde dřív a zbyde
    místo na řadu akcí pod ním. */
@@ -122,11 +122,13 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .hbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
 .hstats{display:flex;gap:10px 26px;flex-wrap:wrap;margin-top:16px;justify-content:center}
 .hstats>div{text-align:center;min-width:74px}
-/* Na mobilu se čtyři čísla lámala 3+1 a poslední viselo samo na řádku.
-   Mřížka dva a dva drží pořádek; při pěti (se splátkami) je pátá na středu. */
+/* Na mobilu nesmí žádné číslo viset samo na řádku. Mřížka na šest dílů
+   se přizpůsobí počtu: 2 a 4 po dvou, 3 v jedné řadě, 5 jako tři a dva. */
 @media(max-width:640px){
-  .hstats{display:grid;grid-template-columns:1fr 1fr;gap:14px 10px}
-  .hstats>div:last-child:nth-child(odd){grid-column:1/-1}
+  .hstats{display:grid;grid-template-columns:repeat(6,1fr);gap:14px 8px}
+  .hstats>div{grid-column:span 3;min-width:0}
+  .hstats:has(>div:nth-child(3):last-child)>div{grid-column:span 2}
+  .hstats:has(>div:nth-child(5):last-child)>div:nth-child(-n+3){grid-column:span 2}
 }
 
 /* Řada kulatých akcí — podpis moderních bankovních appek. */
@@ -150,16 +152,15 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .acccard .av{font-size:17px;font-weight:500;font-family:var(--numfont);font-variant-numeric:tabular-nums;letter-spacing:-.3px}
 .hstats span{display:block;font-size:10.5px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
 .hstats b{font-size:15.5px;font-weight:500;font-family:var(--numfont);font-variant-numeric:tabular-nums}
-.card.go{cursor:pointer;transition:transform .12s,box-shadow .12s}
-.card.go:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
 
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-@media(max-width:640px){.tiles{grid-template-columns:1fr 1fr}.tiles .tile:nth-child(3):last-child{grid-column:1/-1}}
-.tile{background:var(--white);border-radius:var(--rs);padding:14px 16px;border:1px solid var(--line);text-align:center}
-.card .tile{background:var(--bg);box-shadow:none}
-.tile .tl{font-size:10.5px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
-.tile .tv{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
-.pos{color:var(--teal)} .neg{color:var(--neg)} .warn{color:var(--gold)}
+
+
+
+
+
+
+
+ .neg{color:var(--neg)} .warn{color:var(--gold)}
 
 /* Navigace se řídí šířkou okna, ne zařízením: na širokém pilulky nahoře
    (appka běží i na dvou počítačích), na úzkém spodní lišta jako v bankovních
@@ -194,33 +195,14 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .card.go:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
 
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-@media(max-width:640px){.tiles{grid-template-columns:1fr 1fr}.tiles .tile:nth-child(3):last-child{grid-column:1/-1}}
+@media(max-width:640px){.tiles{grid-template-columns:repeat(3,1fr);gap:8px}.tiles .tile{padding:10px 6px;text-align:center;min-width:0}.tiles .tile .tv{font-size:15px}.tiles .tile .tl{font-size:10px;letter-spacing:.2px}}
 .tile{background:var(--white);border-radius:var(--rs);padding:14px 16px;border:1px solid var(--line);text-align:center}
 .card .tile{background:var(--bg);box-shadow:none}
-.tile .tl{font-size:11.5px;color:var(--text3);margin-bottom:5px}
+.tile .tl{font-size:11.5px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
 .tile .tv{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
 .pos{color:var(--teal)} .neg{color:var(--neg)} .warn{color:var(--gold)}
 
-/* Navigace se řídí šířkou okna, ne zařízením: na širokém pilulky nahoře
-   (appka běží i na dvou počítačích), na úzkém spodní lišta jako v bankovních
-   appkách. Značky v HTML jsou pro obojí stejné, přepíná to jen CSS — kromě
-   toho, že se na mobilu schovají záložky za čtvrtou a nabídne se „Více". */
-@media(max-width:640px){
-  .tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;margin:0;gap:0;padding:5px 2px;
-    border:none;border-top:1px solid var(--line);border-radius:0;overflow:visible;
-    box-shadow:0 -2px 14px rgba(22,21,26,.06)}
-  .tab{flex:1;flex-direction:column;gap:3px;font-size:10px;font-weight:500;padding:7px 2px;border-radius:12px;min-width:0}
-  .tab .tl{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}
-  .tab.on{background:none;color:var(--accent)}
-  .tab.tov:not(.on){display:none}
-  .app{padding-bottom:108px}
-  .fab{bottom:calc(96px + env(safe-area-inset-bottom));right:16px;width:52px;height:52px;border-radius:17px}
-  .top{padding:16px 0 10px}
-  .brand{font-size:17px;gap:8px;min-width:0}
-  .brand span:not(.mk){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .save-pill{padding:6px 10px;font-size:11px;flex:none}
-}
-@media(min-width:641px){.tab.more{display:none}}
+
 
 
 /* Seznam pohybů: bez linek mezi řádky, jen vzduch a denní hlavičky.
@@ -396,6 +378,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .invtools button{flex:1;min-width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);cursor:pointer;
   font-size:13px;font-weight:500;padding:9px 12px;border-radius:99px;background:var(--white);color:var(--text2)}
 .invtools button:hover{border-color:var(--line2);color:var(--accent-d)}
+@media(max-width:640px){.invtools{flex-wrap:nowrap;gap:6px}.invtools button{min-width:0;padding:9px 6px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .invlist{padding:6px 18px}
 .invr{text-align:right;flex:none}
 .invr .v{font-size:14.5px;font-weight:500;font-variant-numeric:tabular-nums}
@@ -449,7 +432,8 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .sth{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .sth>span:first-child{font-size:15px;font-weight:500}
 .sth>span:last-child{font-size:12.5px;font-weight:500}
-.stg{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:14px 10px}
+.stg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 10px}
+@media(max-width:640px){.stg{grid-template-columns:1fr 1fr}}
 .stg .l{font-size:11.5px;color:var(--text3)}
 .stg .v{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
 .shr{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
@@ -498,7 +482,10 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .zs-seg button{flex:1;background:none;border:none;color:var(--text2);font-size:12.5px;font-weight:500;padding:7px 4px;border-radius:99px;cursor:pointer}
 .zs-seg button.on{background:var(--white);color:var(--text);border:1px solid var(--line)}
 .zs-lbl{font-size:11.5px;color:var(--text3);font-weight:500;margin:12px 0 7px}
-.zs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:212px;overflow-y:auto}
+/* Počet kategorií si volí každý sám, takže poslední řádek nemusí být plný —
+   je vycentrovaný, ať nevisí vlevo. */
+.zs-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 0;max-height:212px;overflow-y:auto}
+.zs-grid>.zt{flex:0 0 25%}
 .zt{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 2px;color:var(--text2);min-width:0}
 .zt>svg{width:46px;height:46px;padding:12px;border-radius:15px;background:var(--bg);color:var(--text2);box-sizing:border-box}
 .zt span{font-size:10.5px;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -520,6 +507,9 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .swatches{display:flex;gap:8px;flex-wrap:wrap}
 .swatch{width:34px;height:34px;border-radius:9px;cursor:pointer;border:3px solid transparent}
 .swatch.on{border-color:var(--text)}
+.pertools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+@media(max-width:640px){.pertools{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pertools>:first-child{grid-column:1/-1}.pertools .btn{justify-content:center}}
+@media(max-width:640px){.swatches{display:grid;grid-template-columns:repeat(9,1fr);gap:6px}.swatch{width:auto;height:auto;aspect-ratio:1}}
 
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -2181,6 +2171,7 @@ function statMonth(p){
   const pv=prevPeriodOf(p),bezi=todayISO()<p.to,rz=pv?exp-sumActual(pv):0;
   h+=`<div class="card stdet"><div class="sth"><span>${esc(p.nm)}</span>${pv&&rz?`<span class="${rz<0?'pos':'neg'}">${bezi?'zatím ':''}o ${fm(Math.abs(rz))} ${rz<0?'méně':'víc'} než minulý cyklus</span>`:''}</div>
     <div class="stg">${[['Příjem',fm(inc),'var(--teal)'],['Výdaje',fm(exp),''],['Zůstatek',fm(freeLeft(p)),freeLeft(p)>=0?'var(--teal)':'var(--neg)'],
+      ['Odloženo',fm(saved+inv),'var(--gold)'],
       ['Míra úspor',savingsRate+' %',savingsRate>=20?'var(--teal)':savingsRate>=10?'var(--gold)':'var(--neg)'],['Plnění plánu',planFill+' %',''],['Denně',fm(daily),''],['Týdně',fm(weekly),'']]
       .map(x=>`<div><div class="l">${x[0]}</div><div class="v" style="${x[2]?'color:'+x[2]:''}">${x[1]}</div></div>`).join('')}</div></div>`;
   h+=rule503020(p);
@@ -2370,7 +2361,7 @@ function vNastaveni(p){
 
   // periods
   h+=`<div class="card"><div class="ct" style="margin-bottom:14px">${ic('calendar',15)} Výplatní období</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <div class="pertools">
       <button class="btn fill" onclick="newPeriodModal()">${ic('plus',15)} Nové období</button>
       <button class="btn" onclick="periodEditModal()">Upravit aktuální</button>
       ${S.periods.length>1?`<button class="btn dgr" onclick="delPeriod()">Smazat aktuální</button>`:''}</div>`;
@@ -2585,8 +2576,8 @@ function incomeBlock(p){
     <span style="color:var(--text4)">${ic('cright',16)}</span></div>`;
   return `<div class="card inc-row" onclick="incomeModal()">
     <div class="ic" style="background:var(--teal-bg);color:var(--teal)">${ic('banknote',20)}</div>
-    <div class="m"><div class="t1">Příjem tento cyklus</div>
-      <div class="t2">plánováno ${fm(pl)}</div></div>
+    <div class="m"><div class="t1">Příjem</div>
+      <div class="t2">plán ${fm(pl)}</div></div>
     <span class="num" style="color:var(--teal);font-size:18px">${fm(ac)}</span>
     <span style="color:var(--text4)">${ic('cright',16)}</span></div>`;
 }
@@ -2628,6 +2619,14 @@ function vPohybyList(){
    četl dosavadní řádek, takže všechny pojistky platí dál. */
 let zapisAmt='', zapisSeg='cat';
 const ZSEG=[{k:'cat',l:'Výdaj',i:'cart'},{k:'env',l:'Obálka',i:'envelope'},{k:'inv',l:'Investice',i:'trending'},{k:'debt',l:'Dluh',i:'landmark'}];
+// Na mobilu se do spodní lišty vejdou čtyři záložky, zbytek je tady.
+function navMoreModal(){
+  const vis=S.ui.tabs.filter(t=>t.visible||t.id==='nastaveni');
+  openModal(`<h3>Další</h3>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px">
+    ${vis.map(t=>`<button onclick="closeModal();go('${t.id}')" style="background:${tab===t.id?'var(--accent-bg)':'var(--bg)'};border:1px solid ${tab===t.id?'var(--accent-bg2)':'var(--line)'};color:${tab===t.id?'var(--accent-d)':'var(--text)'};border-radius:14px;padding:14px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12px;font-weight:500">
+      ${ic(t.icon,21)}<span>${esc(t.label)}</span></button>`).join('')}</div>`);
+}
 function zapisOpen(xfer){
   qaXfer=!!xfer;qaSel=xfer?'vyplata':'';qaFrom='';qaItem='';zapisAmt='';zapisSeg='cat';
   openModal(zapisHTML(),'sheet');
