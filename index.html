@@ -294,7 +294,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .catlist{padding:4px 16px}
 .catrow{padding:12px 0;cursor:pointer;border-bottom:1px solid var(--line)}
 .catrow:last-child{border-bottom:none}
-.catrow .top{display:flex;align-items:center;gap:12px}
+.catrow .crh{display:flex;align-items:center;gap:12px}
 .catrow .cic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none}
 .catrow .m{flex:1;min-width:0}
 .catrow .n{font-size:14.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1374,7 +1374,7 @@ function catRow({c,i,a,pl}){
   const pu=pl>0?Math.round(a/pl*100):0,over=pl>0&&a>pl;
   const stav=over?'var(--neg)':pu>85?'var(--gold)':'var(--teal)';
   return `<div class="catrow" onclick="openCat('${c.id}')">
-    <div class="top">
+    <div class="crh">
       <div class="cic" style="background:${col(i)}1f;color:${col(i)}">${ic(c.icon,18)}</div>
       <div class="m"><div class="n">${esc(c.nm)}</div><div class="s">${pl>0?'z '+fm(pl):'bez plánu'}</div></div>
       <div class="r"><div class="v" style="${over?'color:var(--neg)':a?'':'color:var(--text4)'}">${fm(a)}</div>${pl>0?`<div class="p" style="color:${stav}">${pu} %</div>`:''}</div>
