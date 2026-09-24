@@ -379,6 +379,27 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .wacts .sq{flex:0 0 44px;padding:10px 0}
 .wacts .dng:hover{color:var(--neg)}
 .accmvs{padding:16px 18px 8px}
+/* Investice: hodnota vlevo nad křivkou jako v investičních appkách. */
+.invhead{padding:6px 4px 0}
+.invhead .lbl{font-size:13px;color:var(--text3)}
+.invhead .big{font-size:36px;font-weight:500;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;line-height:1.2}
+.invhead .gn{font-size:13.5px;font-weight:500;margin-top:2px}
+.invhead .gn span{color:var(--text3);font-weight:400}
+.invhead .cy{font-size:12px;color:var(--text3);margin-top:2px}
+.invch{margin:12px 0 14px}
+.invch svg{width:100%;height:150px;display:block}
+.invax{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text3);margin-top:4px}
+.invax b{font-weight:500}
+.invrng{margin-top:10px;max-width:320px}
+.invrng button{padding:7px 8px;font-size:12.5px}
+.invtools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.invtools button{flex:1;min-width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);cursor:pointer;
+  font-size:13px;font-weight:500;padding:9px 12px;border-radius:99px;background:var(--white);color:var(--text2)}
+.invtools button:hover{border-color:var(--line2);color:var(--accent-d)}
+.invlist{padding:6px 18px}
+.invr{text-align:right;flex:none}
+.invr .v{font-size:14.5px;font-weight:500;font-variant-numeric:tabular-nums}
+.invr .g{font-size:12px;font-weight:500}
 .logline{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
 .logline:last-child{border-bottom:none}
 .logline .ld{color:var(--text3);font-size:12px;flex:0 0 62px;font-variant-numeric:tabular-nums}
@@ -701,7 +722,7 @@ function defState(){
 
 /* ---------- state ---------- */
 let S=defState();
-let uctySel='', accPoh=[];
+let uctySel='', accPoh=[], detailInv=null;
 let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='', qaItem='', qaFrom='', qaXfer=false, pohHledej='', pohLimit=5, poh=[], pohFiltr='';
 let fileHandle=null, fileOK=false;
 
@@ -1259,7 +1280,7 @@ function updateSavePill(){const el=document.getElementById('savepill');if(!el)re
 /* =====================================================================
    RENDER
    ===================================================================== */
-function go(t){tab=t;detailCat=null;openItem=null;R();window.scrollTo(0,0);}
+function go(t){tab=t;detailCat=null;detailInv=null;openItem=null;R();window.scrollTo(0,0);}
 const VIEWS={prehled:vPrehled,vydaje:vVydaje,ucty:vUcty,obalky:vObalky,investice:vInvestice,dluhy:vDluhy,statistiky:vStat,nastaveni:vNastaveni};
 
 function R(){
@@ -1576,34 +1597,110 @@ function envCard(p,e,i){
 
 /* ---------- INVESTICE ---------- */
 function vInvestice(p){
-  const ti=totalInvest();
-  let h=pageHero('Hodnota investic a úspor',fm(ti),`tento cyklus vloženo ${fm(investedInPeriod(p.id))}`,'var(--cyan)');
+  if(detailInv){const inv=S.investments.find(x=>x.id===detailInv);if(inv)return invDetail(p,inv);detailInv=null;}
+  const ti=totalInvest(),put=S.investments.reduce((s,v)=>s+invIn(v),0),gain=ti-put;
+  /* Portfolio jako v investičních appkách: hodnota a výnos od vložení,
+     pod tím křivka hodnoty v čase a seznam pozic. Detail pozice (vklady,
+     přecenění, kurz, historie) je až po kliknutí, jako u kategorií. */
+  let h=`<div class="invhead">
+    <div class="lbl">Hodnota investic a úspor</div>
+    <div class="big">${fm(ti)}</div>
+    ${put>0?`<div class="gn ${gain>=0?'pos':'neg'}">${gain>=0?'+':'−'}${fm(Math.abs(gain))} · ${gain>=0?'+':'−'}${(Math.abs(gain)/put*100).toFixed(1).replace('.',',')} % <span>od vložení</span></div>`:''}
+    <div class="cy">tento cyklus vloženo ${fm(investedInPeriod(p.id))}</div></div>`;
+  if(S.investments.length)h+=invChart(S.investments);
   h+=tipBan('percent',`<b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b> — zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
-  h+=`<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">${S.investments.some(i=>i.stock||i.crypto)?`<button class="btn" onclick="pxOverviewModal()">${ic('list',15)} Kurzy</button>`:''}<button class="btn" onclick="invCalcModal()">${ic('percent',15)} Kalkulačka</button><button class="btn fill" onclick="invModal()">${ic('plus',15)} Nová položka</button></div>`;
-  if(!S.investments.length)h+=`<div class="card"><div class="empty">Zatím žádné investice.</div></div>`;
+  h+=`<div class="invtools">
+    <button onclick="invModal()">${ic('plus',15)} Nová položka</button>
+    ${S.investments.some(i=>i.stock||i.crypto)?`<button onclick="pxOverviewModal()">${ic('list',15)} Kurzy</button>`:''}
+    <button onclick="invCalcModal()">${ic('percent',15)} Kalkulačka</button></div>`;
+  if(!S.investments.length)return h+`<div class="card"><div class="empty">Zatím žádné investice.</div></div>`;
   const sorted=S.investments.map((x,i)=>({x,i})).sort((a,b)=>(b.x.val||0)-(a.x.val||0));
-  sorted.forEach(({x:inv,i})=>{const pcw=ti>0?Math.round(inv.val/ti*100):0;const mInt=inv.rate>0?Math.round((inv.val||0)*inv.rate/100/12*(1-(S.tax||0)/100)):0;
-    const put=invIn(inv),gain=invGain(inv),gpc=put>0?Math.round(gain/put*1000)/10:0;
-    h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px">
-      <div class="ic" style="background:${col(i)}22;color:${col(i)}">${ic(inv.icon,18)}</div>
-      <div style="flex:1;min-width:0"><div style="font-weight:500">${esc(inv.nm)}</div>
-        ${inv.crypto?`<div class="mini">${(''+inv.qty).replace('.',',')} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z CoinGecko'}</div>`:inv.stock?`<div class="mini">${(''+inv.qty).replace('.',',')} ks ${esc(inv.stock)}${inv.ccy&&inv.ccy!=='CZK'?' · '+inv.ccy:''} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z burzy'}</div>`:inv.rate>0?`<div class="mini">${(''+inv.rate).replace('.',',')} % p.a. · úrok/měs. ≈ +${fm(mInt)} po dani</div>`:''}
-        <div class="prog" style="height:6px;margin-top:5px"><i style="width:${pcw}%;background:var(--cyan)"></i></div></div>
-      <div style="text-align:right"><div class="num" style="font-size:17px">${fm(inv.val||0)}</div><div class="mini">${pcw}%</div></div>
-      <div style="display:flex;flex-direction:column;gap:3px">${inv.crypto||inv.stock?'':`<button class="btn sm" onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button>`}<button class="ib" onclick="invModal('${inv.id}')">${ic('edit',15)}</button></div></div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1.5px solid var(--line)">
-        <span class="mini">Vloženo <b class="num" style="color:var(--text2)">${fm(put)}</b></span>
-        <span class="mini">Zhodnocení <b class="num" style="color:${gain>0?'var(--teal)':gain<0?'var(--neg)':'var(--text3)'}">${gain>0?'+':''}${fm(gain)}${put>0?` (${gain>0?'+':''}${(''+gpc).replace('.',',')} %)`:''}</b></span>
-        <div style="flex:1"></div>
-        ${inv.crypto||inv.stock?`<button class="btn sm" onclick="invRefreshPrice('${inv.id}')">${ic('trending',14)} Aktualizovat kurz</button>`:`<button class="btn sm" onclick="invRevalue('${inv.id}')">${ic('trending',14)} Přecenit</button>`}</div>`;
-    if(inv.pxBad)h+=`<div class="mini" style="margin-top:8px;color:var(--gold)">${ic('zap',13)} Kurz se nedaří načíst — zkontroluj symbol <b>${esc(inv.stock||'')}</b>. Hodnota níž je poslední známá, ne aktuální.</div>`;
-    const tr=invTrend(inv);
-    if(tr)h+=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px">${ic('trending',13)}${tr}</div>`;
-    // denní záznamy z kurzu se sem netahají — je jich moc a nic neříkají;
-    // co s penězi udělal trh, je vidět v `invTrend` nad tím
-    const hist=(inv.hist||[]).filter(x=>!x.auto).slice(-3).reverse();
-    if(hist.length){h+=`<div style="margin-top:10px;padding-top:10px;border-top:1.5px solid var(--line)">`;hist.forEach(x=>{h+=`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);padding:2px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span class="num" style="color:${x.a>=0?'var(--teal)':'var(--neg)'}">${x.a>=0?'+':''}${fm(x.a)}</span></div>`;});h+=`</div>`;}
-    h+=`</div>`;});
+  h+=`<div class="card invlist">`;
+  sorted.forEach(({x:inv,i})=>{const pin=invIn(inv),g=invGain(inv),gp=pin>0?g/pin*100:0;
+    h+=`<div class="row" style="cursor:pointer" onclick="openInv('${inv.id}')">
+      <div class="ic" style="background:${col(i)}1f;color:${col(i)}">${ic(inv.icon,18)}</div>
+      <div class="m"><div class="t1">${esc(inv.nm)}</div><div class="t2">${invPopis(inv)}</div></div>
+      <div class="invr"><div class="v">${fm(inv.val||0)}</div>
+        ${pin>0?`<div class="g ${g>=0?'pos':'neg'}">${g>=0?'+':'−'}${Math.abs(gp).toFixed(1).replace('.',',')} %</div>`:''}</div>
+      ${inv.pxBad?`<span title="Kurz se nedaří načíst" style="color:var(--gold)">${ic('zap',14)}</span>`:''}</div>`;});
+  h+=`</div>`;
+  return h;
+}
+// podtitulek pozice: kusy a symbol, u krypta stáří kurzu, u spořáku úrok
+function invPopis(inv){
+  if(inv.crypto)return `${(''+inv.qty).replace('.',',')} · kurz ${inv.pxAt?'sám '+agoTxt(inv.pxAt):'z CoinGecko'}`;
+  if(inv.stock)return `${(''+inv.qty).replace('.',',')} ks ${esc(inv.stock)}${inv.pxAt?' · kurz '+agoTxt(inv.pxAt):''}`;
+  if(inv.rate>0)return `${(''+inv.rate).replace('.',',')} % p.a.`;
+  return 'ručně';
+}
+function openInv(id){detailInv=id;R();window.scrollTo(0,0);}
+function closeInv(){detailInv=null;R();}
+
+/* Křivka hodnoty v čase. Hodnota k datu se dopočítá zpětně z dnešní
+   hodnoty a pozdějších záznamů (invValAt), stejně jako graf jmění ve
+   Statistikách, takže poslední bod vždy sedí s číslem nahoře. */
+let invRange='1R';
+const INV_RNG={'1M':30,'6M':182,'1R':365,'Vše':0};
+function invSeries(list){
+  const today=todayISO();let days=INV_RNG[invRange];
+  if(!days){const ds=[];list.forEach(v=>(v.hist||[]).forEach(x=>{if(x.d)ds.push(x.d);}));
+    const start=ds.length?ds.reduce((a,b)=>a<b?a:b):today;
+    days=Math.max(30,Math.round((new Date(today+'T12:00:00')-new Date(start+'T12:00:00'))/864e5));}
+  const n=Math.min(60,Math.max(8,days<=31?days:Math.round(days/7))),pts=[];
+  for(let i=0;i<=n;i++){const d=new Date();d.setDate(d.getDate()-Math.round(days*(1-i/n)));const t=iso(d);
+    pts.push({d:t,v:list.reduce((s,inv)=>s+invValAt(inv,t),0)});}
+  return pts;
+}
+function invChart(list){
+  const pts=invSeries(list),vals=pts.map(x=>x.v),n=pts.length,W=640,H=150,PT=10,PB=8;
+  let mn=Math.min(...vals),mx=Math.max(...vals);const pad=(mx-mn)*.15||Math.abs(mx)*.05||1;mn-=pad;mx+=pad;
+  const X=i=>i*W/(n-1),Y=v=>PT+(mx-v)/(mx-mn)*(H-PT-PB);
+  const line=pts.map((q,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(q.v).toFixed(1)).join(' ');
+  // zhodnocení za období bez vkladů — rozdíl hodnot by vydával vložené peníze za zisk
+  const zm=list.reduce((s,v)=>s+invGainSince(v,pts[0].d),0);
+  const od=pts[0].d,odTxt=INV_RNG[invRange]&&INV_RNG[invRange]<=31?fd(od):(+od.slice(5,7))+'/'+od.slice(2,4);
+  return `<div class="invch">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <path d="${line} L ${W} ${H} L 0 ${H} Z" fill="var(--cyan)" opacity=".10"/>
+      <path d="${line}" fill="none" stroke="var(--cyan)" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <div class="invax"><span>${odTxt}</span><span>zhodnocení <b class="${zm>=0?'pos':'neg'}">${zm>=0?'+':'−'}${fm(Math.abs(zm))}</b></span><span>dnes</span></div>
+    <div class="seg invrng">${Object.keys(INV_RNG).map(k=>`<button class="${invRange===k?'on':''}" onclick="invRange='${k}';R()">${k}</button>`).join('')}</div>
+  </div>`;
+}
+
+/* Detail pozice: všechno, co dřív bylo na kartě — vklad nebo přecenění,
+   kurz, trend, úrok a historie. */
+function invDetail(p,inv){
+  const i=S.investments.indexOf(inv),pin=invIn(inv),g=invGain(inv),gp=pin>0?g/pin*100:0;
+  const auto=inv.crypto||inv.stock;
+  const mInt=inv.rate>0?Math.round((inv.val||0)*inv.rate/100/12*(1-(S.tax||0)/100)):0;
+  let h=`<button class="back" onclick="closeInv()">${ic('cleft',15)} Investice</button>`;
+  h+=`<div class="cdhead">
+    <div class="cic" style="background:${col(i)}1f;color:${col(i)}">${ic(inv.icon,24)}</div>
+    <div class="nm">${esc(inv.nm)}</div>
+    <div class="big">${fm(inv.val||0)}</div>
+    <div class="sub">${invPopis(inv)}</div>
+    ${pin>0?`<div class="sub">vloženo ${fm(pin)} · <span class="${g>=0?'pos':'neg'}">${g>=0?'+':'−'}${fm(Math.abs(g))} (${g>=0?'+':'−'}${Math.abs(gp).toFixed(1).replace('.',',')} %)</span></div>`:''}
+    <div class="cdacts">
+      ${auto?`<button onclick="invRefreshPrice('${inv.id}')">${ic('trending',14)} Aktualizovat kurz</button>`
+        :`<button onclick="invAdd('${inv.id}')">${ic('plus',14)} Kč</button><button onclick="invRevalue('${inv.id}')">${ic('trending',14)} Přecenit</button>`}
+      <button onclick="invModal('${inv.id}')">${ic('edit',14)} Upravit</button>
+      <button class="dng" title="Smazat" onclick="delInv('${inv.id}')">${ic('trash',14)}</button>
+    </div></div>`;
+  if(inv.pxBad)h+=`<div class="banner warn" style="margin-bottom:12px">${ic('zap',15)} Kurz se nedaří načíst — zkontroluj symbol <b>${esc(inv.stock||'')}</b>. Hodnota je poslední známá, ne aktuální.</div>`;
+  h+=invChart([inv]);
+  const tr=invTrend(inv);
+  if(tr||mInt)h+=`<div class="card" style="padding:14px 18px">${tr?`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">${ic('trending',13)}${tr}</div>`:''}
+    ${mInt?`<div class="mini" style="${tr?'margin-top:8px':''}">${ic('percent',13)} Úrok po zdanění ~<b>${fm(mInt)}</b> měsíčně, připisuje se sám k 1. dni v měsíci.</div>`:''}</div>`;
+  const hAll=inv.hist||[],hist=hAll.filter(x=>!x.auto).slice(-10).reverse();
+  h+=`<div class="card accmvs"><div class="ct" style="margin-bottom:4px">Historie</div>`;
+  if(!hist.length)h+=`<div class="empty" style="padding:14px 0">Zatím nic.</div>`;
+  hist.forEach(x=>{const oi=hAll.indexOf(x),zisk=x.k==='gain',plus=(x.a||0)>=0;
+    h+=`<div class="row" ${zisk?'':`style="cursor:pointer" onclick="invHistModal('${inv.id}',${oi})"`}>
+      <div class="ic" style="background:${zisk?'var(--cyan-bg)':plus?'var(--teal-bg)':'var(--neg-bg)'};color:${zisk?'var(--cyan)':plus?'var(--teal)':'var(--neg)'}">${ic(zisk?'trending':plus?'plus':'cleft',16)}</div>
+      <div class="m"><div class="t1">${esc(x.n||(zisk?'Přecenění':plus?'Vklad':'Výběr'))}</div><div class="t2">${fd(x.d)}${zisk?' · změna hodnoty':''}</div></div>
+      <span class="num" style="font-weight:500;color:${plus?'var(--teal)':'var(--neg)'}">${plus?'+':'−'}${fm(Math.abs(x.a||0))}</span></div>`;});
+  h+=`</div>`;
   return h;
 }
 
