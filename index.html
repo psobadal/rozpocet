@@ -122,6 +122,12 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .hbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
 .hstats{display:flex;gap:10px 26px;flex-wrap:wrap;margin-top:16px;justify-content:center}
 .hstats>div{text-align:center;min-width:74px}
+/* Na mobilu se čtyři čísla lámala 3+1 a poslední viselo samo na řádku.
+   Mřížka dva a dva drží pořádek; při pěti (se splátkami) je pátá na středu. */
+@media(max-width:640px){
+  .hstats{display:grid;grid-template-columns:1fr 1fr;gap:14px 10px}
+  .hstats>div:last-child:nth-child(odd){grid-column:1/-1}
+}
 
 /* Řada kulatých akcí — podpis moderních bankovních appek. */
 .acts{display:flex;gap:8px;margin-bottom:18px;max-width:420px;margin-left:auto;margin-right:auto}
@@ -216,18 +222,6 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 }
 @media(min-width:641px){.tab.more{display:none}}
 
-.hbar{height:6px;background:var(--bg2);border-radius:4px;margin-top:15px;overflow:hidden}
-.hbar>i{display:block;height:100%;border-radius:4px;transition:width .5s}
-.hstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px;margin-top:16px}
-.hstats>div{background:var(--bg);border-radius:12px;padding:10px 6px;text-align:center;min-width:0}
-.hstats span{display:block;font-size:11.5px;color:var(--text3);margin-bottom:3px}
-.hstats b{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
-
-/* Vedlejší akce pod hlavním tlačítkem — tiché, ať nepřetahují pozornost. */
-.acts{display:flex;gap:6px;margin-top:10px;justify-content:center;flex-wrap:wrap}
-.acts button{background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
-  font-size:12.5px;font-weight:500;color:var(--text2);padding:7px 12px;border-radius:99px}
-.acts button:hover{background:var(--bg);color:var(--accent-d)}
 
 /* Seznam pohybů: bez linek mezi řádky, jen vzduch a denní hlavičky.
    Kolečko nese ikonu kategorie nebo truhlice, barva říká, jestli to
@@ -235,8 +229,8 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .inc-cta,.inc-row{display:flex;align-items:center;gap:12px;cursor:pointer;padding:14px 16px}
 .inc-cta{border-color:var(--teal-bg);background:var(--teal-bg)}
 .inc-cta:hover,.inc-row:hover{border-color:var(--line2)}
-.inc-cta .t1,.inc-row .t1{font-weight:500;font-size:14.5px}
-.inc-cta .t2,.inc-row .t2{font-size:12.5px;color:var(--text3)}
+.inc-cta .t1,.inc-row .t1{font-weight:500;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inc-cta .t2,.inc-row .t2{font-size:12.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .inc-cta .m,.inc-row .m{flex:1;min-width:0}
 .pohchips{display:flex;gap:6px;overflow-x:auto;margin-bottom:4px;padding-bottom:4px;scrollbar-width:none}
 .pohchips::-webkit-scrollbar{display:none}
