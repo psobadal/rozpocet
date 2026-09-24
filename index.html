@@ -1853,13 +1853,17 @@ function groupDetail(g){
       <button onclick="groupModal('${gE}')">${ic('edit',14)} ${groupIcon(g)==='home'?'Cena a LTV':'Cena'}</button>
       <button class="dng" title="Smazat projekt" onclick="delGroupMeta('${gE}')">${ic('trash',14)}</button>
     </div></div>`;
+  // když se ještě financuje a celek neznáme, je nejdůležitější, kolik chybí — jde první
+  const rozpadH=()=>{let h='';
   if(st.lifetimeTotal>0){
     const parts=[['Vlastní peníze',st.ownPaid,'var(--teal)'],['Úvěry',st.principal,'var(--blue)'],['Úroky za celou dobu',st.lifetimeInterest,'var(--neg)']].filter(x=>x[1]>0);
     const sum=parts.reduce((s,x)=>s+x[1],0)||1;
-    h+=`<div class="dgstack">${parts.map(x=>`<i style="width:${x[1]/sum*100}%;background:${x[2]}"></i>`).join('')}</div>`;
+    if(parts.length>1)h+=`<div class="dgstack">${parts.map(x=>`<i style="width:${x[1]/sum*100}%;background:${x[2]}"></i>`).join('')}</div>`;
     h+=`<div class="card catlist">${parts.map(x=>`<div class="dgrow"><span class="dot" style="background:${x[2]}"></span><span class="l">${x[0]}</span><b style="${x[2]==='var(--neg)'?'color:var(--neg)':''}">${fm(x[1])}</b></div>`).join('')}
       <div class="dgrow"><span class="l" style="color:var(--text3)">Zatím zaplaceno</span><b style="color:var(--text3)">${fm(st.ownPaid+st.paid)} · ${Math.round((st.ownPaid+st.paid)/st.lifetimeTotal*100)} %</b></div></div>`;
   }
+  return h;};
+  const financH=()=>{let h='';
   if(st.totalPrice>0&&st.priceGap>0){
     h+=`<div class="card dgcard">
       <div class="dgline"><span>Zaplaceno na koupi${st.feesSum>0?' (vč. poplatků)':''}</span><b>${st.pricePc} %</b></div>
@@ -1870,6 +1874,8 @@ function groupDetail(g){
     // rada k LTV jen před čerpáním úvěru; potom je to šum (a počítá se dál v „Cena a LTV")
     if(st.suggestedMortgage>0&&st.disbursedPrincipal===0)h+=`<div class="dgtip">${ic('percent',14)} Při LTV ${st.ltv} % z kupní ceny by hypotéka měla mít jistinu ~${fm(st.suggestedMortgage)}.</div>`;
   }
+  return h;};
+  h+=znamCelek?rozpadH()+financH():financH()+rozpadH();
   h+=`<div class="card catlist">
     ${st.price>0?`<div class="dgrow" style="cursor:pointer" onclick="groupModal('${gE}')"><span class="l">Cena${st.feesSum>0?`<small>${fm(st.price)} + poplatky ${fm(st.feesSum)}</small>`:''}</span><b>${fm(st.totalPrice)}</b>${ic('cright',14)}</div>`:''}
     <div class="dgrow" style="cursor:pointer" onclick="groupListModal('${gE}','contrib')"><span class="l">Vlastní vklady</span><b>${fm(st.ownPaid)}</b>${ic('cright',14)}</div>
