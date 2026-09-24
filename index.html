@@ -336,6 +336,27 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .itbar>i{display:block;height:100%;border-radius:3px}
 .itop:hover .itn{color:var(--accent-d)}
 .cdplan .inp{background:var(--bg)}
+/* Obálky: karta se spořicím cílem. */
+.envc{padding:16px}
+.envtop{display:flex;align-items:center;gap:14px}
+.envring{position:relative;width:64px;height:64px;flex:none}
+.envring>span{position:absolute;inset:0;display:grid;place-items:center}
+.envtop .m{flex:1;min-width:0}
+.envtop .n{font-size:14.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.envtop .v{font-size:21px;font-weight:500;letter-spacing:-.5px;font-variant-numeric:tabular-nums;line-height:1.25}
+.envtop .s{font-size:12px;color:var(--text3)}
+.envtools{display:flex;gap:2px;align-self:flex-start}
+.envtip{font-size:12.5px;color:var(--text2);background:var(--bg);border-radius:11px;padding:8px 11px;margin-top:12px}
+.envbtns{display:flex;gap:8px;margin-top:12px}
+.envbtns button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;cursor:pointer;
+  font-size:13.5px;font-weight:500;padding:10px;border-radius:99px;background:var(--bg);color:var(--text2)}
+.envbtns button:hover{background:var(--bg2)}
+.envbtns .in{background:var(--teal-bg);color:var(--teal)}
+.envbtns .in:hover{background:#d6ece3}
+.envhist{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
+.envh{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 0}
+.envh .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.envh .a{font-weight:500;font-variant-numeric:tabular-nums}
 .logline{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
 .logline:last-child{border-bottom:none}
 .logline .ld{color:var(--text3);font-size:12px;flex:0 0 62px;font-variant-numeric:tabular-nums}
@@ -1478,23 +1499,50 @@ function vObalky(p){
   h+=pageHero('Odloženo v obálkách',fm(totalEnvelopes()),`tento cyklus ${fm(savedInPeriod(p.id))}`,'var(--gold)');
   h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn fill" onclick="envModal()">${ic('plus',15)} Nová obálka</button></div>`;
   if(!S.envelopes.length)h+=`<div class="card"><div class="empty">Zatím žádné obálky.</div></div>`;
-  S.envelopes.forEach((e,i)=>{const hasT=e.target>0,pc=hasT?Math.min(100,Math.round(e.bal/e.target*100)):0;const remain=Math.max(0,(e.target||0)-e.bal),months=e.monthly>0?Math.ceil(remain/e.monthly):null;
-    h+=`<div class="card">
-      <div class="ch"><span style="font-size:16px;font-weight:500;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(e.icon,18)}</span>${esc(e.nm)}</span>
-        <div style="display:flex;gap:4px">
-          <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="envMove('${e.id}','in')">${ic('plus',14)} Vložit</button>
-          <button class="btn sm" onclick="envMove('${e.id}','out')">Čerpat</button>
-          <button class="ib" onclick="envModal('${e.id}')">${ic('edit',15)}</button><button class="ib" onclick="delEnv('${e.id}')">${ic('trash',15)}</button></div></div>
-      <div class="${hasT?'grid3':'grid2'}">
-        <div style="text-align:center"><div class="mini">Zůstatek</div><div class="num" style="font-size:22px;color:${e.bal>0?'var(--gold)':'var(--text4)'}">${fm(e.bal||0)}</div></div>
-        <div style="text-align:center"><div class="mini">Měsíčně</div><div class="num" style="font-size:22px">${fm(e.monthly||0)}</div></div>
-        ${hasT?`<div style="text-align:center"><div class="mini">Cíl</div><div class="num" style="font-size:22px;color:var(--cyan)">${fm(e.target)}</div></div>`:``}</div>`;
-    if(hasT){const pcol=pc>=100?'var(--teal)':pc>50?'var(--gold)':'var(--accent)';h+=`<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="font-weight:500;color:${pcol}">${pc}%</span><span class="mini">${pc>=100?'splněno':'zbývá '+fm(remain)+(months?` · ~${months} měs.`:'')}</span></div><div class="prog"><i style="width:${pc}%;background:${pcol}"></i></div></div>`;}
-    if(e.due&&e.target>0&&remain>0){const mtd=monthsBetween(new Date(),new Date(e.due+'T00:00:00'));const req=Math.ceil(remain/mtd);h+=`<div class="mini" style="margin-top:8px">Do ${fdFull(e.due)} (~${mtd} měs.) odkládej ~<b>${fm(req)}</b>/měs${e.monthly>0?` — teď ${fm(e.monthly)}, ${e.monthly>=req?'stačí':'málo'}`:''}</div>`;}
-    const histAll=e.hist||[];const hist=histAll.filter(x=>x.pid===p.id&&!x.adj).slice(-4).reverse();
-    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Tento cyklus</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span><span class="tag ${x.t==='in'?'ok':'bd'}" style="margin-right:6px">${x.t==='in'?'vklad':'čerpáno'}</span>${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:500;color:${x.t==='in'?'var(--teal)':'var(--neg)'}">${x.t==='in'?'+':'−'}${fm(x.a)}</span><button class="ib" onclick="delEnvHist('${e.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
-    h+=`</div>`;});
+  S.envelopes.forEach((e,i)=>{h+=envCard(p,e,i);});
   return h;
+}
+/* Obálka jako karta se spořicím cílem: kroužek ukazuje, jak daleko je
+   k cíli (ikona obálky uvnitř), vedle zůstatek a cíl. Pod tím rada, kolik
+   měsíčně odkládat, aby se cíl stihl do termínu, a rovnou Vložit/Čerpat —
+   nejčastější akce nesmí být schovaná za proklikem. */
+function envCard(p,e,i){
+  const hasT=e.target>0,pc=hasT?Math.min(100,Math.round(e.bal/e.target*100)):0;
+  const remain=Math.max(0,(e.target||0)-(e.bal||0));
+  const hotovo=hasT&&pc>=100,rc=hotovo?'var(--teal)':'var(--gold)';
+  const R=27,C=2*Math.PI*R;
+  let rada='';
+  if(hasT&&e.due&&remain>0){
+    const mtd=monthsBetween(new Date(),new Date(e.due+'T00:00:00')),req=Math.ceil(remain/Math.max(1,mtd));
+    rada=`Do ${fdFull(e.due)} odkládej ~<b>${fm(req)}</b>/měs`+(e.monthly>0?` · teď ${fm(e.monthly)}, ${e.monthly>=req?'<span class="pos">stačí</span>':'<span class="neg">málo</span>'}`:'');
+  }else if(hasT&&remain>0&&e.monthly>0){
+    const m=Math.ceil(remain/e.monthly);rada=`Při ${fm(e.monthly)} měsíčně cíl za ~${m} měs.`;
+  }else if(hotovo)rada=`<span class="pos">Cíl splněný</span>`;
+  const histAll=e.hist||[],hist=histAll.filter(x=>x.pid===p.id&&!x.adj).slice(-4).reverse();
+  return `<div class="card envc">
+    <div class="envtop">
+      <div class="envring">
+        <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+          <circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="6"/>
+          ${hasT?`<circle cx="32" cy="32" r="${R}" fill="none" stroke="${rc}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${pc/100*C} ${C}" transform="rotate(-90 32 32)"/>`:''}</svg>
+        <span style="color:${col(i)}">${ic(e.icon,22)}</span></div>
+      <div class="m">
+        <div class="n">${esc(e.nm)}</div>
+        <div class="v" style="${(e.bal||0)>0?'':'color:var(--text4)'}">${fm(e.bal||0)}</div>
+        <div class="s">${hasT?`z ${fm(e.target)} · ${pc} %`:e.monthly>0?`${fm(e.monthly)} měsíčně · bez cíle`:'bez cíle'}</div></div>
+      <div class="envtools">
+        <button class="ib" title="Upravit obálku" onclick="envModal('${e.id}')">${ic('edit',15)}</button>
+        <button class="ib" title="Smazat obálku" onclick="delEnv('${e.id}')">${ic('trash',15)}</button></div>
+    </div>
+    ${rada?`<div class="envtip">${ic(hotovo?'check':'calendar',13)} ${rada}</div>`:''}
+    <div class="envbtns">
+      <button class="in" onclick="envMove('${e.id}','in')">${ic('plus',15)} Vložit</button>
+      <button onclick="envMove('${e.id}','out')">Čerpat</button></div>
+    ${hist.length?`<div class="envhist"><div class="mini" style="margin-bottom:4px">Tento cyklus</div>${hist.map(x=>{const oi=histAll.indexOf(x);
+      return `<div class="envh"><span class="tag ${x.t==='in'?'ok':'bd'}">${x.t==='in'?'vklad':'čerpáno'}</span><span class="t">${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span>
+        <span class="a" style="color:${x.t==='in'?'var(--teal)':'var(--neg)'}">${x.t==='in'?'+':'−'}${fm(x.a)}</span>
+        <button class="ib" title="Smazat záznam" onclick="delEnvHist('${e.id}',${oi})">${ic('x',12)}</button></div>`;}).join('')}</div>`:''}
+  </div>`;
 }
 
 /* ---------- INVESTICE ---------- */
