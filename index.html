@@ -357,6 +357,28 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .envh{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 0}
 .envh .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
 .envh .a{font-weight:500;font-variant-numeric:tabular-nums}
+/* Účty: peněženka karet. Vykukující karty mají záporný dolní okraj, takže
+   je překryje ta pod nimi; vepředu je vždy vybraná. */
+.wallet{display:flex;flex-direction:column;max-width:440px;margin:0 auto 14px}
+.wcard{border:none;border-radius:18px;width:100%;text-align:left;font-family:inherit;position:relative;
+  box-shadow:0 -3px 12px rgba(22,21,26,.12)}
+.wcard .wn{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500}
+.wcard.peek{height:110px;margin-bottom:-58px;padding:15px 18px;display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;transition:transform .15s}
+.wcard.peek:hover{transform:translateY(-4px)}
+.wcard.peek .wb{font-size:14px;font-weight:500;font-variant-numeric:tabular-nums;opacity:.92}
+.wcard.front{min-height:168px;padding:18px 20px;display:flex;flex-direction:column}
+.wcard .wtop{display:flex;justify-content:space-between;align-items:center}
+.wcard .wdef{font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.22)}
+.wcard .wlbl{margin-top:auto;font-size:12px;opacity:.8}
+.wcard .wbig{font-size:30px;font-weight:500;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.2}
+.wacts{display:flex;gap:8px;max-width:440px;margin:0 auto 14px}
+.wacts button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);cursor:pointer;
+  font-size:13.5px;font-weight:500;padding:10px;border-radius:99px;background:var(--white);color:var(--text2)}
+.wacts button:hover{border-color:var(--line2);color:var(--accent-d)}
+.wacts .in{background:var(--teal-bg);border-color:var(--teal-bg);color:var(--teal)}
+.wacts .sq{flex:0 0 44px;padding:10px 0}
+.wacts .dng:hover{color:var(--neg)}
+.accmvs{padding:16px 18px 8px}
 .logline{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
 .logline:last-child{border-bottom:none}
 .logline .ld{color:var(--text3);font-size:12px;flex:0 0 62px;font-variant-numeric:tabular-nums}
@@ -546,6 +568,12 @@ const CAT_ICONS=['home','food','cart','bus','car','film','repeat','droplet','hea
 const ENV_ICONS=['umbrella','plane','bus','shield','target','car','home','gift','graduation','gamepad','phone','paw','coins','wallet'];
 const INV_ICONS=['piggy','trending','bitcoin','landmark','gem','coins','banknote','wallet'];
 const ACC_ICONS=['landmark','wallet','card','banknote','coins','piggy'];
+// Barvy karet účtů — jde si vybrat i vlastní, tyhle jsou jen nabídka
+const ACC_COLS=['#7a5a8c','#2b8fa8','#3f9e58','#c4694a','#f2c230','#c0453a','#3d6ea8','#16151a'];
+const accColor=(a,i)=>a.color||ACC_COLS[(i<0?0:i)%ACC_COLS.length];
+// na světlé kartě (žlutá) musí být tmavý text, jinak se nedá číst
+function onColor(hex){const n=parseInt(hex.slice(1),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  return (0.2126*r+0.7152*g+0.0722*b)/255>0.62?'#16151a':'#ffffff';}
 const DEBT_ICONS=['landmark','home','key','car','card','banknote','coins','graduation','wallet'];
 
 /* =====================================================================
@@ -673,6 +701,7 @@ function defState(){
 
 /* ---------- state ---------- */
 let S=defState();
+let uctySel='', accPoh=[];
 let tab='prehled', detailCat=null, openItem=null, mctx={}, qaSel='', qaDate='', qaItem='', qaFrom='', qaXfer=false, pohHledej='', pohLimit=5, poh=[], pohFiltr='';
 let fileHandle=null, fileOK=false;
 
@@ -2173,29 +2202,29 @@ function allMovements(od){
     if(le.d<od)return;
     const lt=linkTarget(it);
     out.push({d:le.d,a:le.a,ikona:c.icon,label:c.nm+': '+it.nm,sub:(le.n?le.n+' · ':'')+'výdaj'+(lt?' → '+lt.obj.nm:'')+accSub(le.acc,false),icon:'arrowupright',volne:true,rid:le.id||'',
-      kind:'cat',pid:per.id,cid:c.id,iid:it.id,li});
+      kind:'cat',pid:per.id,cid:c.id,iid:it.id,li,acc:le.acc||'',accSign:-1});
   }))));
   S.envelopes.forEach(e=>(e.hist||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
     const volne=h.t==='in'&&!h.src;
     out.push({d:h.d,a:h.a,ikona:e.icon,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):'čerpání'+(h.cat?' · '+h.cat:''))+accSub(h.acc,h.t==='out'),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
-      kind:'env',eid:e.id,hidx});
+      kind:'env',eid:e.id,hidx,acc:h.acc||'',accSign:h.t==='in'?-1:1});
   }));
   S.investments.forEach(inv=>(inv.hist||[]).forEach((h,hidx)=>{
     if(h.k||h.d<od)return;
     const volne=!h.src;
     out.push({d:h.d,a:Math.abs(h.a),ikona:inv.icon,label:'Investice: '+inv.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:h.a>0?'vklad':'výběr')+accSub(h.acc,h.a<0),icon:h.a>0?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
-      kind:'inv',invId:inv.id,hidx});
+      kind:'inv',invId:inv.id,hidx,acc:h.acc||'',accSign:h.a>0?-1:1});
   }));
   S.debts.forEach(dt=>(dt.pay||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
     out.push({d:h.d,a:h.a,ikona:dt.icon,label:'Dluh: '+dt.nm,sub:(h.n?h.n+' · ':'')+(h.src?'z '+h.src:'splátka')+accSub(h.acc,false),icon:'arrowupright',volne:!h.src,rid:h.id||'',
-      kind:'debt',did:dt.id,hidx});
+      kind:'debt',did:dt.id,hidx,acc:h.acc||'',accSign:-1});
   }));
   S.accounts.forEach(a=>(a.hist||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
     out.push({d:h.d,a:Math.abs(h.a),ikona:a.icon,label:'Účet: '+a.nm,sub:(h.n?h.n+' · ':'')+(h.a>=0?'vklad':'výběr'),icon:h.a>=0?'arrowupright':'arrowdownleft',volne:false,rid:h.id||'',
-      kind:'acc',aid:a.id,hidx});
+      kind:'acc',aid:a.id,hidx,acc:a.id,accSign:h.a>=0?1:-1});
   }));
   /* Stejné datum (appka nemá čas, jen den) se řadí podle `id` — ten začíná
      časovým razítkem (viz uid()), takže i bez skutečného pole "čas" sedí
@@ -2600,35 +2629,61 @@ function vUcty(p){
   let h=tipBan('wallet','<b>Účty</b> = kde peníze fyzicky leží (Raiffka, mBank, spořák...). Přesun mezi účty se nikdy nepočítá do „zbývá volných" — je to pořád tvoje volná peníze, jen mění místo. Vyber si aktivní účet dole v Přehledu a běžné zápisy se z něj budou samy odečítat, bez vybírání.');
   h+=pageHero('Celkem na účtech',fm(totalAccounts()),'');
   h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn fill" onclick="accModal()">${ic('plus',15)} Nový účet</button></div>`;
-  if(!S.accounts.length)h+=`<div class="card"><div class="empty">Zatím žádné účty.</div></div>`;
-  S.accounts.forEach((a,i)=>{
-    h+=`<div class="card">
-      <div class="ch"><span style="font-size:16px;font-weight:500;display:flex;align-items:center;gap:10px"><span class="mvi" style="width:34px;height:34px;background:${col(i)}1c;color:${col(i)}">${ic(a.icon,18)}</span>${esc(a.nm)}</span>
-        <div style="display:flex;gap:4px">
-          <button class="btn sm" style="color:var(--teal);border-color:var(--teal-bg)" onclick="accDepositModal('${a.id}')">${ic('plus',14)} Vklad</button>
-          <button class="btn sm" onclick="accXferModal('${a.id}')">${ic('repeat',14)} Přesun</button>
-          <button class="ib" onclick="accModal('${a.id}')">${ic('edit',15)}</button><button class="ib" onclick="delAcc('${a.id}')">${ic('trash',15)}</button></div></div>
-      ${S.ui.defAcc===a.id?`<div class="mini" style="color:var(--gold);margin-bottom:8px">${ic('check',13)} Výchozí účet — předvybere se v novém zápisu.</div>`:''}
-      <div style="text-align:center"><div class="mini">Zůstatek</div><div class="num" style="font-size:24px;color:${(a.bal||0)>0?'var(--teal)':(a.bal||0)<0?'var(--neg)':'var(--text4)'}">${fm(a.bal||0)}</div></div>`;
-    const histAll=a.hist||[];const hist=histAll.slice(-4).reverse();
-    if(hist.length){h+=`<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--line)"><div class="mini" style="margin-bottom:6px">Poslední pohyby</div>`;hist.forEach(x=>{const oi=histAll.indexOf(x);h+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0"><span>${fd(x.d)} ${esc(x.n||'')}</span><span style="display:flex;align-items:center;gap:6px"><span class="num" style="font-weight:500;color:${x.a>=0?'var(--teal)':'var(--neg)'}">${x.a>=0?'+':''}${fm(x.a)}</span><button class="ib" onclick="accHistModal('${a.id}',${oi})">${ic('edit',12)}</button><button class="ib" onclick="delAccHist('${a.id}',${oi})">${ic('x',12)}</button></span></div>`;});h+=`</div>`;}
-    h+=`</div>`;});
+  if(!S.accounts.length)return h+`<div class="card"><div class="empty">Zatím žádné účty.</div></div>`;
+  /* Účty jako karty v peněžence: vybraná je vepředu celá, ostatní nad ní
+     vykukují pruhem se jménem a zůstatkem. Klik na pruh ji vytáhne dopředu.
+     Barvu karty si každý nastaví sám v úpravě účtu. */
+  const sel=accById(uctySel)||accById(S.ui.defAcc)||S.accounts[0];
+  const idx=S.accounts.indexOf(sel);
+  h+=`<div class="wallet">`;
+  S.accounts.forEach((a,i)=>{if(a===sel)return;const c=accColor(a,i),t=onColor(c);
+    h+=`<button class="wcard peek" style="background:${c};color:${t}" onclick="uctySel='${a.id}';R()">
+      <span class="wn">${ic(a.icon,16)} ${esc(a.nm)}</span><span class="wb">${fm(a.bal||0)}</span></button>`;});
+  const c=accColor(sel,idx),t=onColor(c);
+  h+=`<div class="wcard front" style="background:${c};color:${t}">
+      <div class="wtop"><span class="wn">${ic(sel.icon,18)} ${esc(sel.nm)}</span>${S.ui.defAcc===sel.id?`<span class="wdef">výchozí</span>`:''}</div>
+      <div class="wlbl">Zůstatek</div>
+      <div class="wbig">${fm(sel.bal||0)}</div></div>`;
+  h+=`</div>`;
+  h+=`<div class="wacts">
+      <button class="in" onclick="accDepositModal('${sel.id}')">${ic('plus',15)} Vklad</button>
+      <button onclick="accXferModal('${sel.id}')">${ic('repeat',15)} Přesun</button>
+      <button class="sq" title="Upravit účet" onclick="accModal('${sel.id}')">${ic('edit',15)}</button>
+      <button class="sq dng" title="Smazat účet" onclick="delAcc('${sel.id}')">${ic('trash',15)}</button></div>`;
+  // poslední pohyby účtu: vklady a přesuny i výdaje, obálky a splátky zaplacené z něj
+  accPoh=allMovements('0000').filter(m=>m.acc===sel.id).slice(0,6);
+  h+=`<div class="card accmvs"><div class="ct" style="margin-bottom:4px">Poslední pohyby</div>`;
+  if(!accPoh.length)h+=`<div class="empty" style="padding:14px 0">Zatím žádné pohyby.</div>`;
+  accPoh.forEach((m,i)=>{const plus=m.accSign>0;
+    h+=`<div class="row" style="cursor:pointer" onclick="pohClick(accPoh[${i}])">
+      <div class="ic" style="background:${plus?'var(--teal-bg)':'var(--neg-bg)'};color:${plus?'var(--teal)':'var(--neg)'}">${ic(m.ikona||'coin',17)}</div>
+      <div class="m"><div class="t1">${esc(m.kind==='acc'?m.sub:m.label)}</div><div class="t2">${fd(m.d)}</div></div>
+      <span class="num" style="font-weight:500;color:${plus?'var(--teal)':'var(--text)'}">${plus?'+':'−'}${fm(m.a)}</span></div>`;});
+  h+=`</div>`;
   return h;
 }
-function accModal(id){const a=id?S.accounts.find(x=>x.id===id):null;mctx={id,icon:a?a.icon:'landmark'};
+function accModal(id){const a=id?S.accounts.find(x=>x.id===id):null;
+  mctx={id,icon:a?a.icon:'landmark',color:a?accColor(a,S.accounts.indexOf(a)):ACC_COLS[S.accounts.length%ACC_COLS.length]};
   openModal(`<h3>${a?'Upravit':'Nový'} účet</h3>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${a?esc(a.nm):''}" placeholder="např. Raiffka"></div>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(ACC_ICONS,mctx.icon)}</div>
+    <div class="fg"><span class="fl">Barva karty</span><div class="swatches" id="m_cols">${accSwatches()}</div></div>
     <div class="fg"><span class="fl">${a?'Zůstatek':'Počáteční zůstatek'}</span><input class="inp num" id="m_bal" type="number" value="${a?a.bal||0:''}" placeholder="0"></div>
     ${a?`<p class="mini" style="margin-top:2px">Uprav, jen když neodpovídá skutečnosti — je to jen oprava čísla, žádný pohyb se nezapočítá.</p>`:''}
     <label class="mini" style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer"><input type="checkbox" id="m_def" ${a&&S.ui.defAcc===a.id?'checked':''} style="width:auto"> Výchozí účet — předvybere se v novém zápisu</label>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveAcc()">${a?'Uložit':'Vytvořit'}</button></div>`);}
+function accSwatches(){
+  const cur=(mctx.color||'').toLowerCase();
+  return ACC_COLS.map(hx=>`<div class="swatch ${cur===hx.toLowerCase()?'on':''}" style="background:${hx}" onclick="accPickColor('${hx}')"></div>`).join('')
+    +`<label class="swatch ${ACC_COLS.some(x=>x.toLowerCase()===cur)?'':'on'}" style="background:conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);display:grid;place-items:center;overflow:hidden" title="Vlastní barva"><input type="color" value="${mctx.color}" oninput="accPickColor(this.value,true)" style="opacity:0;width:100%;height:100%;cursor:pointer"></label>`;
+}
+function accPickColor(hx,vlastni){mctx.color=hx;if(!vlastni){const el=document.getElementById('m_cols');if(el)el.innerHTML=accSwatches();}}
 function saveAcc(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const bal=num(document.getElementById('m_bal').value);
   const jeVych=document.getElementById('m_def')?.checked;
-  if(mctx.id){const a=S.accounts.find(x=>x.id===mctx.id);a.nm=nm;a.icon=mctx.icon;
+  if(mctx.id){const a=S.accounts.find(x=>x.id===mctx.id);a.nm=nm;a.icon=mctx.icon;a.color=mctx.color;
     const diff=bal-(a.bal||0);if(diff){a.bal=bal;a.hist.push({id:uid(),d:todayISO(),a:diff,n:'Oprava zůstatku'});}
     if(jeVych)S.ui.defAcc=a.id;else if(S.ui.defAcc===a.id)S.ui.defAcc='';}
-  else{const a={id:uid(),nm,icon:mctx.icon,bal:0,hist:[]};if(bal){a.bal=bal;a.hist.push({id:uid(),d:todayISO(),a:bal,n:'Počáteční zůstatek'});}S.accounts.push(a);
+  else{const a={id:uid(),nm,icon:mctx.icon,color:mctx.color,bal:0,hist:[]};if(bal){a.bal=bal;a.hist.push({id:uid(),d:todayISO(),a:bal,n:'Počáteční zůstatek'});}S.accounts.push(a);
     if(jeVych)S.ui.defAcc=a.id;}
   closeModal();commit();}
 function delAcc(id){const a=S.accounts.find(x=>x.id===id);if(!a)return;
