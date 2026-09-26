@@ -356,6 +356,14 @@ S.tax            — daň z úroků (výchozí 15 %)
   text se porovnával na název a kdo se netrefil, založil duplikát vedle
   původní položky. U obálky zůstává volný text, obálka položky nemá.
 
+- **Účet v panelu Zápis se předvolí v tomhle pořadí:** co jsi v panelu
+  zvolil ručně (`zapisAcc`), jinak účet, ze kterého se u vybrané položky
+  platí vždycky (`it.defAcc`), jinak aktivní účet nahoře, jinak výchozí.
+  Dřív panel `it.defAcc` ignoroval (fungovalo to jen v řádku uvnitř
+  detailu kategorie) a každé překreslení panelu ruční volbu účtu mazalo.
+  Dlaždice cílů v panelu jdou po vyrovnaných řadách (`zsGrid`: 10 = 4+3+3,
+  ne 4+4+2), řady po nejvýš čtyřech.
+
 - **`fm()` zaokrouhluje na celé koruny, `fmEx()` ne.** Na částky, které si
   uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —
   jinak by viděl „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení nevadí.
@@ -436,11 +444,16 @@ S.tax            — daň z úroků (výchozí 15 %)
   `S.ui.hideIntro`, což je průvodce začátkem na Přehledu.
 
 - **Ikona v záložce se kreslí v JS** (`faviconSVG`/`applyFavicon`), ne ze
-  souboru — je to stejná značka jako v záhlaví (kulatý čtverec, přechod
-  z akcentu do zlaté, mince) a přebarvuje se s `S.ui.accent`. Mince je
-  v ikoně tučnější a větší než v appce schválně: v 16px záložce se tenká
-  kresba slévá do skvrny. Pro iOS plochu se z SVG dělá PNG přes canvas
-  (SVG tam nefunguje). Titulek stránky se taky řídí `S.ui.appName`.
+  souboru, a přebarvuje se s `S.ui.accent`. Je to značka z tří pruhů
+  (jako v záhlaví), ale **tučnější a s tmavším přechodem** než logo:
+  v 16px záložce se tenká kresba slévá a na světlém rohu ztrácela bílá
+  kontrast. Pruh 12 a mezera 4 jednotky padají na 16 px přesně na celé
+  pixely, proto je varianta pro záložku o 2 jednotky výš než střed;
+  `faviconSVG(hex,true)` je vystředěná verze pro ikonu na ploše (canvas).
+  Stejný tvar má i komerční Můj budget (`tools/znacka.py` v repu
+  mujrozpocet), dynamická ikona je s jeho `favicon.svg` pixel po pixelu
+  shodná. Pro iOS plochu se z SVG dělá PNG přes canvas. Titulek stránky
+  se taky řídí `S.ui.appName`.
 
 - **Ikony jsou z knihovny Lucide** (lucide.dev, ISC licence), vložené přímo
   v `ICON` mapě v kódu (ne CDN). `svg.i{display:inline-block}` — POZOR, dřív

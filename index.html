@@ -484,8 +484,9 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .zs-lbl{font-size:11.5px;color:var(--text3);font-weight:500;margin:12px 0 7px}
 /* Počet kategorií si volí každý sám, takže poslední řádek nemusí být plný —
    je vycentrovaný, ať nevisí vlevo. */
-.zs-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 0;max-height:212px;overflow-y:auto}
-.zs-grid>.zt{flex:0 0 calc(100% / var(--zc,4))}
+.zs-grid{display:flex;flex-direction:column;gap:8px;max-height:212px;overflow-y:auto}
+.zs-row{display:flex;justify-content:center}
+.zs-row>.zt{flex:0 0 25%}
 .zt{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 2px;color:var(--text2);min-width:0}
 .zt>svg{width:46px;height:46px;padding:12px;border-radius:15px;background:var(--bg);color:var(--text2);box-sizing:border-box}
 .zt span{font-size:10.5px;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -687,15 +688,19 @@ function applyAccent(hex){const rs=document.documentElement.style;rs.setProperty
    Stejná značka jako v záhlaví appky: kulatý čtverec s přechodem z tvého
    akcentu do zlaté a mince uprostřed. Kreslí se v SVG přímo tady, takže
    se přebarví hned, jak si změníš barvu, a nepotřebuje žádný soubor. */
-function faviconSVG(hex){
+function faviconSVG(hex,velka){
+  /* Ikona pro záložku (16 a 32 px). Pruh 12 a mezera 4 jednotky dopadají na
+     celé pixely, takže se pruhy neslévají; přechod je tmavší než logo
+     v záhlaví, ať bílá drží kontrast i v pravém dolním rohu. `velka` je
+     vystředěná varianta pro ikonu na ploše (canvas níž). Stejný tvar má
+     favicon.svg úvodní stránky (tools/znacka.py v repu mujrozpocet). */
+  const bars=velka?[[14,10],[10,26],[13,42]]:[[12,8],[8,24],[11,40]];
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">`
     +`<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">`
-    +`<stop offset="0" stop-color="${shade(hex,-12)}"/>`
-    +`<stop offset="1" stop-color="${shade(hex,42)}"/></linearGradient></defs>`
+    +`<stop offset="0" stop-color="${shade(hex,-14)}"/>`
+    +`<stop offset="1" stop-color="${shade(hex,16)}"/></linearGradient></defs>`
     +`<rect width="64" height="64" rx="15" fill="url(#g)"/>`
-    +`<g fill="#fff"><rect x="16" y="12.5" width="36" height="10" rx="5"/>`
-    +`<rect x="12" y="27" width="36" height="10" rx="5"/>`
-    +`<rect x="15" y="41.5" width="36" height="10" rx="5"/></g></svg>`;
+    +`<g fill="#fff">${bars.map(b=>`<rect x="${b[0]}" y="${b[1]}" width="40" height="12" rx="6"/>`).join('')}</g></svg>`;
 }
 /* Značka je stack tří bankovek — stejná, jakou má mujbudget.cz, ať appka
    a web nevypadají jako dvě různé věci. */
@@ -706,14 +711,14 @@ function markGlyph(size){
     +`<rect x="15" y="41.5" width="36" height="10" rx="5"/></svg>`;
 }
 function applyFavicon(hex){
-  const svg=faviconSVG(hex),url='data:image/svg+xml,'+encodeURIComponent(svg);
+  const svg=faviconSVG(hex),url='data:image/svg+xml,'+encodeURIComponent(svg),urlVelka='data:image/svg+xml,'+encodeURIComponent(faviconSVG(hex,true));
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.setAttribute(id==='themec'?'content':'href',v);};
   set('favi',url);set('themec',hex);
   // iOS na plochu SVG nebere, tak z něj jednou udělej PNG přes canvas
   try{const img=new Image();
     img.onload=()=>{try{const c=document.createElement('canvas');c.width=c.height=180;
       c.getContext('2d').drawImage(img,0,0,180,180);set('favi180',c.toDataURL('image/png'));}catch(e){}};
-    img.src=url;
+    img.src=urlVelka;
   }catch(e){}
 }
 const NUMFONTS={
@@ -2620,7 +2625,12 @@ function vPohybyList(){
    četl dosavadní řádek, takže všechny pojistky platí dál. */
 let zapisAmt='', zapisSeg='cat';
 // nejvýš 4 v řadě, ale řady vyrovnané: 5 = 3+2, 6 = 3+3, ne 4+1 a 4+2
-const zsCols=n=>Math.max(1,Math.ceil(n/Math.max(1,Math.ceil(n/4))));
+function zsGrid(polozky){
+  // řady po nejvýš čtyřech, co nejvyrovnanější (5 = 3+2, 6 = 3+3, 10 = 4+3+3), ne 4+4+2
+  const rady=Math.max(1,Math.ceil(polozky.length/4)),zaklad=Math.floor(polozky.length/rady),navic=polozky.length%rady;
+  let i=0,h='';
+  for(let r=0;r<rady;r++){const n=zaklad+(r<navic?1:0);h+=`<div class="zs-row">${polozky.slice(i,i+n).join('')}</div>`;i+=n;}
+  return `<div class="zs-grid">${h}</div>`;}
 const ZSEG=[{k:'cat',l:'Výdaj',i:'cart'},{k:'env',l:'Obálka',i:'envelope'},{k:'inv',l:'Investice',i:'trending'},{k:'debt',l:'Dluh',i:'landmark'}];
 // Na mobilu se do spodní lišty vejdou čtyři záložky, zbytek je tady.
 function navMoreModal(){
@@ -2631,18 +2641,23 @@ function navMoreModal(){
       ${ic(t.icon,21)}<span>${esc(t.label)}</span></button>`).join('')}</div>`);
 }
 function zapisOpen(xfer){
-  qaXfer=!!xfer;qaSel=xfer?'vyplata':'';qaFrom='';qaItem='';zapisAmt='';zapisSeg='cat';
+  qaXfer=!!xfer;qaSel=xfer?'vyplata':'';qaFrom='';qaItem='';zapisAmt='';zapisSeg='cat';zapisAcc=null;
   openModal(zapisHTML(),'sheet');
   setTimeout(()=>document.getElementById('qamt')?.focus(),80);
 }
-function zapisRe(){
+/* Účet zvolený ručně v panelu. Bez toho by se s každým překreslením (výběr
+   položky, psaní poznámky) vrátil na předvolený a ruční volba by zmizela.
+   null = ještě nikdo nevolil, předvolí se podle položky, aktivního a výchozího účtu. */
+let zapisAcc=null;
+function zapisRe(reset){
+  if(reset)zapisAcc=null;else{const q=document.getElementById('qacc');if(q)zapisAcc=q.value;}
   const a=document.getElementById('qamt');if(a)zapisAmt=a.value;
   const n=document.getElementById('qnote');if(n)zapisNote=n.value;
   const box=document.querySelector('.modal');if(box)box.innerHTML=zapisHTML();
 }
 let zapisNote='';
-function zapisSeg2(k){zapisSeg=k;qaSel='';qaItem='';zapisRe();}
-function zapisPick(v){qaSel=v;qaItem='';zapisRe();}
+function zapisSeg2(k){zapisSeg=k;qaSel='';qaItem='';zapisRe(true);}
+function zapisPick(v){qaSel=v;qaItem='';zapisRe(true);}
 function zapisFrom(v){qaFrom=v;zapisRe();}
 function zapisSubmit(){if(quickAdd()===true){zapisAmt='';zapisNote='';closeModal();}}
 function zapisHTML(){
@@ -2650,7 +2665,13 @@ function zapisHTML(){
   /* Účet se vybírá tady v panelu, ne jen přepínačem na Přehledu — platí se
      z různých účtů a zpětně to nikdo nedohledá. Předvybere se ten, co je
      zrovna nahoře, jinak zapamatovaný výchozí. */
-  const predvolAcc=(S.ui.activeAcc&&accById(S.ui.activeAcc)?S.ui.activeAcc:(accById(S.ui.defAcc)?S.ui.defAcc:''));
+  /* Pořadí předvolby: co jsi v panelu zvolil ručně, jinak účet, ze kterého se
+     u vybrané položky platí vždycky (nastavení položky), jinak aktivní účet
+     nahoře, jinak výchozí. */
+  const cc=cur.startsWith('cat:')?p.cats.find(x=>'cat:'+x.id===cur):null,itm=cc&&qaItem&&qaItem!=='__new'?cc.it.find(x=>x.id===qaItem):null;
+  const predvolAcc=(zapisAcc!==null&&(zapisAcc===''||accById(zapisAcc)))?zapisAcc
+    :(itm&&itm.defAcc&&accById(itm.defAcc)?itm.defAcc
+    :(S.ui.activeAcc&&accById(S.ui.activeAcc)?S.ui.activeAcc:(accById(S.ui.defAcc)?S.ui.defAcc:'')));
   const seg=cur.startsWith('env:')?'env':cur.startsWith('inv:')?'inv':cur.startsWith('debt:')?'debt':zapisSeg;
   const cile=qaXfer?[]:seg==='env'?S.envelopes.map(e=>({v:'env:'+e.id,nm:e.nm,ik:e.icon}))
     :seg==='inv'?S.investments.map(i=>({v:'inv:'+i.id,nm:i.nm,ik:i.icon}))
@@ -2664,17 +2685,16 @@ function zapisHTML(){
     ${qaXfer?`<input type="hidden" id="qfrom" value="${esc(qaFrom)}">`:''}
     <div class="zs-amt"><input id="qamt" type="number" step="0.01" inputmode="decimal" placeholder="0" value="${esc(zapisAmt||(fix?String(fix):''))}" onkeydown="if(event.key==='Enter')zapisSubmit()"><span>Kč</span></div>`;
   if(qaXfer){
-    h+=`<div class="zs-lbl">Odkud</div><div class="zs-grid" style="--zc:${zsCols(zdroje.length)}">`
-      +zdroje.map(z=>`<button class="zt ${qaFrom===z.v?'on':''}" onclick="zapisFrom('${z.v}')">${ic(z.ik,21)}<span>${esc(z.nm)}</span></button>`).join('')
-      +`</div><div class="zs-note-line">${ic('cright',13)} Připíše se na účet${acc?`: <b>${esc(acc.nm)}</b>`:''}</div>`;
+    h+=`<div class="zs-lbl">Odkud</div>`+zsGrid(zdroje.map(z=>`<button class="zt ${qaFrom===z.v?'on':''}" onclick="zapisFrom('${z.v}')">${ic(z.ik,21)}<span>${esc(z.nm)}</span></button>`))
+      +`<div class="zs-note-line">${ic('cright',13)} Připíše se na účet${acc?`: <b>${esc(acc.nm)}</b>`:''}</div>`;
   }else{
     h+=`<div class="zs-seg">`+ZSEG.filter(x=>x.k==='cat'||(x.k==='env'&&S.envelopes.length)||(x.k==='inv'&&S.investments.length)||(x.k==='debt'&&S.debts.length))
       .map(x=>`<button class="${seg===x.k?'on':''}" onclick="zapisSeg2('${x.k}')">${esc(x.l)}</button>`).join('')+`</div>`;
-    h+=`<div class="zs-grid" style="--zc:${zsCols(cile.length)}">`+cile.map(c=>`<button class="zt ${cur===c.v?'on':''}" onclick="zapisPick('${c.v}')">${ic(c.ik,21)}<span>${esc(c.nm)}</span></button>`).join('')+`</div>`;
+    h+=zsGrid(cile.map(c=>`<button class="zt ${cur===c.v?'on':''}" onclick="zapisPick('${c.v}')">${ic(c.ik,21)}<span>${esc(c.nm)}</span></button>`));
     if(cur.startsWith('cat:')){
       const c=p.cats.find(x=>'cat:'+x.id===cur),its=(c&&c.it)||[];
       h+=`<div class="zs-lbl">Položka</div>`;
-      if(its.length)h+=`<select class="inp" id="qitem" onchange="qaItem=this.value;zapisRe()">
+      if(its.length)h+=`<select class="inp" id="qitem" onchange="qaItem=this.value;zapisRe(true)">
         <option value="" ${qaItem?'':'selected'}>— vyber položku —</option>
         ${its.map(it=>`<option value="${it.id}" ${qaItem===it.id?'selected':''}>${esc(it.nm)}${it.fixAmt&&it.pl>0?' · '+fmEx(it.pl):''}</option>`).join('')}
         <option value="__new" ${qaItem==='__new'?'selected':''}>+ nová položka…</option></select>`;
