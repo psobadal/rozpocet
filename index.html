@@ -69,7 +69,6 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .top{display:flex;align-items:center;gap:12px;padding:22px 0 14px}
 .brand{font-size:22px;font-weight:500;letter-spacing:-.4px;display:flex;align-items:center;gap:11px}   /* logotyp podle znacka/MANUAL.md: 38 / 22 / 11 */
 .brand .mk{display:block;flex:none}
-.brand .bw{color:#674a78}
 .sp{flex:1}
 .save-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;padding:7px 12px;border-radius:20px;border:1.5px solid var(--line2);background:var(--white);cursor:pointer;white-space:nowrap}
 .save-pill .d{width:8px;height:8px;border-radius:50%}
@@ -696,8 +695,6 @@ function applyAccent(hex){const rs=document.documentElement.style;rs.setProperty
 const LOGO_CORE='<defs><linearGradient id="mbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b4f7b"/><stop offset="1" stop-color="#b29fbc"/></linearGradient></defs><rect width="38" height="38" rx="9" fill="url(#mbg)"/><g fill="#fff" transform="translate(8.5 8.5) scale(0.875)"><rect x="6" y="4.7" width="13.5" height="3.75" rx="1.9"/><rect x="4.5" y="10.1" width="13.5" height="3.75" rx="1.9"/><rect x="5.6" y="15.6" width="13.5" height="3.75" rx="1.9"/></g></svg>';
 const LOGO_FILE='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 38">'+LOGO_CORE;
 function logoSVG(){return '<svg class="mk" width="38" height="38" viewBox="0 0 38 38" aria-hidden="true" focusable="false">'+LOGO_CORE;}
-// název vedle loga: u „Můj budget" je „budget" v barvě značky, vlastní název je celý v barvě textu
-function brandName(nm){return nm==='Můj budget'?'Můj <span class="bw">budget</span>':esc(nm);}
 /* Ikona v záložce je vzor loga (LOGO_FILE), nikdy se nepřebarvuje podle
    barvy appky. Barvu motivu nese jen theme-color. */
 function applyFavicon(hex){
@@ -1339,7 +1336,7 @@ function R(){
   const visTabs=S.ui.tabs.filter(t=>t.visible||t.id==='nastaveni');
   if(!visTabs.some(t=>t.id===tab))tab='prehled';
   let h=`<div class="top">
-    <div class="brand">${logoSVG()}<span>${brandName(S.ui.appName)}</span></div><div class="sp"></div>
+    <div class="brand">${logoSVG()}<span>${esc(S.ui.appName)}</span></div><div class="sp"></div>
     <button class="save-pill" id="savepill"><span class="d"></span></button>
   </div>`;
   const idx=periodIndex();
