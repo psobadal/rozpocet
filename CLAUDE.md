@@ -443,20 +443,17 @@ S.tax            — daň z úroků (výchozí 15 %)
   musí být vidět i s vypnutými vysvětlivkami. Je to oddělené od
   `S.ui.hideIntro`, což je průvodce začátkem na Přehledu.
 
-- **Ikona v záložce se kreslí v JS** (`faviconSVG`/`applyFavicon`), ale
-  **nepřebarvuje se podle `S.ui.accent`**, vždycky je to značka
-  (`ZNACKA`, #7a5a8c). Dřív se přebarvovala a tvoje appka s vlastní
-  modrofialovou měla v záložce jinou ikonu než web Můj budget vedle ní
-  (nahlášeno 28. 9. 2026). Barvu motivu nese jen `theme-color`. Je to značka
-  z tří pruhů (jako v záhlaví), ale **tučnější a s tmavším přechodem** než
-  logo: v 16px záložce se tenká kresba slévá a na světlém rohu ztrácela
-  bílá kontrast. Pruh 12 a mezera 4 jednotky padají na 16 px přesně na
-  celé pixely, proto je varianta pro záložku o 2 jednotky výš než střed;
-  `faviconSVG(hex,true)` je vystředěná verze pro ikonu na ploše (canvas).
-  Stejný tvar má komerční Můj budget (`tools/znacka.py` v repu
-  mujrozpocet), rastr je s jeho `favicon.svg` pixel po pixelu shodný.
-  Pro iOS plochu se z SVG dělá PNG přes canvas. Titulek stránky se taky
-  řídí `S.ui.appName`.
+- **Logo a ikona v záložce se řídí grafickým manuálem Můj budget**
+  (`~/Documents/GitHub/mujrozpocet/znacka/MANUAL.md`). Logo je jedno:
+  vzor ze záhlaví mujbudget.cz, v kódu konstanta `LOGO_CORE`, doslova
+  stejná jako `znacka/logo.svg`. Záhlaví (`logoSVG()`), ikona v záložce
+  (`applyFavicon`, data URL z `LOGO_FILE`) i ikona na ploše (PNG přes
+  canvas z plné varianty bez zaoblení) jsou tentýž vzor. **Nepřebarvuje
+  se podle `S.ui.accent`** a nemá žádnou tučnou „malou" variantu; obojí
+  bylo a Patrik to 28. 9. 2026 vrátil. Logotyp 38 / 22 / 11 i na mobilu.
+  Kontrola `python3 tools/kontrola-znacky.py` v repu mujrozpocet hlídá
+  i tenhle soubor, když leží vedle. Titulek stránky se řídí
+  `S.ui.appName`, vlastní název stojí vedle loga celý v barvě textu.
 
 - **Ikony jsou z knihovny Lucide** (lucide.dev, ISC licence), vložené přímo
   v `ICON` mapě v kódu (ne CDN). `svg.i{display:inline-block}` — POZOR, dřív

@@ -67,8 +67,9 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .app{max-width:764px;margin:0 auto;padding:0 20px 110px;position:relative;z-index:1}
 
 .top{display:flex;align-items:center;gap:12px;padding:22px 0 14px}
-.brand{font-size:21px;font-weight:500;letter-spacing:-.4px;display:flex;align-items:center;gap:9px}
-.brand .mk{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent-d),var(--accent-l));display:grid;place-items:center;color:#fff}
+.brand{font-size:22px;font-weight:500;letter-spacing:-.4px;display:flex;align-items:center;gap:11px}   /* logotyp podle znacka/MANUAL.md: 38 / 22 / 11 */
+.brand .mk{display:block;flex:none}
+.brand .bw{color:#674a78}
 .sp{flex:1}
 .save-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;padding:7px 12px;border-radius:20px;border:1.5px solid var(--line2);background:var(--white);cursor:pointer;white-space:nowrap}
 .save-pill .d{width:8px;height:8px;border-radius:50%}
@@ -177,8 +178,8 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
   .app{padding-bottom:108px}
   .fab{bottom:calc(96px + env(safe-area-inset-bottom));right:16px;width:52px;height:52px;border-radius:17px}
   .top{padding:16px 0 10px}
-  .brand{font-size:17px;gap:8px;min-width:0}
-  .brand span:not(.mk){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .brand{min-width:0}   /* velikost logotypu zůstává 38 / 22 / 11 i na mobilu (znacka/MANUAL.md) */
+  .brand>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .save-pill{padding:6px 10px;font-size:11px;flex:none}
 }
 @media(min-width:641px){.tab.more{display:none}}
@@ -688,40 +689,27 @@ function applyAccent(hex){const rs=document.documentElement.style;rs.setProperty
    Stejná značka jako v záhlaví appky: kulatý čtverec s přechodem z tvého
    akcentu do zlaté a mince uprostřed. Kreslí se v SVG přímo tady, takže
    se přebarví hned, jak si změníš barvu, a nepotřebuje žádný soubor. */
-const ZNACKA='#7a5a8c';   // barva značky; ikona v záložce se s barvou appky nemění
-function faviconSVG(hex,velka){
-  /* Ikona pro záložku (16 a 32 px). Pruh 12 a mezera 4 jednotky dopadají na
-     celé pixely, takže se pruhy neslévají; přechod je tmavší než logo
-     v záhlaví, ať bílá drží kontrast i v pravém dolním rohu. `velka` je
-     vystředěná varianta pro ikonu na ploše (canvas níž). Stejný tvar má
-     favicon.svg úvodní stránky (tools/znacka.py v repu mujrozpocet). */
-  const bars=velka?[[14,10],[10,26],[13,42]]:[[12,8],[8,24],[11,40]];
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">`
-    +`<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">`
-    +`<stop offset="0" stop-color="${shade(hex,-14)}"/>`
-    +`<stop offset="1" stop-color="${shade(hex,16)}"/></linearGradient></defs>`
-    +`<rect width="64" height="64" rx="15" fill="url(#g)"/>`
-    +`<g fill="#fff">${bars.map(b=>`<rect x="${b[0]}" y="${b[1]}" width="40" height="12" rx="6"/>`).join('')}</g></svg>`;
-}
-/* Značka je stack tří bankovek — stejná, jakou má mujbudget.cz, ať appka
-   a web nevypadají jako dvě různé věci. */
-function markGlyph(size){
-  return `<svg class="i" viewBox="0 0 64 64" width="${size}" height="${size}" aria-hidden="true" fill="currentColor">`
-    +`<rect x="16" y="12.5" width="36" height="10" rx="5"/>`
-    +`<rect x="12" y="27" width="36" height="10" rx="5"/>`
-    +`<rect x="15" y="41.5" width="36" height="10" rx="5"/></svg>`;
-}
+/* Logo je jedno a nemění se s barvou appky: vzor ze znacka/logo.svg v repu
+   mujrozpocet (logo ze záhlaví mujbudget.cz), pravidla ve znacka/MANUAL.md.
+   Tenhle řetězec musí být doslova stejný jako vzor, hlídá to
+   tools/kontrola-znacky.py. Neupravovat ručně, jen přes tools/znacka.py. */
+const LOGO_CORE='<defs><linearGradient id="mbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b4f7b"/><stop offset="1" stop-color="#b29fbc"/></linearGradient></defs><rect width="38" height="38" rx="9" fill="url(#mbg)"/><g fill="#fff" transform="translate(8.5 8.5) scale(0.875)"><rect x="6" y="4.7" width="13.5" height="3.75" rx="1.9"/><rect x="4.5" y="10.1" width="13.5" height="3.75" rx="1.9"/><rect x="5.6" y="15.6" width="13.5" height="3.75" rx="1.9"/></g></svg>';
+const LOGO_FILE='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 38">'+LOGO_CORE;
+function logoSVG(){return '<svg class="mk" width="38" height="38" viewBox="0 0 38 38" aria-hidden="true" focusable="false">'+LOGO_CORE;}
+// název vedle loga: u „Můj budget" je „budget" v barvě značky, vlastní název je celý v barvě textu
+function brandName(nm){return nm==='Můj budget'?'Můj <span class="bw">budget</span>':esc(nm);}
+/* Ikona v záložce je vzor loga (LOGO_FILE), nikdy se nepřebarvuje podle
+   barvy appky. Barvu motivu nese jen theme-color. */
 function applyFavicon(hex){
-  /* Ikona je značka, ne barva motivu: stejná jako favicon.svg Můj budget, ať vedle
-     sebe v záložkách nevypadají jako dva různé produkty. Barvu appky nese jen theme-color. */
-  const svg=faviconSVG(ZNACKA),url='data:image/svg+xml,'+encodeURIComponent(svg),urlVelka='data:image/svg+xml,'+encodeURIComponent(faviconSVG(ZNACKA,true));
+  const url='data:image/svg+xml,'+encodeURIComponent(LOGO_FILE),
+        plne='data:image/svg+xml,'+encodeURIComponent(LOGO_FILE.replace(' rx="9" fill="url(#mbg)"',' fill="url(#mbg)"'));
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.setAttribute(id==='themec'?'content':'href',v);};
   set('favi',url);set('themec',hex);
-  // iOS na plochu SVG nebere, tak z něj jednou udělej PNG přes canvas
+  // iOS na plochu SVG nebere: PNG z plné varianty (bez zaoblení, zaoblí ho systém)
   try{const img=new Image();
     img.onload=()=>{try{const c=document.createElement('canvas');c.width=c.height=180;
       c.getContext('2d').drawImage(img,0,0,180,180);set('favi180',c.toDataURL('image/png'));}catch(e){}};
-    img.src=urlVelka;
+    img.src=plne;
   }catch(e){}
 }
 const NUMFONTS={
@@ -1351,7 +1339,7 @@ function R(){
   const visTabs=S.ui.tabs.filter(t=>t.visible||t.id==='nastaveni');
   if(!visTabs.some(t=>t.id===tab))tab='prehled';
   let h=`<div class="top">
-    <div class="brand"><span class="mk">${markGlyph(19)}</span> <span>${esc(S.ui.appName)}</span></div><div class="sp"></div>
+    <div class="brand">${logoSVG()}<span>${brandName(S.ui.appName)}</span></div><div class="sp"></div>
     <button class="save-pill" id="savepill"><span class="d"></span></button>
   </div>`;
   const idx=periodIndex();
