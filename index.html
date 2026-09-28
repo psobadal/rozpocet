@@ -688,6 +688,7 @@ function applyAccent(hex){const rs=document.documentElement.style;rs.setProperty
    Stejná značka jako v záhlaví appky: kulatý čtverec s přechodem z tvého
    akcentu do zlaté a mince uprostřed. Kreslí se v SVG přímo tady, takže
    se přebarví hned, jak si změníš barvu, a nepotřebuje žádný soubor. */
+const ZNACKA='#7a5a8c';   // barva značky; ikona v záložce se s barvou appky nemění
 function faviconSVG(hex,velka){
   /* Ikona pro záložku (16 a 32 px). Pruh 12 a mezera 4 jednotky dopadají na
      celé pixely, takže se pruhy neslévají; přechod je tmavší než logo
@@ -711,7 +712,9 @@ function markGlyph(size){
     +`<rect x="15" y="41.5" width="36" height="10" rx="5"/></svg>`;
 }
 function applyFavicon(hex){
-  const svg=faviconSVG(hex),url='data:image/svg+xml,'+encodeURIComponent(svg),urlVelka='data:image/svg+xml,'+encodeURIComponent(faviconSVG(hex,true));
+  /* Ikona je značka, ne barva motivu: stejná jako favicon.svg Můj budget, ať vedle
+     sebe v záložkách nevypadají jako dva různé produkty. Barvu appky nese jen theme-color. */
+  const svg=faviconSVG(ZNACKA),url='data:image/svg+xml,'+encodeURIComponent(svg),urlVelka='data:image/svg+xml,'+encodeURIComponent(faviconSVG(ZNACKA,true));
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.setAttribute(id==='themec'?'content':'href',v);};
   set('favi',url);set('themec',hex);
   // iOS na plochu SVG nebere, tak z něj jednou udělej PNG přes canvas
