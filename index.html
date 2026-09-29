@@ -557,6 +557,38 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .zp:has(input:disabled){cursor:default}
 .zs-note-line{font-size:12px;color:var(--text3);margin-top:12px}
 .zs-go{width:100%;justify-content:center;margin-top:16px;padding:14px;font-size:15px;border-radius:15px}
+.zs-tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zs-top .zs-x:first-child{margin:0 4px 0 -6px}
+.zs-dots{display:flex;gap:4px;margin-right:6px}
+.zs-dots i{width:6px;height:6px;border-radius:99px;background:var(--line2)}
+.zs-dots i.on{background:var(--accent)}
+.zs-ned{display:grid;gap:7px}
+.zs-ned.n2,.zs-ned.n4{grid-template-columns:1fr 1fr}.zs-ned.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.zn{background:var(--bg);border:none;border-radius:12px;padding:9px 11px;text-align:left;cursor:pointer;min-width:0;display:flex;flex-direction:column;gap:1px}
+.zn b{font-size:13.5px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zn span{font-size:11.5px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zs-list{display:flex;flex-direction:column;margin-top:4px}
+.zi{display:flex;align-items:center;gap:10px;background:none;border:none;border-top:1px solid var(--line);padding:14px 2px;text-align:left;cursor:pointer;color:var(--text3);font-size:15px}
+.zi:first-child{border-top:none}
+.zi-n{flex:1;min-width:0;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zi-a{font-family:var(--numfont);font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums}
+.zi-new,.zi-new .zi-n{color:var(--accent-d)}
+.zs-cesta{display:flex;align-items:center;gap:8px;width:100%;background:var(--bg);border:none;border-radius:12px;padding:9px 12px;cursor:pointer;color:var(--text2);font-size:13px;text-align:left;margin-top:2px}
+.zs-cesta>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;color:var(--text)}
+.zs-cesta em{font-style:normal;color:var(--text3);font-weight:400}
+.zs-cesta u{text-decoration:none;color:var(--accent-d);font-size:12.5px;font-weight:500}
+.zs-amtv{font-family:var(--numfont);font-size:42px;font-weight:500;letter-spacing:-1.6px;color:var(--text);font-variant-numeric:tabular-nums;position:relative}
+.zs-amtv.pr{color:var(--text4)}
+.zs-amtv::after{content:'';position:absolute;right:-5px;top:12%;bottom:12%;width:2px;border-radius:2px;background:var(--accent);animation:kurzor 1.1s steps(1) infinite}
+@keyframes kurzor{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.zs-amtv::after{animation:none}}
+.modal.sheet .zs-amt:has(.zs-amtv){padding:10px 0 12px}
+.zs-pad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:12px}
+.zs-pad button{height:50px;background:var(--bg);border:none;border-radius:12px;font-family:var(--numfont);font-size:23px;font-weight:500;color:var(--text);cursor:pointer;display:grid;place-items:center;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.zs-pad button:active{background:var(--line2)}
+.modal.sheet.pise .zs-pad,.modal.sheet.pise .zs-pills{display:none}
+.modal.sheet.pise .zs-go{margin-top:12px}
+@media (pointer:coarse){.modal.sheet .zs-grid{max-height:none;overflow:visible}}
 
 .iconpick{display:grid;grid-template-columns:repeat(auto-fill,40px);gap:6px;max-height:180px;overflow:auto}
 .iconpick button{width:40px;height:40px;border-radius:10px;border:1.5px solid var(--line2);background:var(--white);cursor:pointer;display:grid;place-items:center;color:var(--text2)}
@@ -685,6 +717,7 @@ const ICON={
   trash:'<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   cleft:'<path d="m15 18-6-6 6-6"/>',
+  backspace:'<path d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><path d="m12 9 6 6"/><path d="m18 9-6 6"/>',
   cright:'<path d="m9 18 6-6-6-6"/>',
   up:'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   down:'<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
@@ -2745,8 +2778,9 @@ function navMoreModal(){
 }
 function zapisOpen(xfer){
   qaXfer=!!xfer;qaSel=xfer?'vyplata':'';qaFrom='';qaItem='';zapisAmt='';zapisSeg='cat';zapisAcc=null;
+  zapisKrok=1;zapisName='';zapisNote='';zapisFresh=false;
   openModal(zapisHTML(),'sheet');
-  setTimeout(()=>document.getElementById('qamt')?.focus(),80);
+  if(!zapisDotyk())setTimeout(()=>document.getElementById('qamt')?.focus(),80);
 }
 /* Účet zvolený ručně v panelu. Bez toho by se s každým překreslením (výběr
    položky, psaní poznámky) vrátil na předvolený a ruční volba by zmizela.
@@ -2756,14 +2790,197 @@ function zapisRe(reset){
   if(reset)zapisAcc=null;else{const q=document.getElementById('qacc');if(q)zapisAcc=q.value;}
   const a=document.getElementById('qamt');if(a)zapisAmt=a.value;
   const n=document.getElementById('qnote');if(n)zapisNote=n.value;
-  const box=document.querySelector('.modal');if(box)box.innerHTML=zapisHTML();
+  const nm=document.getElementById('qname');if(nm&&zapisDotyk()){if(nm.dataset.k==='pol')zapisName=nm.value;else zapisNote=nm.value;}
+  const box=document.querySelector('.modal');if(box){box.innerHTML=zapisHTML();box.scrollTop=0;}
 }
 let zapisNote='';
 function zapisSeg2(k){zapisSeg=k;qaSel='';qaItem='';zapisRe(true);}
-function zapisPick(v){qaSel=v;qaItem='';zapisRe(true);}
-function zapisFrom(v){qaFrom=v;zapisRe();}
-function zapisSubmit(){if(quickAdd()===true){zapisAmt='';zapisNote='';closeModal();}}
+function zapisPick(v){qaSel=v;qaItem='';
+  if(zapisDotyk()){const c=v.startsWith('cat:')&&P().cats.find(x=>'cat:'+x.id===v);
+    if(c){zapisKrok=2;if(!c.it.length)qaItem='__new';}else zapisKrok=3;}
+  zapisRe(true);if(qaItem==='__new')zapisFokus('qname');}
+function zapisFrom(v){qaFrom=v;if(zapisDotyk())zapisKrok=3;zapisRe();}
+function zapisSubmit(){if(quickAdd()===true){zapisAmt='';zapisNote='';zapisName='';closeModal();}}
+
+/* ---------- Zápis na dotykovém displeji ----------
+   Na počítači je Zápis jeden panel a píše se do něj z klávesnice. Na
+   telefonu tentýž panel nefungoval: částka vytáhla systémovou klávesnici,
+   ta zakryla půlku obrazovky, dlaždice „za co" i Zapsat zmizely pod ní
+   a při přechodu mezi poli vyjížděla a zajížděla (nahlásil Patrik
+   29. 9. 2026, i po opravě přibližování). Proto jde zápis na dotyku po
+   krocích, každý se vejde na obrazovku celý: 1. za co (kategorie, nahoře
+   naposledy použité položky), 2. která položka, 3. kolik. Částka se píše
+   na klávesnici přímo v panelu, systémová vyjede jen na poznámku a číselník
+   se na tu chvíli schová. Motor je pořád quickAdd(): krok 3 podá stejná
+   pole (qcat, qitem, qname, qnote, qamt, qdate, qacc), jen skrytá. */
+let zapisKrok=1,zapisName='',zapisFresh=false;
+function zapisDotyk(){return !!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);}
+function zapisFokus(id){setTimeout(()=>document.getElementById(id)?.focus(),60);}
+function zapisZpet(){
+  const cur=qaCur(P());
+  if(zapisKrok===3&&cur.startsWith('cat:')){zapisKrok=2;if(qaItem!=='__new'||P().cats.find(x=>'cat:'+x.id===cur)?.it.length)qaItem='';else zapisKrok=1;}
+  else if(zapisKrok===2&&qaItem==='__new'&&P().cats.find(x=>'cat:'+x.id===cur)?.it.length)qaItem='';
+  else zapisKrok=1;
+  zapisRe();
+}
+function zapisItem(id){
+  const p=P(),c=p.cats.find(x=>'cat:'+x.id===qaCur(p)),it=c&&c.it.find(x=>x.id===id);if(!it)return;
+  qaItem=id;zapisKrok=3;
+  // pevná platba: částka se předvyplní, první stisk ji přepíše (jako označený text)
+  if(it.fixAmt&&it.pl>0&&(!zapisAmt||zapisFresh)){zapisAmt=String(it.pl);zapisFresh=true;}
+  else if(zapisFresh){zapisAmt='';zapisFresh=false;}
+  zapisRe(true);
+}
+function zapisNova(){qaItem='__new';zapisRe(true);zapisFokus('qname');}
+function zapisNovaDal(){
+  const nm=(document.getElementById('qname')?.value||'').trim();
+  if(!nm){toast('Napiš název položky');zapisFokus('qname');return;}
+  zapisName=nm;zapisKrok=3;if(zapisFresh){zapisAmt='';zapisFresh=false;}zapisRe(true);
+}
+function zapisNedavnaVyber(cid,iid){qaSel='cat:'+cid;zapisSeg='cat';zapisItem(iid);}
+/* Naposledy použité položky (podle toho, kdy se zapisovaly, ne podle data
+   výdaje): z otevřeného období, a když jich je málo,
+   i z toho předchozího (položka se dohledá podle názvu, id je v každém
+   období jiné). Jen zkratka, nic se nevybírá samo. */
+// kdy byl zápis pořízený: uid() začíná časem, datum výdaje může být zpětné
+function zapisCas(le){const t=parseInt(String(le.id||'').slice(0,8),36);return t>1.5e12&&t<4.2e12?t:(Date.parse(le.d||'')||0);}
+function zapisNedavne(p){
+  const pred=S.periods.filter(x=>x.id!==p.id&&(x.from||'')<(p.from||'')).sort((a,b)=>(b.from||'').localeCompare(a.from||''))[0];
+  const out=[],seen=new Set();
+  for(const pp of pred?[p,pred]:[p]){
+    const zs=[];let n=0;
+    pp.cats.forEach(c=>(c.it||[]).forEach(it=>(it.log||[]).forEach(le=>zs.push({c,it,t:zapisCas(le),n:n++}))));
+    zs.sort((a,b)=>b.t-a.t||b.n-a.n);
+    for(const z of zs){
+      const c=pp===p?z.c:p.cats.find(x=>x.nm===z.c.nm),it=c&&(pp===p?z.it:c.it.find(x=>x.nm===z.it.nm));
+      if(!it||seen.has(it.id))continue;seen.add(it.id);out.push({c,it});if(out.length>=4)return out;
+    }
+  }
+  return out;
+}
+/* Číselník: zapisAmt drží číslo s tečkou (to čte num()), ukazuje se
+   s čárkou a mezerami po tisících. */
+function zapisKlav(k){
+  let v=zapisFresh&&k!=='del'?'':zapisAmt;zapisFresh=false;
+  if(k==='del')v=v.slice(0,-1);
+  else if(k===','){if(!v.includes('.'))v=(v||'0')+'.';}
+  else{
+    const [cele,des]=v.split('.');
+    if(des!==undefined){if(des.length<2)v+=k;}
+    else if(cele==='0')v=k;
+    else if(cele.length<9)v+=k;
+  }
+  zapisAmt=v;
+  const h=document.getElementById('qamt');if(h)h.value=v;
+  const d=document.getElementById('qamtv');if(d){d.innerHTML=zapisAmtHTML();d.classList.toggle('pr',!v);}
+}
+function zapisAmtHTML(){
+  if(!zapisAmt)return '0';
+  const [cele,des]=zapisAmt.split('.');
+  return (cele||'0').replace(/\B(?=(\d{3})+(?!\d))/g,' ')+(des!==undefined?','+des:'');
+}
+// hardwarová klávesnice u tabletu: čísla, čárka, mazání a Enter jdou dál
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('qamtv')||/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
+  if(/^[0-9]$/.test(e.key))zapisKlav(e.key);
+  else if(e.key===','||e.key==='.')zapisKlav(',');
+  else if(e.key==='Backspace')zapisKlav('del');
+  else if(e.key==='Enter'&&e.target.tagName!=='BUTTON')zapisSubmit();
+  else return;
+  e.preventDefault();
+});
+// při psaní poznámky se číselník schová, ať je nad systémovou klávesnicí vidět pole i Zapsat
+function zapisPise(on){
+  const m=document.querySelector('.modal.sheet');if(!m)return;
+  clearTimeout(zapisPise.t);
+  if(on)m.classList.add('pise');
+  else zapisPise.t=setTimeout(()=>m.classList.remove('pise'),220);   // až po kliknutí na Zapsat, jinak by se pod prstem posunulo
+}
+function zapisHTMLDotyk(){
+  const p=P(),cur=qaCur(p),acc=accById(S.ui.activeAcc);
+  const cc=cur.startsWith('cat:')?p.cats.find(x=>'cat:'+x.id===cur):null;
+  if(zapisKrok>=2&&!cur&&!qaXfer)zapisKrok=1;
+  if(zapisKrok===2&&!cc)zapisKrok=cur?3:1;
+  if(qaXfer&&zapisKrok===3&&!qaFrom)zapisKrok=1;
+  if(zapisKrok===3&&cc&&!qaItem)zapisKrok=2;
+  const seg=cur.startsWith('env:')?'env':cur.startsWith('inv:')?'inv':cur.startsWith('debt:')?'debt':zapisSeg;
+  const kroku=qaXfer||(zapisKrok===1?seg!=='cat':!cc)?2:3,krok=kroku===2&&zapisKrok===3?2:zapisKrok;
+  const nadpis=zapisKrok===1?(qaXfer?'Odkud?':'Za co?'):zapisKrok===2?esc(cc.nm):'Kolik?';
+  let h=`<div class="zs-top">
+    ${zapisKrok>1?`<button class="zs-x" onclick="zapisZpet()" aria-label="Zpět">${ic('cleft',19)}</button>`:''}
+    <span class="zs-tt">${nadpis}</span>
+    <span class="zs-dots" role="img" aria-label="Krok ${krok} z ${kroku}">${Array.from({length:kroku},(_,i)=>`<i class="${i<krok?'on':''}"></i>`).join('')}</span>
+    <button class="zs-x" onclick="closeModal()" aria-label="Zavřít">${ic('x',19)}</button></div>`;
+
+  if(zapisKrok===1){
+    if(qaXfer){
+      const zdroje=[...S.envelopes.map(e=>({v:'env:'+e.id,nm:e.nm,ik:e.icon})),...S.investments.map(i=>({v:'inv:'+i.id,nm:i.nm,ik:i.icon}))];
+      h+=`<div class="zs-note-line" style="margin:2px 0 12px">Peníze zpět na účet${acc?`: <b>${esc(acc.nm)}</b>`:''}</div>`;
+      h+=zdroje.length?zsGrid(zdroje.map(z=>`<button class="zt ${qaFrom===z.v?'on':''}" onclick="zapisFrom('${z.v}')">${ic(z.ik,21)}<span>${esc(z.nm)}</span></button>`))
+        :`<div class="mini" style="padding:10px 0">Zatím nemáš žádnou obálku ani investici, ze které by šlo peníze vrátit.</div>`;
+      return h;
+    }
+    h+=`<div class="zs-seg">`+ZSEG.filter(x=>x.k==='cat'||(x.k==='env'&&S.envelopes.length)||(x.k==='inv'&&S.investments.length)||(x.k==='debt'&&S.debts.length))
+      .map(x=>`<button class="${seg===x.k?'on':''}" onclick="zapisSeg2('${x.k}')">${esc(x.l)}</button>`).join('')+`</div>`;
+    const ned=seg==='cat'?zapisNedavne(p):[];
+    if(ned.length){
+      h+=`<div class="zs-lbl" style="margin-top:0">Naposledy</div><div class="zs-ned n${ned.length}">`
+        +ned.map(z=>`<button class="zn" onclick="zapisNedavnaVyber('${z.c.id}','${z.it.id}')"><b>${esc(z.it.nm)}</b><span>${esc(z.c.nm)}</span></button>`).join('')
+        +`</div><div class="zs-lbl">Kategorie</div>`;
+    }
+    const cile=seg==='env'?S.envelopes.map(e=>({v:'env:'+e.id,nm:e.nm,ik:e.icon}))
+      :seg==='inv'?S.investments.map(i=>({v:'inv:'+i.id,nm:i.nm,ik:i.icon}))
+      :seg==='debt'?S.debts.map(d=>({v:'debt:'+d.id,nm:d.nm,ik:d.icon}))
+      :p.cats.map(c=>({v:'cat:'+c.id,nm:c.nm,ik:c.icon}));
+    h+=zsGrid(cile.map(c=>`<button class="zt ${cur===c.v?'on':''}" onclick="zapisPick('${c.v}')">${ic(c.ik,21)}<span>${esc(c.nm)}</span></button>`));
+    return h;
+  }
+
+  if(zapisKrok===2){
+    if(qaItem==='__new'){
+      h+=`<div class="zs-lbl" style="margin-top:4px">Nová položka v kategorii ${esc(cc.nm)}</div>
+        <input class="inp" id="qname" data-k="pol" placeholder="Název, třeba Potraviny" value="${esc(zapisName)}" enterkeyhint="next" onkeydown="if(event.key==='Enter')zapisNovaDal()">
+        <button class="btn fill zs-go" onclick="zapisNovaDal()">Dál</button>`;
+      return h;
+    }
+    h+=`<div class="zs-list">`+cc.it.map(it=>`<button class="zi" onclick="zapisItem('${it.id}')"><span class="zi-n">${esc(it.nm)}</span>${it.fixAmt&&it.pl>0?`<span class="zi-a">${fmEx(it.pl)}</span>`:''}${ic('cright',16)}</button>`).join('')
+      +`<button class="zi zi-new" onclick="zapisNova()">${ic('plus',16)}<span class="zi-n">Nová položka</span></button></div>`;
+    return h;
+  }
+
+  // krok 3: kolik
+  const itm=cc&&qaItem&&qaItem!=='__new'?cc.it.find(x=>x.id===qaItem):null;
+  const predvolAcc=(zapisAcc!==null&&(zapisAcc===''||accById(zapisAcc)))?zapisAcc
+    :(itm&&itm.defAcc&&accById(itm.defAcc)?itm.defAcc
+    :(S.ui.activeAcc&&accById(S.ui.activeAcc)?S.ui.activeAcc:(accById(S.ui.defAcc)?S.ui.defAcc:'')));
+  let cesta,ik;
+  if(qaXfer){const z=presunNazev(qaFrom);ik=(qaFrom.startsWith('env:')?S.envelopes.find(e=>'env:'+e.id===qaFrom):S.investments.find(i=>'inv:'+i.id===qaFrom))?.icon||'repeat';
+    cesta=`${esc(z)} ${ic('cright',13)} ${acc?esc(acc.nm):'účet'}`;}
+  else if(cc){ik=cc.icon;cesta=`${esc(cc.nm)} ${ic('cright',13)} ${qaItem==='__new'?esc(zapisName)+' <em>(nová)</em>':esc(itm?itm.nm:'')}`;}
+  else{const o=cur.startsWith('env:')?S.envelopes.find(e=>'env:'+e.id===cur):cur.startsWith('inv:')?S.investments.find(i=>'inv:'+i.id===cur):S.debts.find(d=>'debt:'+d.id===cur);
+    ik=o?.icon||'wallet';cesta=esc(o?o.nm:'');}
+  h+=`<input type="hidden" id="qcat" value="${qaXfer?'vyplata':esc(cur)}">
+    ${qaXfer?`<input type="hidden" id="qfrom" value="${esc(qaFrom)}">`:''}
+    ${cc?`<input type="hidden" id="qitem" value="${esc(qaItem)}">`:''}
+    ${cc&&qaItem==='__new'?`<input type="hidden" id="qname" data-k="pol" value="${esc(zapisName)}">`:''}
+    <input type="hidden" id="qamt" value="${esc(zapisAmt)}">
+    <button class="zs-cesta" onclick="zapisKrok=1;zapisRe()" aria-label="Změnit, za co to je">${ic(ik,16)}<span>${cesta}</span><u>změnit</u></button>
+    <div class="zs-amt"><output id="qamtv" class="zs-amtv ${zapisAmt?'':'pr'}" aria-live="polite">${zapisAmtHTML()}</output><span>Kč</span></div>`;
+  if(!qaXfer)h+=`<input class="inp" id="${cc?'qnote':'qname'}" placeholder="Poznámka (nepovinné)" value="${esc(zapisNote)}" enterkeyhint="done"
+    onfocus="zapisPise(true)" onblur="zapisPise(false)" onkeydown="if(event.key==='Enter')this.blur()">`;
+  h+=`<div class="zs-pills">
+    <label class="zp">${ic('calendar',15)}<input id="qdate" type="date" value="${qaDate||todayISO()}"></label>
+    ${!qaXfer&&S.accounts.length?`<label class="zp">${ic('wallet',15)}<select id="qacc">
+      <option value="" ${predvolAcc?'':'selected'}>Bez účtu</option>
+      ${S.accounts.map(a=>`<option value="${a.id}" ${predvolAcc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
+    </select></label>`:''}</div>
+    <div class="zs-pad" role="group" aria-label="Číselník">${['1','2','3','4','5','6','7','8','9',',','0','del'].map(k=>
+      `<button type="button" onclick="zapisKlav('${k}')" ${k==='del'?`aria-label="Smazat číslici">${ic('backspace',22)}`:k===','?'aria-label="Desetinná čárka">,':'>'+k}</button>`).join('')}</div>
+    <button class="btn fill zs-go" onclick="zapisSubmit()">${qaXfer?'Přesunout':'Zapsat'}</button>`;
+  return h;
+}
 function zapisHTML(){
+  if(zapisDotyk())return zapisHTMLDotyk();
   const p=P(),cur=qaCur(p),acc=accById(S.ui.activeAcc);
   /* Účet se vybírá tady v panelu, ne jen přepínačem na Přehledu — platí se
      z různých účtů a zpětně to nikdo nedohledá. Předvybere se ten, co je

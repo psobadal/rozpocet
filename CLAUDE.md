@@ -399,6 +399,22 @@ S.tax            — daň z úroků (výchozí 15 %)
   jen `#pohres` (`pohObnov`), pole zůstává a klávesnice se nezavře.
   Ověřeno jen v emulaci mobilu; simulátor iPhonu bez plného Xcode nejde.
 
+- **Zápis na dotyku jde po krocích a má vlastní číselník**
+  (`zapisHTMLDotyk`, rozhoduje `zapisDotyk()` = `pointer:coarse`).
+  I po opravě přibližování to Patrikovi na telefonu vadilo: částka
+  vytáhla systémovou klávesnici, ta zakryla dlaždice i Zapsat a mezi
+  poli vyjížděla a zajížděla. Vybral si spojení tří návrhů (29. 9. 2026):
+  kroky **Za co → položka → Kolik** (u obálky, investice, dluhu a
+  přesunu jen dva), nahoře v kroku 1 **Naposledy** (`zapisNedavne`,
+  max 4 položky podle času pořízení zápisu z `uid()`, ne podle data
+  výdaje), částka na **číselníku v panelu** (`zapisKlav`, v `zapisAmt`
+  s tečkou), systémová klávesnice jen u poznámky a názvu nové položky,
+  a při psaní poznámky se číselník a pilulky schovají (`zapisPise`,
+  třída `.pise`, vrací se se zpožděním, ať se Zapsat neposune pod
+  prstem). Pevná platba se předvyplní a první stisk ji přepíše.
+  Motor zůstává `quickAdd()`, krok 3 mu podá stejná pole jako skrytá.
+  **Na počítači je Zápis beze změny** (jeden panel, Enter zapíše).
+
 - **`fm()` zaokrouhluje na celé koruny, `fmEx()` ne.** Na částky, které si
   uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —
   jinak by viděl „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení nevadí.
