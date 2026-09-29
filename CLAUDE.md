@@ -414,6 +414,19 @@ S.tax            — daň z úroků (výchozí 15 %)
   prstem). Pevná platba se předvyplní a první stisk ji přepíše.
   Motor zůstává `quickAdd()`, krok 3 mu podá stejná pole jako skrytá.
   **Na počítači je Zápis beze změny** (jeden panel, Enter zapíše).
+  Pozor na zmenšování panelu pod prstem: první verze schovávala číselník
+  hned při klepnutí do poznámky, panel se zmenšil, klepnutí doběhlo na
+  pozadí a Zápis se zavřel (nahlásil Patrik týž den). Proto `zapisPise`
+  jede se zpožděním a `openModal` zavírá jen tehdy, když dotyk na
+  pozadí i začal (`pointerdown`), ne jen skončil.
+
+- **Spodní lišta a plusko na telefonu** (29. 9. 2026): viewport má
+  `viewport-fit=cover` a lišta si dole bere `env(safe-area-inset-bottom)`,
+  jinak se na iPhonu lepila na zaoblení displeje a pruh pro přejetí
+  domů. Mobilní `.fab` a `.toast` stojí **za** obecnými pravidly
+  (stejná specificita, vyhrává pozdější): uvnitř horní mobilní sekce je
+  obecné `.fab{bottom:22px}` přebilo, plusko sedělo přes „Více" a lišta
+  nad ním chytala klepnutí.
 
 - **`fm()` zaokrouhluje na celé koruny, `fmEx()` ne.** Na částky, které si
   uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —

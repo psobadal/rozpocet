@@ -14,7 +14,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Můj rozpočet</title>
 <!-- Ikona se kreslí až v JS (applyAccent), aby držela barvu, kterou si
      uživatel nastavil. Tyhle značky jsou jen prázdné přihrádky. -->
@@ -181,16 +181,16 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
    appkách. Značky v HTML jsou pro obojí stejné, přepíná to jen CSS — kromě
    toho, že se na mobilu schovají záložky za čtvrtou a nabídne se „Více". */
 @media(max-width:640px){
-  .tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;margin:0;gap:0;padding:5px 2px;
+  .tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;margin:0;gap:0;
+    padding:5px max(2px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(2px,env(safe-area-inset-left));
     border:none;border-top:1px solid var(--line);border-radius:0;overflow:visible;
     box-shadow:0 -2px 14px rgba(22,21,26,.06)}
   .tab{flex:1;flex-direction:column;gap:3px;font-size:10px;font-weight:500;padding:7px 2px;border-radius:12px;min-width:0}
   .tab .tl{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}
   .tab.on{background:none;color:var(--accent)}
   .tab.tov:not(.on){display:none}
-  .app{padding-bottom:108px}
-  .fab{bottom:calc(96px + env(safe-area-inset-bottom));right:16px;width:52px;height:52px;border-radius:17px}
-  .top{padding:16px 0 10px}
+  .app{padding-bottom:calc(128px + env(safe-area-inset-bottom))}
+  .top{padding:calc(16px + env(safe-area-inset-top)) 0 10px}
   .brand{min-width:0}   /* velikost logotypu zůstává 38 / 22 / 11 i na mobilu (znacka/MANUAL.md) */
   .brand>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .save-pill{padding:6px 10px;font-size:11px;flex:none}
@@ -608,6 +608,15 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
   box-shadow:0 10px 26px rgba(0,0,0,.22);display:grid;place-items:center}
 .fab:hover{filter:brightness(1.06)}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:11px 22px;border-radius:12px;font-size:13px;font-weight:500;z-index:200;box-shadow:var(--sh-lg);animation:tin .25s}
+/* Mobil: plusko a hláška nad spodní lištou. Musí stát až tady, za
+   obecným .fab a .toast; uvnitř horní mobilní sekce je obecná pravidla
+   přebila, plusko sedělo v rohu přes „Více" a lišta ležela nad ním, takže
+   na něj občas nešlo klepnout (nahlásil Patrik 29. 9. 2026). */
+@media(max-width:640px){
+  .fab{bottom:calc(76px + env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right));width:54px;height:54px;border-radius:17px}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom));max-width:calc(100vw - 32px)}
+}
+.app{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
 @keyframes tin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 .banner{border-radius:14px;padding:13px 16px;font-size:13px;display:flex;gap:11px;align-items:flex-start;margin-bottom:14px}
 .banner .bi{flex:none;margin-top:1px}
@@ -2889,12 +2898,14 @@ document.addEventListener('keydown',e=>{
   else return;
   e.preventDefault();
 });
-// při psaní poznámky se číselník schová, ať je nad systémovou klávesnicí vidět pole i Zapsat
+/* Při psaní poznámky se číselník schová, ať je nad systémovou klávesnicí
+   vidět pole i Zapsat. Oběma směry až se zpožděním, po dokončení klepnutí:
+   když se panel zmenšil hned při klepnutí do poznámky, prst pak skončil
+   mimo panel na pozadí a Zápis se zavřel (nahlásil Patrik 29. 9. 2026).
+   Stejně tak Zapsat se nesmí posunout pod prstem, když poznámku opouštíš. */
 function zapisPise(on){
-  const m=document.querySelector('.modal.sheet');if(!m)return;
   clearTimeout(zapisPise.t);
-  if(on)m.classList.add('pise');
-  else zapisPise.t=setTimeout(()=>m.classList.remove('pise'),220);   // až po kliknutí na Zapsat, jinak by se pod prstem posunulo
+  zapisPise.t=setTimeout(()=>document.querySelector('.modal.sheet')?.classList.toggle('pise',on),on?300:220);
 }
 function zapisHTMLDotyk(){
   const p=P(),cur=qaCur(p),acc=accById(S.ui.activeAcc);
@@ -3164,7 +3175,7 @@ function drzOverlay(){
   ov.style.top=vv.offsetTop+'px';ov.style.height=vv.height+'px';ov.style.bottom='auto';
 }
 if(window.visualViewport){visualViewport.addEventListener('resize',drzOverlay);visualViewport.addEventListener('scroll',drzOverlay);}
-function openModal(html,cls){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov'+(cls?' ov-'+cls:'');ov.id='ov';ov.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);drzOverlay();iconPickFit(ov);}
+function openModal(html,cls){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov'+(cls?' ov-'+cls:'');ov.id='ov';ov.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;let zPozadi=false;ov.addEventListener('pointerdown',e=>{zPozadi=e.target===ov;});ov.onclick=e=>{if(e.target===ov&&zPozadi)closeModal();zPozadi=false;};document.body.appendChild(ov);drzOverlay();iconPickFit(ov);}
 /* Výběr ikon: počet sloupců se volí podle počtu ikon, ať poslední řádek
    nezůstane poloprázdný (14 ikon = 7+7, ne 9+5). */
 function iconPickFit(root){
