@@ -297,6 +297,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .vk-mid .l{font-size:11.5px;color:var(--text3)}
 .vk-mid .v{font-size:22px;font-weight:500;letter-spacing:-.6px;font-variant-numeric:tabular-nums;line-height:1.25}
 .vk-zb{font-size:13px;margin-top:8px;font-weight:500}
+.vk-zb.nic{color:var(--text3)}
 .catlist{padding:4px 16px}
 .catrow{padding:12px 0;cursor:pointer;border-bottom:1px solid var(--line)}
 .catrow:last-child{border-bottom:none}
@@ -1622,15 +1623,18 @@ function vydajeKolac(rows,tot,plan){
     const x=`<circle ${donutAttr(id,k,r.c.nm+' '+fm(r.a)+', '+Math.round(r.a/tot*100)+' %')} cx="75" cy="75" r="${R}" fill="none" stroke="${col(r.i)}" stroke-width="13" stroke-dasharray="${Math.max(0,len-mez)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 75 75)"/>`;
     off+=len;return x;}).join(''):'';
   const zb=plan-tot;
+  /* Řádek pod koláčem mluví o tom samém co prostředek: bez výběru o celém
+     cyklu, s vybranou výsečí o její kategorii (Patrik 29. 9. 2026). */
+  const pod=(a,pl,celk)=>pl>0?(a>pl?{t:'přes plán o '+fm(a-pl),c:'neg'}:{t:'zbývá '+fm(pl-a)+(celk?' do výplaty':' z plánu'),c:'pos'}):{t:'bez plánu',c:'nic'};
   const def=`<div class="l">utraceno</div><div class="v">${fmN(tot)}</div><div class="l">${plan>0?'z '+fmN(plan):'bez plánu'}</div>`;
-  donuts[id]={sw:13,def,cum:donutCum(s.map(r=>r.a)),mid:s.map(r=>`<div class="l nm"><i class="dd" style="background:${col(r.i)}"></i>${esc(r.c.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${Math.round(r.a/tot*100)} %${r.pl>0?' · plán '+fmN(r.pl):''}</div>`)};
+  donuts[id]={sw:13,def,cum:donutCum(s.map(r=>r.a)),pod:{def:pod(tot,plan,true),seg:s.map(r=>pod(r.a,r.pl))},mid:s.map(r=>`<div class="l nm"><i class="dd" style="background:${col(r.i)}"></i>${esc(r.c.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${Math.round(r.a/tot*100)} %${r.pl>0?' · plán '+fmN(r.pl):''}</div>`)};
   return `<div class="vkolac">
     <div class="vk-in" id="${id}" onclick="donutKlep(event,'${id}')">
       <svg viewBox="0 0 150 150" width="180" height="180" role="group" aria-label="Podíl kategorií na výdajích">
         <circle cx="75" cy="75" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="13"/>${vysece}</svg>
       <div class="vk-mid dmid">${def}</div>
     </div>
-    ${plan>0?`<div class="vk-zb ${zb<0?'neg':'pos'}">${zb<0?'přes plán o '+fm(-zb):'zbývá '+fm(zb)+' do výplaty'}</div>`:''}
+    ${plan>0?`<div class="vk-zb ${zb<0?'neg':'pos'}" data-pod="${id}" aria-live="polite">${zb<0?'přes plán o '+fm(-zb):'zbývá '+fm(zb)+' do výplaty'}</div>`:''}
   </div>`;
 }
 /* Donut: najetí myší nebo focus klávesnicí na výseč ukáže uprostřed její
@@ -1654,6 +1658,8 @@ function donutSeg(id,k,co){
   box.querySelectorAll('.dseg').forEach(el=>{const i=+el.dataset.k;el.style.opacity=on&&i!==k?'.28':'';el.setAttribute('stroke-width',on&&i===k?d.sw+3:d.sw);});
   document.querySelectorAll('[data-dn="'+id+'"]').forEach(el=>el.classList.toggle('dhl',on&&+el.dataset.k===k));
   const mid=box.querySelector('.dmid');if(mid)mid.innerHTML=on&&d.mid[k]?d.mid[k]:d.def;
+  const pod=document.querySelector('[data-pod="'+id+'"]');
+  if(pod&&d.pod){const x=on&&d.pod.seg[k]?d.pod.seg[k]:d.pod.def;pod.textContent=x.t;pod.className='vk-zb '+x.c;}
 }
 /* Klepnutí na koláč (dotyk): výseč se pozná podle úhlu, ne podle toho,
    jestli prst trefil tenký prstenec. Malé kategorie měly výseč pár

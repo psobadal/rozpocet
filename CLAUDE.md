@@ -437,7 +437,9 @@ S.tax            — daň z úroků (výchozí 15 %)
   Výseč byla tenký prstenec a malé kategorie nešly trefit; navíc focus
   z klepnutí výseč zapnul a klepnutí ji hned vypnulo. Na dotyku teď
   focus nic nedělá, klepnutí kamkoli do koláče vybere výseč podle úhlu
-  a klepnutí doprostřed vrátí souhrn.
+  a klepnutí doprostřed vrátí souhrn. Řádek pod koláčem na Výdajích
+  (`data-pod`, `donuts[id].pod`) se přepíná s prostředkem: bez výběru
+  o celém cyklu, s vybranou výsečí o její kategorii.
 
 - **Dlaždice s čísly** (`.tile`) mají číslo dole (`margin-top:auto`),
   ať v řadě sedí všechna ve stejné výšce, i když se popisek zalomí.
