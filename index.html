@@ -599,7 +599,8 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .zs-pad button:active{background:var(--line2)}
 .modal.sheet .zs-pad{transition:opacity .15s}
 .modal.sheet.pise .zs-pad{visibility:hidden;opacity:0}
-.zs-chips{display:flex;justify-content:center;gap:8px;margin-top:10px}
+.zs-chips{display:flex;justify-content:center;gap:8px;margin-top:0}
+.zs-pozn{margin-top:8px}
 .zc{position:relative;display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:62%;background:var(--bg);border-radius:99px;padding:7px 13px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer}
 .zc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zc input,.zc select{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;margin:0;padding:0;-webkit-appearance:none;appearance:none;cursor:pointer;font-size:16px}
@@ -2993,7 +2994,7 @@ function zapisHTMLDotyk(){
   if(zapisKrok===2){
     if(qaItem==='__new'){
       h+=`<div class="zs-lbl" style="margin-top:4px">Nová položka v kategorii ${esc(cc.nm)}</div>
-        <input class="inp" id="qname" data-k="pol" placeholder="Název, třeba Potraviny" value="${esc(zapisName)}" enterkeyhint="next" onkeydown="if(event.key==='Enter')zapisNovaDal()">
+        <input class="inp" id="qname" data-k="pol" placeholder="Název, třeba Potraviny" value="${esc(zapisName)}" enterkeyhint="next" autocomplete="off" onkeydown="if(event.key==='Enter')zapisNovaDal()">
         <button class="btn fill zs-go" onclick="zapisNovaDal()">Dál</button>`;
       return h;
     }
@@ -3018,10 +3019,14 @@ function zapisHTMLDotyk(){
     ${cc?`<input type="hidden" id="qitem" value="${esc(qaItem)}">`:''}
     ${cc&&qaItem==='__new'?`<input type="hidden" id="qname" data-k="pol" value="${esc(zapisName)}">`:''}
     <input type="hidden" id="qamt" value="${esc(zapisAmt)}">
-    <button class="zs-cesta" onclick="zapisKrok=1;zapisRe()" aria-label="Změnit, za co to je">${ic(ik,16)}<span>${cesta}</span><u>změnit</u></button>
-    <div class="zs-amt"><output id="qamtv" class="zs-amtv ${zapisAmt?'':'pr'}" aria-live="polite">${zapisAmtHTML()}</output><span>Kč</span></div>`;
-  if(!qaXfer)h+=`<input class="inp" id="${cc?'qnote':'qname'}" placeholder="Poznámka (nepovinné)" value="${esc(zapisNote)}" enterkeyhint="done"
+    <button class="zs-cesta" onclick="zapisKrok=1;zapisRe()" aria-label="Změnit, za co to je">${ic(ik,16)}<span>${cesta}</span><u>změnit</u></button>`;
+  /* Poznámka je nad částkou schválně: tam na ni klávesnice nedosáhne.
+     Pod částkou ležela kousek pod horní hranou klávesnice a Safari pak
+     sám posunul celou stránku, s rezervou navíc: uřízl záhlaví a nad
+     klávesnicí zůstala prázdná plocha (Patrik 29. 9. 2026). */
+  if(!qaXfer)h+=`<input class="inp zs-pozn" id="${cc?'qnote':'qname'}" placeholder="Poznámka (nepovinné)" value="${esc(zapisNote)}" enterkeyhint="done" autocomplete="off" autocorrect="on"
     onfocus="zapisPise(true)" onblur="zapisPise(false)" onkeydown="if(event.key==='Enter')this.blur()">`;
+  h+=`<div class="zs-amt"><output id="qamtv" class="zs-amtv ${zapisAmt?'':'pr'}" aria-live="polite">${zapisAmtHTML()}</output><span>Kč</span></div>`;
   /* Datum a účet jsou malé štítky. Pod každým leží neviditelné nativní
      pole s písmem 16 px, takže klepnutí otevře systémový výběr a iPhone
      nepřiblíží stránku. Viditelná pole s 16 px byla obří (Patrik). */

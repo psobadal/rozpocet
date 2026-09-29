@@ -415,6 +415,11 @@ S.tax            — daň z úroků (výchozí 15 %)
   neviditelným nativním polem 16 px pod sebou: viditelná pole s 16 px
   byla obří a menší písmo by iPhone při klepnutí přiblížil.
   Pevná platba se předvyplní a první stisk ji přepíše.
+  **Poznámka je nad částkou, ne pod ní**: pod částkou ležela kousek pod
+  horní hranou klávesnice (s lištou automatického vyplňování) a Safari
+  pak sám posunul celou stránku s rezervou navíc, uřízl záhlaví a nad
+  klávesnicí nechal prázdno. Pole, do kterého se píše, musí být v panelu
+  tak vysoko, aby na něj klávesnice nedosáhla (teď 420 px nad spodkem).
   Motor zůstává `quickAdd()`, krok 3 mu podá stejná pole jako skrytá.
   **Na počítači je Zápis beze změny** (jeden panel, Enter zapíše).
   Pozor na zmenšování panelu pod prstem: první verze schovávala číselník
