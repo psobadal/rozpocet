@@ -68,6 +68,11 @@ input[type=number]{-moz-appearance:textfield}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
 @media (pointer:coarse){
   .inp,.zp input,.zp select,select,textarea,input[type=date],input[type=text],input[type=email],input[type=search]{font-size:16px!important}
+  /* Datum na iPhonu má vlastní minimální šířku a na width nedá; s 16 px
+     přetékalo v půlce řádku přes vedlejší pole (Přesun z účtu, nahlásil
+     Patrik 29. 9. 2026). appearance:none ho nechá se vejít do sloupce. */
+  input[type=date].inp{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;min-height:44px}
+  input[type=date].inp::-webkit-date-and-time-value{text-align:left;margin:0}
   /* datum a účet v Zápisu: dva stejné sloupce, jinak by s větším písmem spadly pod sebe */
   .modal .zs-pills{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px}
   .modal .zp{min-width:0}
@@ -214,6 +219,11 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .card .tile{background:var(--bg);box-shadow:none}
 .tile .tl{font-size:11.5px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
 .tile .tv{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
+/* Čísla v řadě dlaždic ve stejné výšce: když se popisek zalomí na dva
+   řádky (Z plánu utraceno na mobilu), číslo nespadne níž než sousední,
+   všechna sedí dole (Patrik 29. 9. 2026). */
+.tile{display:flex;flex-direction:column}
+.tile .tv{margin-top:auto}
 .pos{color:var(--teal)} .neg{color:var(--neg)} .warn{color:var(--gold)}
 
 
@@ -524,7 +534,7 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .modal.sheet{max-width:440px;padding:20px 20px 22px}
 @media(max-width:640px){
   .ov-sheet{align-items:flex-end;padding:0}
-  .modal.sheet{max-width:none;border-radius:24px 24px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));animation:rise .22s;max-height:100%;overflow-y:auto}
+  .modal.sheet{max-width:none;border-radius:24px 24px 0 0;padding:16px 16px calc(14px + env(safe-area-inset-bottom));animation:rise .22s;max-height:100%;overflow-y:auto}
 }
 .zs-top{display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:500;margin-bottom:6px}
 .zs-x{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;border-radius:9px;display:grid;place-items:center}
@@ -584,10 +594,19 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 @media (prefers-reduced-motion:reduce){.zs-amtv::after{animation:none}}
 .modal.sheet .zs-amt:has(.zs-amtv){padding:10px 0 12px}
 .zs-pad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:12px}
-.zs-pad button{height:50px;background:var(--bg);border:none;border-radius:12px;font-family:var(--numfont);font-size:23px;font-weight:500;color:var(--text);cursor:pointer;display:grid;place-items:center;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.zs-pad button{height:48px;background:var(--bg);border:none;border-radius:12px;font-family:var(--numfont);font-size:23px;font-weight:500;color:var(--text);cursor:pointer;display:grid;place-items:center;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 .zs-pad button:active{background:var(--line2)}
-.modal.sheet.pise .zs-pad,.modal.sheet.pise .zs-pills{display:none}
-.modal.sheet.pise .zs-go{margin-top:12px}
+.modal.sheet .zs-pad{transition:opacity .15s}
+.modal.sheet.pise .zs-pad{visibility:hidden;opacity:0}
+.zs-chips{display:flex;justify-content:center;gap:8px;margin-top:10px}
+.zc{position:relative;display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:62%;background:var(--bg);border-radius:99px;padding:7px 13px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer}
+.zc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zc input,.zc select{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;margin:0;padding:0;-webkit-appearance:none;appearance:none;cursor:pointer;font-size:16px}
+.zc:focus-within{box-shadow:0 0 0 2px var(--accent)}
+/* stránka za panelem se nehýbe a tažení prstem po panelu ji nepřetahuje */
+@media (pointer:coarse){html:has(.ov-sheet),html:has(.ov-sheet) body{overflow:hidden}}
+.ov-sheet{overscroll-behavior:contain;transition:padding-bottom .22s ease}
+.modal.sheet{overscroll-behavior:contain}
 @media (pointer:coarse){.modal.sheet .zs-grid{max-height:none;overflow:visible}}
 
 .iconpick{display:grid;grid-template-columns:repeat(auto-fill,40px);gap:6px;max-height:180px;overflow:auto}
@@ -726,6 +745,7 @@ const ICON={
   trash:'<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   cleft:'<path d="m15 18-6-6 6-6"/>',
+  cdown:'<path d="m6 9 6 6 6-6"/>',
   backspace:'<path d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><path d="m12 9 6 6"/><path d="m18 9-6 6"/>',
   cright:'<path d="m9 18 6-6-6-6"/>',
   up:'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
@@ -1603,9 +1623,9 @@ function vydajeKolac(rows,tot,plan){
     off+=len;return x;}).join(''):'';
   const zb=plan-tot;
   const def=`<div class="l">utraceno</div><div class="v">${fmN(tot)}</div><div class="l">${plan>0?'z '+fmN(plan):'bez plánu'}</div>`;
-  donuts[id]={sw:13,def,mid:s.map(r=>`<div class="l nm"><i class="dd" style="background:${col(r.i)}"></i>${esc(r.c.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${Math.round(r.a/tot*100)} %${r.pl>0?' · plán '+fmN(r.pl):''}</div>`)};
+  donuts[id]={sw:13,def,cum:donutCum(s.map(r=>r.a)),mid:s.map(r=>`<div class="l nm"><i class="dd" style="background:${col(r.i)}"></i>${esc(r.c.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${Math.round(r.a/tot*100)} %${r.pl>0?' · plán '+fmN(r.pl):''}</div>`)};
   return `<div class="vkolac">
-    <div class="vk-in" id="${id}">
+    <div class="vk-in" id="${id}" onclick="donutKlep(event,'${id}')">
       <svg viewBox="0 0 150 150" width="180" height="180" role="group" aria-label="Podíl kategorií na výdajích">
         <circle cx="75" cy="75" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="13"/>${vysece}</svg>
       <div class="vk-mid dmid">${def}</div>
@@ -1621,12 +1641,13 @@ function vydajeKolac(rows,tot,plan){
 const donuts={};const donutOn={};let donutSeq=0;
 const umiNajeti=()=>window.matchMedia&&matchMedia('(hover:hover)').matches;
 function donutAttr(id,k,popis){
-  return `class="dseg" data-k="${k}" tabindex="0" role="img" aria-label="${esc(popis)}" onmouseenter="donutSeg('${id}',${k},'in')" onmouseleave="donutSeg('${id}',${k},'out')" onfocus="donutSeg('${id}',${k},'f')" onblur="donutSeg('${id}',${k},'out')" onclick="event.stopPropagation();donutSeg('${id}',${k},'tap')"`;}
+  return `class="dseg" data-k="${k}" tabindex="0" role="img" aria-label="${esc(popis)}" onmouseenter="donutSeg('${id}',${k},'in')" onmouseleave="donutSeg('${id}',${k},'out')" onfocus="donutSeg('${id}',${k},'f')" onblur="donutSeg('${id}',${k},'out')"`;}
 function donutRow(id,k){
   return ` data-dn="${id}" data-k="${k}" onmouseenter="donutSeg('${id}',${k},'in')" onmouseleave="donutSeg('${id}',${k},'out')"`;}
 function donutSeg(id,k,co){
   const box=document.getElementById(id),d=donuts[id];if(!box||!d)return;
-  if((co==='in'||co==='out')&&!umiNajeti())return;
+  if((co==='in'||co==='f')&&!umiNajeti())return;   // na dotyku rozhoduje jen klepnutí (focus z klepnutí by ho hned zase přepnul zpět)
+  if(co==='out'&&!umiNajeti()&&k>=0&&donutOn[id]!==k)return;
   if(co==='tap'){if(umiNajeti())return;co=donutOn[id]===k?'out':'in';}
   const on=co!=='out';
   donutOn[id]=on?k:null;
@@ -1634,6 +1655,20 @@ function donutSeg(id,k,co){
   document.querySelectorAll('[data-dn="'+id+'"]').forEach(el=>el.classList.toggle('dhl',on&&+el.dataset.k===k));
   const mid=box.querySelector('.dmid');if(mid)mid.innerHTML=on&&d.mid[k]?d.mid[k]:d.def;
 }
+/* Klepnutí na koláč (dotyk): výseč se pozná podle úhlu, ne podle toho,
+   jestli prst trefil tenký prstenec. Malé kategorie měly výseč pár
+   pixelů a nedaly se trefit (Patrik 29. 9. 2026). Klepnutí doprostřed
+   vrátí souhrn. d.cum = konce výsečí jako podíl celého kruhu. */
+function donutKlep(e,id){
+  if(umiNajeti())return;
+  const box=document.getElementById(id),d=donuts[id],svg=box&&box.querySelector('svg');if(!svg||!d||!d.cum)return;
+  const r=svg.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),vz=Math.hypot(dx,dy)/(r.width/2);
+  if(vz<.5){donutSeg(id,-1,'out');return;}
+  if(vz>1.2)return;
+  let a=Math.atan2(dx,-dy)/(2*Math.PI);if(a<0)a+=1;   // 0 = nahoře, po směru hodin jako výseče
+  const k=d.cum.findIndex(c=>a<=c);if(k>=0)donutSeg(id,k,'tap');
+}
+const donutCum=a=>{const t=a.reduce((x,y)=>x+y,0);let c=0;return a.map(v=>(c+=v)/(t||1));};
 /* Řádek kategorie: pruh se barví podle stavu (v pořádku / blízko plánu /
    přečerpáno), ne podle kategorie — ta má svou barvu v ikoně. */
 function catRow({c,i,a,pl,k}){
@@ -2132,9 +2167,9 @@ function catShare(rows,total,label){if(!rows.length)return '';
   const R=40,C=2*Math.PI*R,id='dn'+(++donutSeq);let off=0;
   const vys=total>0?rows.map((r,k)=>{const l=r.a/total*C,x=`<circle ${donutAttr(id,k,r.nm+' '+fm(r.a)+', '+Math.round(r.a/total*100)+' %')} cx="50" cy="50" r="${R}" fill="none" stroke="${catColByName(r.nm,k)}" stroke-width="13" stroke-dasharray="${Math.max(0,l-(rows.length>1?1.2:0))} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 50 50)"/>`;off+=l;return x;}).join(''):'';
   const def=`<div class="l">celkem</div><div class="v">${fmN(total)}</div>`;
-  donuts[id]={sw:13,def,mid:rows.map((r,k)=>`<div class="l nm"><i class="dd" style="background:${catColByName(r.nm,k)}"></i>${esc(r.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${total>0?Math.round(r.a/total*100):0} %</div>`)};
+  donuts[id]={sw:13,def,cum:donutCum(rows.map(r=>r.a)),mid:rows.map((r,k)=>`<div class="l nm"><i class="dd" style="background:${catColByName(r.nm,k)}"></i>${esc(r.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${total>0?Math.round(r.a/total*100):0} %</div>`)};
   return `<div class="card"><div class="ct" style="margin-bottom:12px">${label}</div>
-    <div class="shr"><div class="shd" id="${id}"><svg viewBox="0 0 100 100" width="132" height="132" role="group" aria-label="${esc(label)}"><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="13"/>${vys}</svg><div class="shmid dmid">${def}</div></div>
+    <div class="shr"><div class="shd" id="${id}" onclick="donutKlep(event,'${id}')"><svg viewBox="0 0 100 100" width="132" height="132" role="group" aria-label="${esc(label)}"><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="13"/>${vys}</svg><div class="shmid dmid">${def}</div></div>
     <div class="shl">${rows.map((r,k)=>`<div class="shrow"${donutRow(id,k)}><span class="dot" style="background:${catColByName(r.nm,k)}"></span><span class="n">${esc(r.nm)}</span><span class="p">${total>0?Math.round(r.a/total*100):0} %</span><span class="v">${fm(r.a)}</span></div>`).join('')}</div></div></div>`;}
 function topItems(items,n,label){if(!items.length)return '';let h=`<div class="card"><div class="ct" style="margin-bottom:14px">${label}</div>`;items.slice(0,n).forEach((it,k)=>{h+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;border-top:${k?'1px solid var(--line)':'none'}"><span style="color:var(--text4);width:18px">${k+1}.</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.n)} <span class="mini">${esc(it.cat)}</span></span><span class="num">${fm(it.a)}</span></div>`;});return h+`</div>`;}
 function overUnder(over,under){let h=`<div class="grid2" style="margin-bottom:14px"><div class="card" style="margin-bottom:0"><div class="ct" style="margin-bottom:10px;color:var(--neg)">Přečerpané</div>`;
@@ -2898,14 +2933,16 @@ document.addEventListener('keydown',e=>{
   else return;
   e.preventDefault();
 });
-/* Při psaní poznámky se číselník schová, ať je nad systémovou klávesnicí
-   vidět pole i Zapsat. Oběma směry až se zpožděním, po dokončení klepnutí:
-   když se panel zmenšil hned při klepnutí do poznámky, prst pak skončil
-   mimo panel na pozadí a Zápis se zavřel (nahlásil Patrik 29. 9. 2026).
-   Stejně tak Zapsat se nesmí posunout pod prstem, když poznámku opouštíš. */
-function zapisPise(on){
-  clearTimeout(zapisPise.t);
-  zapisPise.t=setTimeout(()=>document.querySelector('.modal.sheet')?.classList.toggle('pise',on),on?300:220);
+/* Při psaní poznámky vyjede klávesnice přes číselník. Ten se jen
+   zneviditelní (nemění velikost), aby nad klávesnicí netrčil jeho proužek
+   a nic se neposunulo. Dřív se panel zmenšoval a skákal, a jednou se
+   kvůli tomu klepnutí trefilo vedle a Zápis se zavřel. */
+function zapisPise(on){document.querySelector('.modal.sheet')?.classList.toggle('pise',on);}
+// Dnes / Včera / 29. 9. (rok jen když není letošní)
+function datumPopis(d){
+  const t=todayISO();if(!d||d===t)return 'Dnes';
+  const v=new Date(t+'T12:00');v.setDate(v.getDate()-1);if(d===iso(v))return 'Včera';
+  const [r,m,den]=d.split('-');return `${+den}. ${+m}.${r!==t.slice(0,4)?' '+r:''}`;
 }
 function zapisHTMLDotyk(){
   const p=P(),cur=qaCur(p),acc=accById(S.ui.activeAcc);
@@ -2979,9 +3016,13 @@ function zapisHTMLDotyk(){
     <div class="zs-amt"><output id="qamtv" class="zs-amtv ${zapisAmt?'':'pr'}" aria-live="polite">${zapisAmtHTML()}</output><span>Kč</span></div>`;
   if(!qaXfer)h+=`<input class="inp" id="${cc?'qnote':'qname'}" placeholder="Poznámka (nepovinné)" value="${esc(zapisNote)}" enterkeyhint="done"
     onfocus="zapisPise(true)" onblur="zapisPise(false)" onkeydown="if(event.key==='Enter')this.blur()">`;
-  h+=`<div class="zs-pills">
-    <label class="zp">${ic('calendar',15)}<input id="qdate" type="date" value="${qaDate||todayISO()}"></label>
-    ${!qaXfer&&S.accounts.length?`<label class="zp">${ic('wallet',15)}<select id="qacc">
+  /* Datum a účet jsou malé štítky. Pod každým leží neviditelné nativní
+     pole s písmem 16 px, takže klepnutí otevře systémový výběr a iPhone
+     nepřiblíží stránku. Viditelná pole s 16 px byla obří (Patrik). */
+  const dnes=qaDate||todayISO(),uc=accById(predvolAcc);
+  h+=`<div class="zs-chips">
+    <label class="zc">${ic('calendar',14)}<span id="qdatel">${datumPopis(dnes)}</span><input id="qdate" type="date" value="${dnes}" aria-label="Datum" onchange="document.getElementById('qdatel').textContent=datumPopis(this.value)"></label>
+    ${!qaXfer&&S.accounts.length?`<label class="zc">${ic('wallet',14)}<span id="qaccl">${uc?esc(uc.nm):'Bez účtu'}</span>${ic('cdown',13)}<select id="qacc" aria-label="Účet" onchange="zapisAcc=this.value;document.getElementById('qaccl').textContent=this.options[this.selectedIndex].text">
       <option value="" ${predvolAcc?'':'selected'}>Bez účtu</option>
       ${S.accounts.map(a=>`<option value="${a.id}" ${predvolAcc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
     </select></label>`:''}</div>
@@ -3171,10 +3212,26 @@ function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v
    vypne, ať nepřekáží. Android to zvládne sám díky interactive-widget. */
 function drzOverlay(){
   const ov=document.getElementById('ov'),vv=window.visualViewport;if(!ov||!vv)return;
-  if(vv.scale>1.01){ov.style.top=ov.style.height=ov.style.bottom='';return;}
-  ov.style.top=vv.offsetTop+'px';ov.style.height=vv.height+'px';ov.style.bottom='auto';
+  if(vv.scale>1.01){ov.style.top=ov.style.height=ov.style.bottom=ov.style.paddingBottom='';return;}
+  if(!ov.classList.contains('ov-sheet')){ov.style.top=vv.offsetTop+'px';ov.style.height=vv.height+'px';ov.style.bottom='auto';return;}
+  /* Spodní panel (Zápis): překryv zůstává přes celou obrazovku. Dřív se
+     zkracoval na viditelnou část a při tažení prstem, když prohlížeč
+     schovával lišty, pod panelem prosvítala stránka. Panel se zvedne jen
+     o tolik, aby pole, do kterého se píše, bylo nad klávesnicí; když je
+     vidět i tak, nehne se vůbec a klávesnice jen překryje číselník. Dřív
+     vyskočil o celou výšku klávesnice a Patrikovi to „divně poskočilo". */
+  const kl=Math.max(0,innerHeight-vv.height-vv.offsetTop),f=document.activeElement;
+  let zved=0;
+  if(kl>120&&f&&ov.contains(f)&&(f.tagName==='TEXTAREA'||(f.tagName==='INPUT'&&!/^(hidden|date|checkbox|radio)$/.test(f.type)))){
+    // kde by pole bylo bez zvednutí: panel leží na spodku obrazovky a vzdálenost pole od jeho spodku se posunem nemění (ani uprostřed animace)
+    const m=ov.querySelector('.modal'),dno=innerHeight-(m.getBoundingClientRect().bottom-f.getBoundingClientRect().bottom),hrana=vv.offsetTop+vv.height-12;
+    zved=Math.min(kl,Math.max(0,Math.ceil(dno-hrana)));
+  }
+  ov.style.paddingBottom=zved?zved+'px':'';
 }
 if(window.visualViewport){visualViewport.addEventListener('resize',drzOverlay);visualViewport.addEventListener('scroll',drzOverlay);}
+document.addEventListener('focusin',()=>setTimeout(drzOverlay,60));
+document.addEventListener('focusout',()=>setTimeout(drzOverlay,60));
 function openModal(html,cls){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov'+(cls?' ov-'+cls:'');ov.id='ov';ov.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;let zPozadi=false;ov.addEventListener('pointerdown',e=>{zPozadi=e.target===ov;});ov.onclick=e=>{if(e.target===ov&&zPozadi)closeModal();zPozadi=false;};document.body.appendChild(ov);drzOverlay();iconPickFit(ov);}
 /* Výběr ikon: počet sloupců se volí podle počtu ikon, ať poslední řádek
    nezůstane poloprázdný (14 ikon = 7+7, ne 9+5). */

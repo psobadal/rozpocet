@@ -409,16 +409,41 @@ S.tax            — daň z úroků (výchozí 15 %)
   max 4 položky podle času pořízení zápisu z `uid()`, ne podle data
   výdaje), částka na **číselníku v panelu** (`zapisKlav`, v `zapisAmt`
   s tečkou), systémová klávesnice jen u poznámky a názvu nové položky,
-  a při psaní poznámky se číselník a pilulky schovají (`zapisPise`,
-  třída `.pise`, vrací se se zpožděním, ať se Zapsat neposune pod
-  prstem). Pevná platba se předvyplní a první stisk ji přepíše.
+  a při psaní poznámky se číselník jen zneviditelní (`zapisPise`,
+  třída `.pise`, `visibility:hidden`, velikost panelu se nemění) a
+  klávesnice ho překryje. Datum a účet jsou malé štítky (`.zc`) s
+  neviditelným nativním polem 16 px pod sebou: viditelná pole s 16 px
+  byla obří a menší písmo by iPhone při klepnutí přiblížil.
+  Pevná platba se předvyplní a první stisk ji přepíše.
   Motor zůstává `quickAdd()`, krok 3 mu podá stejná pole jako skrytá.
   **Na počítači je Zápis beze změny** (jeden panel, Enter zapíše).
   Pozor na zmenšování panelu pod prstem: první verze schovávala číselník
   hned při klepnutí do poznámky, panel se zmenšil, klepnutí doběhlo na
-  pozadí a Zápis se zavřel (nahlásil Patrik týž den). Proto `zapisPise`
-  jede se zpožděním a `openModal` zavírá jen tehdy, když dotyk na
+  pozadí a Zápis se zavřel (nahlásil Patrik týž den). Proto se panel
+  při psaní nezmenšuje a `openModal` zavírá jen tehdy, když dotyk na
   pozadí i začal (`pointerdown`), ne jen skončil.
+  **Spodní panel a klávesnice** (`drzOverlay`, jen `.ov-sheet`): překryv
+  zůstává přes celou obrazovku a panel se zvedne (`padding-bottom`
+  s přechodem) jen o tolik, aby pole s kurzorem bylo nad klávesnicí;
+  když je vidět i tak, nehne se vůbec. Dřív se překryv zkracoval na
+  viditelnou část: panel vyskočil o celou klávesnici a při tažení
+  prstem pod ním prosvítala stránka. Poloha pole bez zvednutí se počítá
+  ze vzdálenosti od spodku panelu, ne z aktuální polohy (ta se během
+  animace posouvá). Ostatní dialogy mají pořád starou logiku.
+  Při testu v Browser panelu na pozadí stojí CSS animace na začátku;
+  pro měření je vypni (`*{transition:none;animation:none}`).
+
+- **Donut na dotyku se klepe podle úhlu** (`donutKlep`, `donuts[id].cum`).
+  Výseč byla tenký prstenec a malé kategorie nešly trefit; navíc focus
+  z klepnutí výseč zapnul a klepnutí ji hned vypnulo. Na dotyku teď
+  focus nic nedělá, klepnutí kamkoli do koláče vybere výseč podle úhlu
+  a klepnutí doprostřed vrátí souhrn.
+
+- **Dlaždice s čísly** (`.tile`) mají číslo dole (`margin-top:auto`),
+  ať v řadě sedí všechna ve stejné výšce, i když se popisek zalomí.
+  Datové pole na iPhonu (`input[type=date].inp`) má `appearance:none`,
+  jinak si drží vlastní minimální šířku a v půlce řádku přetékalo přes
+  vedlejší pole (Přesun z účtu).
 
 - **Spodní lišta a plusko na telefonu** (29. 9. 2026): viewport má
   `viewport-fit=cover` a lišta si dole bere `env(safe-area-inset-bottom)`,
