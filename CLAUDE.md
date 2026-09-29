@@ -372,6 +372,16 @@ S.tax            — daň z úroků (výchozí 15 %)
   prohlížeč ho simuluje při klepnutí) a výseč se přepíná klepnutím, jinak
   by se hned zase zavřela. Název uprostřed je v barvě textu s barevnou
   tečkou, ne v barvě kategorie (oranžová by neprošla kontrastem).
+- **Položky v detailu kategorie jsou varianta D** (vybral Patrik
+  29. 9. 2026 z pěti návrhů): každý řádek (`.itr`) se podbarví (`.itfill`)
+  tak daleko, kolik z plánu je utraceno, zeleně / zlatě nad 85 % /
+  červeně přes plán. Pevná platba zaplacená celá je zelená, ne zlatá (je
+  hotová, ne „blízko plánu"). Vpravo částka a pod ní „z plánu", pod názvem
+  jen to, co za řeč stojí: o kolik je přes plán, štítek 50/30/20 a kam se
+  propisuje. Plán je pod částkou schválně: vedle sebe na jednom řádku
+  stlačil dlouhé názvy na „Splát…". Přidání položky je tlačítko,
+  pole se otevřou až po kliknutí (`novaPolozka`) a po přidání zůstanou
+  otevřená pro další.
 - **Plán kategorie je sbalený řádek** pod položkami (`catPlanOpen`).
   Normálně se sčítá z položek; jeden plán za celou kategorii (`c.pl`) je
   výjimka, vysvětlená až po rozkliknutí, a když platí, řádek to říká
