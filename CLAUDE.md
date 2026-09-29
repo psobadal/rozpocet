@@ -364,6 +364,19 @@ S.tax            — daň z úroků (výchozí 15 %)
   Dlaždice cílů v panelu jdou po vyrovnaných řadách (`zsGrid`: 10 = 4+3+3,
   ne 4+4+2), řady po nejvýš čtyřech.
 
+- **Donuty ukazují hodnotu po najetí** (`donutSeg`, `donutAttr`,
+  `donutRow`, data v `donuts[id]`). Koláč na Výdajích i podíl kategorií ve
+  Statistikách: najetí myší nebo focus na výseč ukáže uprostřed název,
+  částku a podíl a ostatní výseče ztlumí; stejně reagují řádky seznamu
+  kategorií a legenda. Na dotykovém displeji se najetí ignoruje (mobilní
+  prohlížeč ho simuluje při klepnutí) a výseč se přepíná klepnutím, jinak
+  by se hned zase zavřela. Název uprostřed je v barvě textu s barevnou
+  tečkou, ne v barvě kategorie (oranžová by neprošla kontrastem).
+- **Plán kategorie je sbalený řádek** pod položkami (`catPlanOpen`).
+  Normálně se sčítá z položek; jeden plán za celou kategorii (`c.pl`) je
+  výjimka, vysvětlená až po rozkliknutí, a když platí, řádek to říká
+  hned. Dřív to byla karta s polem „0" a textem, kterému nikdo nerozuměl.
+
 - **`fm()` zaokrouhluje na celé koruny, `fmEx()` ne.** Na částky, které si
   uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —
   jinak by viděl „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení nevadí.

@@ -318,6 +318,34 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .itbar>i{display:block;height:100%;border-radius:3px}
 .itop:hover .itn{color:var(--accent-d)}
 .cdplan .inp{background:var(--bg)}
+/* Donut s hodnotami po najetí (donutSeg): popisek uprostřed nesmí brát
+   myš výsečím pod sebou, zvýrazněný řádek legendy/seznamu je tichý. */
+.dmid{pointer-events:none}
+.dseg{cursor:pointer;transition:opacity .15s,stroke-width .15s;outline:none}
+.vk-mid .l,.shmid .l{max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto}
+.vk-mid .nm,.shmid .nm{font-weight:500;color:var(--text)}
+.dmid .dd{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:5px;vertical-align:0}
+.shd{position:relative;flex:none;margin:0 auto;width:132px;height:132px}
+.shmid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.shmid .l{font-size:10.5px;color:var(--text3)}
+.shmid .nm{max-width:76px;font-size:11px}
+.shmid .v{font-size:14px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.shrow.dhl{background:var(--bg);border-radius:8px}
+.catrow.dhl .n{color:var(--accent-d)}
+/* Plán kategorie: sbalený řádek, vysvětlení až po rozkliknutí */
+.cdplan{padding:0;overflow:hidden}
+.cdp-row{width:100%;display:flex;align-items:center;gap:12px;padding:15px 18px;background:none;border:none;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.cdp-row .m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.cdp-row .t1{font-size:14px;font-weight:500}
+.cdp-row .t2{font-size:12.5px;color:var(--text3)}
+.cdp-row .v{font-size:14px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cdp-row .chev{color:var(--chev,var(--text4));display:grid;transition:transform .2s}
+.cdplan.op .chev{transform:rotate(90deg)}
+.cdp-body{padding:2px 18px 16px;border-top:1px solid var(--line)}
+.cdp-body p{font-size:13px;color:var(--text2);line-height:1.5;margin:12px 0 0}
+.cdp-in{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.cdp-in .inp{flex:0 0 130px;text-align:right}
+
 /* Obálky: karta se spořicím cílem. */
 .envc{padding:16px}
 .envtop{display:flex;align-items:center;gap:14px}
@@ -710,12 +738,12 @@ function applyFavicon(hex){
   }catch(e){}
 }
 const NUMFONTS={
-  system:{label:'Inter — stejný jako zbytek appky (výchozí)',stack:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif"},
-  bahnschrift:{label:'Bahnschrift — moderní, technická',stack:"'Bahnschrift','Segoe UI',sans-serif"},
-  cascadia:{label:'Cascadia — vývojářská (mono)',stack:"'Cascadia Code','Cascadia Mono','Consolas',monospace"},
-  consolas:{label:'Consolas — klasická mono',stack:"'Consolas','Courier New',monospace"},
-  corbel:{label:'Corbel — hravé číslice',stack:"'Corbel','Candara',sans-serif"},
-  century:{label:'Century Gothic — kulaté',stack:"'Century Gothic','Futura','Segoe UI',sans-serif"},
+  system:{label:'Inter (stejný jako zbytek appky, výchozí)',stack:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif"},
+  bahnschrift:{label:'Bahnschrift (moderní, technická)',stack:"'Bahnschrift','Segoe UI',sans-serif"},
+  cascadia:{label:'Cascadia (vývojářská, mono)',stack:"'Cascadia Code','Cascadia Mono','Consolas',monospace"},
+  consolas:{label:'Consolas (klasická mono)',stack:"'Consolas','Courier New',monospace"},
+  corbel:{label:'Corbel (hravé číslice)',stack:"'Corbel','Candara',sans-serif"},
+  century:{label:'Century Gothic (kulaté)',stack:"'Century Gothic','Futura','Segoe UI',sans-serif"},
 };
 function applyNumFont(key){const f=NUMFONTS[key]||NUMFONTS.system;document.documentElement.style.setProperty('--numfont',f.stack);}
 function setNumFont(key){S.ui.numFont=key;S.ui.numFontOwn=true;applyNumFont(key);commit();}
@@ -827,9 +855,9 @@ const idb={db:null,
   async set(k,v){const db=await this.open();if(!db)return;return new Promise(r=>{const t=db.transaction('kv','readwrite').objectStore('kv').put(v,k);t.onsuccess=()=>r();t.onerror=()=>r();});}};
 const fsaSupported=()=>('showSaveFilePicker'in window);
 async function connectFile(){
-  if(!fsaSupported()){toast('Prohlížeč tohle neumí — použij Zálohu');return;}
+  if(!fsaSupported()){toast('Prohlížeč tohle neumí, použij Zálohu');return;}
   try{fileHandle=await window.showSaveFilePicker({suggestedName:'rozpocet-data.json',types:[{description:'JSON',accept:{'application/json':['.json']}}]});
-    await idb.set('fh',fileHandle);fileOK=true;await autosaveFile(true);toast('Připojeno — ukládá se automaticky');updateSavePill();R();
+    await idb.set('fh',fileHandle);fileOK=true;await autosaveFile(true);toast('Připojeno, ukládá se automaticky');updateSavePill();R();
   }catch(e){if(e.name!=='AbortError')toast('Nepodařilo se připojit soubor');}
 }
 async function tryReconnectFile(){if(!fsaSupported())return;try{const h=await idb.get('fh');if(!h)return;const perm=await h.queryPermission({mode:'readwrite'});fileHandle=h;if(perm==='granted'){fileOK=true;await loadFromFile();}else fileOK=false;updateSavePill();}catch(e){}}
@@ -918,7 +946,7 @@ async function fetchFx(ccy){
   _fx[ccy]=v;_fxAt=Date.now();return v;
 }
 async function fetchStockQuotes(symbols){
-  if(!syncOn())throw new Error('kurzy jdou přes tvůj Worker — nejdřív zapni synchronizaci');
+  if(!syncOn())throw new Error('kurzy jdou přes tvůj Worker, nejdřív zapni synchronizaci');
   // Worker bere nejvýš 25 symbolů na dotaz a přebytek by mlčky zahodil,
   // takže se to radši rozdělí tady než aby část portfolia tiše zamrzla
   const out={};
@@ -965,7 +993,7 @@ async function findSymbols(q){
 }
 const hitHtml=h=>`<a onclick="useSym('${esc(h.sym)}')"><b>${esc(h.sym)}</b></a>`
   +(h.ex?` <span style="opacity:.75">${esc(h.ex)}</span>`:'')
-  +(h.nm?` — ${esc(h.nm)}`:'');
+  +(h.nm?` · ${esc(h.nm)}`:'');
 async function suggestSymbols(sym){
   const base=(sym||'').split('.')[0];
   if(!base)return [];
@@ -1212,7 +1240,7 @@ async function wkPull(){const r=await wkFetch('/data');
 async function wkPush(state){
   const r=await wkFetch('/data',{method:'PUT',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({data:state,mt:state.mt||Date.now()})});
-  if(!r.ok){let m='';try{m=(await r.json()).error||'';}catch(e){}throw new Error('push '+r.status+(m?' – '+m:''));}}
+  if(!r.ok){let m='';try{m=(await r.json()).error||'';}catch(e){}throw new Error('push '+r.status+(m?': '+m:''));}}
 
 /* Pojistka proti ztrátě dat: „prázdný" stav (čerstvě založená appka, nebo stav
    po nepovedeném načtení localStorage) se NIKDY nesmí nahrát přes cloud —
@@ -1227,7 +1255,7 @@ function stateEmpty(s){
   // účty se v čerstvé appce nezakládají, takže každý založený účet už jsou data
   return !perHas&&!envHas&&!invHas&&!(s.debts||[]).length&&!Object.keys(s.debtGroups||{}).length&&!(s.accounts||[]).length;}
 const netErr=e=>/Failed to fetch|NetworkError|Load failed/i.test((e&&e.message)||'');
-const CLOUD_DOWN='Cloud je nedostupný — projekt může být pozastavený nebo offline. Data máš zatím jen v tomhle zařízení.';
+const CLOUD_DOWN='Cloud je nedostupný, projekt může být pozastavený nebo offline. Data máš zatím jen v tomhle zařízení.';
 
 let pushTimer=null,pushing=false;
 function schedulePush(){if(!syncOn())return;clearTimeout(pushTimer);pushTimer=setTimeout(doPush,1500);}
@@ -1246,7 +1274,7 @@ async function syncNow(silent){ // sladí cloud a zařízení — vyhrává nov�
     if(!row){ // v cloudu nic nevidíme → buď první připojení, nebo výpadek
       if(!silent)return firstLoginChoice();
       // tiché nahrání jen když je co nahrát — prázdný stav by přepsal dobrá data
-      if(stateEmpty(S)){syncState='err';syncMsg='Cloud nevrátil žádná data a v tomhle zařízení nic není — radši nic nenahrávám.';updateSavePill();return;}
+      if(stateEmpty(S)){syncState='err';syncMsg='Cloud nevrátil žádná data a v tomhle zařízení nic není, radši nic nenahrávám.';updateSavePill();return;}
       await wkPush(S);syncState='ok';updateSavePill();return;}
     const cloudMt=+row.mt||0,localMt=+S.mt||0;
     if(cloudMt>localMt){pushBackup();S=migrate(row.data);S.mt=cloudMt;saveLS();applyTheme();if(!silent)toast('Staženo z cloudu');}
@@ -1262,7 +1290,7 @@ function firstLoginChoice(){ // cloud je prázdný — co s daty v tomhle zaří
     <div class="macts" style="flex-direction:column">
       <button class="btn fill" onclick="finishFirstLogin(true)">Nahrát je do cloudu</button>
       <button class="btn" onclick="finishFirstLogin(false)">Začít načisto</button></div>
-    <p class="mini" style="margin-top:12px">Při „začít načisto" se současná data neztratí — uloží se do interní zálohy a pořád si je můžeš stáhnout.</p>`);}
+    <p class="mini" style="margin-top:12px">Při „začít načisto" se současná data neztratí, uloží se do interní zálohy a pořád si je můžeš stáhnout.</p>`);}
 async function finishFirstLogin(keep){closeModal();
   try{if(!keep){pushBackup();const ui=S.ui;S=defState();S.ui=ui;}
     S.mt=Date.now();saveLS();await wkPush(S);syncState='ok';toast(keep?'Data nahrána do cloudu':'Začínáme načisto');applyTheme();R();
@@ -1291,9 +1319,9 @@ async function wkJoin(){ // další zařízení: vlož připojovací kód z prvn
   catch(e){syncState='err';syncMsg='Připojení se nepovedlo';R();}}
 function wkCopyConn(){const s=connStr();if(!s)return;
   navigator.clipboard?.writeText(s).then(()=>toast('Připojovací kód zkopírován'),()=>toast('Zkopíruj ho ručně'));}
-function markCodeSaved(){S.ui.codeSaved=true;toast('Díky — víc už to připomínat nebudu');commit();}
+function markCodeSaved(){S.ui.codeSaved=true;toast('Díky, víc už to připomínat nebudu');commit();}
 function codeSavePrompt(){if(!syncOn())return;
-  openModal(`<h3>Připojovací kód</h3><div class="md">Tohle je jediný klíč k datům v cloudu a žije jen v tomhle prohlížeči. Ulož si ho někam mimo počítač — do správce hesel, poznámek v telefonu, nebo si ho pošli mailem. <b>Kdo ho má, vidí tvůj rozpočet</b>, ber ho jako heslo.</div>
+  openModal(`<h3>Připojovací kód</h3><div class="md">Tohle je jediný klíč k datům v cloudu a žije jen v tomhle prohlížeči. Ulož si ho někam mimo počítač, do správce hesel, poznámek v telefonu, nebo si ho pošli mailem. <b>Kdo ho má, vidí tvůj rozpočet</b>, ber ho jako heslo.</div>
     <div class="fg"><input class="inp" readonly value="${esc(connStr())}" style="font-family:ui-monospace,monospace;font-size:12px" onclick="this.select()"></div>
     <div class="macts"><button class="btn" onclick="wkCopyConn()">Zkopírovat</button><button class="btn fill" onclick="markCodeSaved();closeModal()">Mám uloženo</button></div>`);}
 async function wkVersions(){ // denní verze uložené ve Workeru
@@ -1301,7 +1329,7 @@ async function wkVersions(){ // denní verze uložené ve Workeru
   try{const r=await wkFetch('/list');if(!r.ok)throw new Error('list '+r.status);
     const days=(await r.json()).days||[];
     if(!days.length){toast('Zatím žádné starší verze');return;}
-    openModal(`<h3>Starší verze</h3><div class="md">Úložiště si každý den odloží jednu verzi (drží se půl roku). Obnovením přepíšeš současná data — ta se předtím uloží do interní zálohy.</div>
+    openModal(`<h3>Starší verze</h3><div class="md">Úložiště si každý den odloží jednu verzi (drží se půl roku). Obnovením přepíšeš současná data, ta se předtím uloží do interní zálohy.</div>
       <div class="fg"><span class="fl">Ze dne</span><select class="inp" id="wk_day">${days.map(d=>`<option value="${d}">${fdFull(d)}</option>`).join('')}</select></div>
       <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="wkRestore()">Obnovit</button></div>`);
   }catch(e){toast(netErr(e)?'Úložiště neodpovídá':'Nepovedlo se načíst starší verze');}}
@@ -1317,7 +1345,7 @@ function wkDisconnect(){if(!wconfirmSimple('Odpojit tohle zařízení od synchro
 /* ---------- save pill ---------- */
 function updateSavePill(){const el=document.getElementById('savepill');if(!el)return;
   if(syncOn()){
-    const map={syncing:['warn','Synchronizuji…'],err:['warn','Cloud: chyba — klikni'],ok:['ok','Uloženo v cloudu'],off:['ok','Uloženo v cloudu'],out:['ok','Uloženo v cloudu']};
+    const map={syncing:['warn','Synchronizuji…'],err:['warn','Cloud: chyba, klikni'],ok:['ok','Uloženo v cloudu'],off:['ok','Uloženo v cloudu'],out:['ok','Uloženo v cloudu']};
     const [cls,txt]=map[syncState]||map.ok;
     el.className='save-pill '+cls;el.innerHTML='<span class="d"></span> '+txt;el.onclick=()=>go('nastaveni');return;}
   if(fileOK){el.className='save-pill ok';el.innerHTML='<span class="d"></span> Ukládá se do souboru';el.onclick=()=>go('nastaveni');}
@@ -1371,7 +1399,7 @@ function fixedBlock(p){
   const done=rows.filter(r=>r.a>0).length,zbyva=rows.filter(r=>!r.a).reduce((s,r)=>s+r.it.pl,0);
   let h=`<div class="card"><div class="ch"><span class="ct">${ic('repeat',15)} Pevné platby</span>
     <span class="mini">${done}/${rows.length} zaplaceno${zbyva>0?` · zbývá ${fm(zbyva)}`:''}</span></div>`;
-  if(mimo)h+=`<div class="mini" style="margin-bottom:10px">${ic('zap',13)} Díváš se na jiný cyklus, než do kterého patří dnešek${dnesni?` (${esc(dnesni.nm)})`:''}. Zaplacení jedním klikem je proto vypnuté — zapiš platbu u položky s datem, ať skončí tam, kam patří.</div>`;
+  if(mimo)h+=`<div class="mini" style="margin-bottom:10px">${ic('zap',13)} Díváš se na jiný cyklus, než do kterého patří dnešek${dnesni?` (${esc(dnesni.nm)})`:''}. Zaplacení jedním klikem je proto vypnuté, zapiš platbu u položky s datem, ať skončí tam, kam patří.</div>`;
   rows.forEach(({c,it,a})=>{h+=`<div class="row" style="cursor:default">
     <div class="ic" style="background:${a>0?'var(--teal-bg)':'var(--bg2)'};color:${a>0?'var(--teal)':'var(--text3)'}">${ic(a>0?'check':c.icon,18)}</div>
     <div class="m"><div class="t1"${a>0?' style="color:var(--text3)"':''}>${esc(it.nm)}</div><div class="t2">${esc(c.nm)} · ${fmEx(it.pl)}${linkTarget(it)?' → '+esc(linkTarget(it).obj.nm):''}</div></div>
@@ -1383,7 +1411,7 @@ function fixedBlock(p){
 function payFixed(cid,iid){
   const c=P().cats.find(x=>x.id===cid),it=c&&c.it.find(x=>x.id===iid);if(!it||!(it.pl>0))return;
   const dnesni=periodForDate(todayISO());
-  if(!dnesni||dnesni.id!==P().id){toast('Dnešek patří do jiného cyklu — zapiš platbu s datem');return;}
+  if(!dnesni||dnesni.id!==P().id){toast('Dnešek patří do jiného cyklu, zapiš platbu s datem');return;}
   if(itemActual(it)>0){toast('Tahle platba už je v cyklu zapsaná');return;}
   const r=logToDate(c,it,{id:uid(),d:todayISO(),a:it.pl,n:''});
   const lt=linkTarget(it);
@@ -1407,23 +1435,23 @@ function vPrehled(p){
   // souborem nemá smysl. Reálná díra je jinde: připojovací kód žije taky
   // jen v localStorage, takže smazání dat webu odstřihne appku od cloudu.
   if(syncOn()){
-    if(!S.ui.codeSaved)h+=`<div class="banner tip"><span class="bi">${ic('shield',18)}</span><div><b>Ulož si připojovací kód mimo tenhle počítač.</b> Data máš i v cloudu, ale klíč k nim žije jen tady v prohlížeči — kdyby smazal data webu, vezme to i kód a appka se k cloudu sama nedostane. Stačí mail sám sobě nebo správce hesel. <a onclick="codeSavePrompt()">Ukázat kód →</a> <a onclick="markCodeSaved()" style="margin-left:10px">Mám uloženo</a></div></div>`;
+    if(!S.ui.codeSaved)h+=`<div class="banner tip"><span class="bi">${ic('shield',18)}</span><div><b>Ulož si připojovací kód mimo tenhle počítač.</b> Data máš i v cloudu, ale klíč k nim žije jen tady v prohlížeči, kdyby smazal data webu, vezme to i kód a appka se k cloudu sama nedostane. Stačí mail sám sobě nebo správce hesel. <a onclick="codeSavePrompt()">Ukázat kód →</a> <a onclick="markCodeSaved()" style="margin-left:10px">Mám uloženo</a></div></div>`;
   }
   else if(fsaSupported()&&!fileOK)h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Ochrana dat:</b> ${fileHandle?'Klikni na „Klikni pro připojení" nahoře a potvrď přístup.':'Připoj datový soubor, ať už nikdy nepřijdeš o data.'} <a onclick="connectFile()">Připojit soubor →</a></div></div>`;
   else if(!fsaSupported()&&(!S.lastExport||Date.now()-new Date(S.lastExport+'T00:00:00').getTime()>7*864e5))
-    h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Data jsou jen v tomhle zařízení.</b> Telefon a počítač mají každý svoje — nepropojí se samy. Občas si stáhni zálohu. <a onclick="exportData()">Stáhnout zálohu →</a></div></div>`;
+    h+=`<div class="banner warn"><span class="bi">${ic('shield',18)}</span><div><b>Data jsou jen v tomhle zařízení.</b> Telefon a počítač mají každý svoje, nepropojí se samy. Občas si stáhni zálohu. <a onclick="exportData()">Stáhnout zálohu →</a></div></div>`;
   const steps=[
     {ok:base>0,t:'Nastav si příjem',s:'kolik čekáš / kolik přišlo tenhle cyklus',fn:'incomeModal()',c:'var(--accent-bg)',fg:'var(--accent-d)'},
     {ok:sumPlan(p)>0,t:'Naplánuj měsíční výdaje',s:'kolik chceš utratit v každé kategorii',fn:'plansModal()',c:'var(--teal-bg)',fg:'var(--teal)'},
     syncOn()
-      ? {ok:!!S.ui.codeSaved,t:'Ulož si připojovací kód',s:'mimo tenhle počítač — je to klíč k datům v cloudu',fn:'codeSavePrompt()',c:'var(--cyan-bg)',fg:'var(--cyan)'}
+      ? {ok:!!S.ui.codeSaved,t:'Ulož si připojovací kód',s:'mimo tenhle počítač, je to klíč k datům v cloudu',fn:'codeSavePrompt()',c:'var(--cyan-bg)',fg:'var(--cyan)'}
       : fsaSupported()
       ? {ok:fileOK,t:'Připoj datový soubor',s:'ať se všechno samo ukládá na disk',fn:'connectFile()',c:'var(--cyan-bg)',fg:'var(--cyan)'}
       : {ok:!!S.lastExport,t:'Stáhni si zálohu',s:'ať o data nikdy nepřijdeš',fn:'exportData()',c:'var(--cyan-bg)',fg:'var(--cyan)'},
   ];
   const doneCount=steps.filter(s=>s.ok).length;
   if(doneCount<steps.length&&!S.ui.hideIntro){
-    h+=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('rocket',15)} Začínáme — ${doneCount}/${steps.length} hotovo</span><button class="btn gho sm" onclick="hideIntro()">Skrýt</button></div>`;
+    h+=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('rocket',15)} Začínáme: ${doneCount}/${steps.length} hotovo</span><button class="btn gho sm" onclick="hideIntro()">Skrýt</button></div>`;
     steps.forEach((st,i)=>{h+=`<div class="row" style="cursor:pointer;${st.ok?'opacity:.55':''}" onclick="${st.fn}">
       <div class="ic" style="background:${st.ok?'var(--teal-bg)':st.c};color:${st.ok?'var(--teal)':st.fg};font-weight:500">${st.ok?ic('check',18):(i+1)}</div>
       <div class="m"><div class="t1" style="${st.ok?'text-decoration:line-through':''}">${st.t}</div><div class="t2">${st.s}</div></div>
@@ -1484,6 +1512,7 @@ function pageHero(lbl,val,sub,color){
 function vVydaje(p){
   if(detailCat){const c=p.cats.find(x=>x.id===detailCat);if(c)return catDetail(p,c);detailCat=null;}
   const rows=p.cats.map((c,i)=>({c,i,a:catActualDisplay(c,p.id),pl:catPlan(c)}));
+  let kk=0;rows.forEach(r=>{r.k=r.a>0?kk++:-1;});   // pořadí výseče v koláči (jen kategorie s výdaji)
   const tot=sumActualDisplay(p),plan=sumPlan(p);
   let h=vydajeKolac(rows,tot,plan);
   h+=`<div style="text-align:center;margin-bottom:14px"><button class="btn" onclick="plansModal()">${ic('list',15)} Měsíční plány</button></div>`;
@@ -1493,29 +1522,54 @@ function vVydaje(p){
 }
 /* Koláč nad seznamem: výseče mají stejné barvy jako ikony kategorií pod
    ním, takže seznam slouží zároveň jako legenda. Uprostřed je souhrn,
-   pod koláčem kolik z plánu zbývá (nebo o kolik je přes). */
+   pod koláčem kolik z plánu zbývá (nebo o kolik je přes). Najetí na
+   výseč (nebo na řádek kategorie pod grafem) ukáže uprostřed její
+   částku a podíl, viz donutSeg. */
 function vydajeKolac(rows,tot,plan){
-  const R=57,C=2*Math.PI*R,s=rows.filter(r=>r.a>0);
+  const R=57,C=2*Math.PI*R,s=rows.filter(r=>r.a>0),id='dn-vyd';
   let off=0;
-  const vysece=tot>0?s.map(r=>{const len=r.a/tot*C,mez=s.length>1?2:0;
-    const x=`<circle cx="75" cy="75" r="${R}" fill="none" stroke="${col(r.i)}" stroke-width="13" stroke-dasharray="${Math.max(0,len-mez)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 75 75)"/>`;
+  const vysece=tot>0?s.map((r,k)=>{const len=r.a/tot*C,mez=s.length>1?2:0;
+    const x=`<circle ${donutAttr(id,k,r.c.nm+' '+fm(r.a)+', '+Math.round(r.a/tot*100)+' %')} cx="75" cy="75" r="${R}" fill="none" stroke="${col(r.i)}" stroke-width="13" stroke-dasharray="${Math.max(0,len-mez)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 75 75)"/>`;
     off+=len;return x;}).join(''):'';
   const zb=plan-tot;
+  const def=`<div class="l">utraceno</div><div class="v">${fmN(tot)}</div><div class="l">${plan>0?'z '+fmN(plan):'bez plánu'}</div>`;
+  donuts[id]={sw:13,def,mid:s.map(r=>`<div class="l nm"><i class="dd" style="background:${col(r.i)}"></i>${esc(r.c.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${Math.round(r.a/tot*100)} %${r.pl>0?' · plán '+fmN(r.pl):''}</div>`)};
   return `<div class="vkolac">
-    <div class="vk-in">
-      <svg viewBox="0 0 150 150" width="180" height="180" aria-hidden="true">
+    <div class="vk-in" id="${id}">
+      <svg viewBox="0 0 150 150" width="180" height="180" role="group" aria-label="Podíl kategorií na výdajích">
         <circle cx="75" cy="75" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="13"/>${vysece}</svg>
-      <div class="vk-mid"><div class="l">utraceno</div><div class="v">${fmN(tot)}</div><div class="l">${plan>0?'z '+fmN(plan):'bez plánu'}</div></div>
+      <div class="vk-mid dmid">${def}</div>
     </div>
     ${plan>0?`<div class="vk-zb ${zb<0?'neg':'pos'}">${zb<0?'přes plán o '+fm(-zb):'zbývá '+fm(zb)+' do výplaty'}</div>`:''}
   </div>`;
 }
+/* Donut: najetí myší nebo focus klávesnicí na výseč ukáže uprostřed její
+   název, částku a podíl a ostatní výseče ztlumí. Na dotykovém displeji
+   to udělá klepnutí (a druhé klepnutí vrátí souhrn), protože tam žádné
+   najetí není. Totéž umí řádky, které k výsečím patří (data-dn/data-k):
+   seznam kategorií na Výdajích a legenda ve Statistikách. */
+const donuts={};const donutOn={};let donutSeq=0;
+const umiNajeti=()=>window.matchMedia&&matchMedia('(hover:hover)').matches;
+function donutAttr(id,k,popis){
+  return `class="dseg" data-k="${k}" tabindex="0" role="img" aria-label="${esc(popis)}" onmouseenter="donutSeg('${id}',${k},'in')" onmouseleave="donutSeg('${id}',${k},'out')" onfocus="donutSeg('${id}',${k},'f')" onblur="donutSeg('${id}',${k},'out')" onclick="event.stopPropagation();donutSeg('${id}',${k},'tap')"`;}
+function donutRow(id,k){
+  return ` data-dn="${id}" data-k="${k}" onmouseenter="donutSeg('${id}',${k},'in')" onmouseleave="donutSeg('${id}',${k},'out')"`;}
+function donutSeg(id,k,co){
+  const box=document.getElementById(id),d=donuts[id];if(!box||!d)return;
+  if((co==='in'||co==='out')&&!umiNajeti())return;
+  if(co==='tap'){if(umiNajeti())return;co=donutOn[id]===k?'out':'in';}
+  const on=co!=='out';
+  donutOn[id]=on?k:null;
+  box.querySelectorAll('.dseg').forEach(el=>{const i=+el.dataset.k;el.style.opacity=on&&i!==k?'.28':'';el.setAttribute('stroke-width',on&&i===k?d.sw+3:d.sw);});
+  document.querySelectorAll('[data-dn="'+id+'"]').forEach(el=>el.classList.toggle('dhl',on&&+el.dataset.k===k));
+  const mid=box.querySelector('.dmid');if(mid)mid.innerHTML=on&&d.mid[k]?d.mid[k]:d.def;
+}
 /* Řádek kategorie: pruh se barví podle stavu (v pořádku / blízko plánu /
    přečerpáno), ne podle kategorie — ta má svou barvu v ikoně. */
-function catRow({c,i,a,pl}){
+function catRow({c,i,a,pl,k}){
   const pu=pl>0?Math.round(a/pl*100):0,over=pl>0&&a>pl;
   const stav=over?'var(--neg)':pu>85?'var(--gold)':'var(--teal)';
-  return `<div class="catrow" onclick="openCat('${c.id}')">
+  return `<div class="catrow"${k>=0?donutRow('dn-vyd',k):''} onclick="openCat('${c.id}')">
     <div class="crh">
       <div class="cic" style="background:${col(i)}1f;color:${col(i)}">${ic(c.icon,18)}</div>
       <div class="m"><div class="n">${esc(c.nm)}</div><div class="s">${pl>0?'z '+fm(pl):'bez plánu'}</div></div>
@@ -1564,11 +1618,11 @@ function catDetail(p,c){
         <input class="inp" id="ln-${it.id}" placeholder="Poznámka" style="flex:1;min-width:80px">
         <input class="inp num" id="la-${it.id}" type="number" placeholder="Kč" style="flex:0 0 90px" onkeydown="if(event.key==='Enter')addLog('${c.id}','${it.id}')">
         ${S.accounts.length?`<select class="inp" id="lacc-${it.id}" style="flex:0 0 130px">
-          <option value="">— bez účtu —</option>
+          <option value="">Bez účtu</option>
           ${S.accounts.map(a=>`<option value="${a.id}" ${(it.defAcc||S.ui.activeAcc)===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
         </select>`:''}
         <button class="btn fill sm" onclick="addLog('${c.id}','${it.id}')">${ic('plus',15)}</button></div>
-      ${it.defAcc&&accById(it.defAcc)?`<div class="mini" style="margin-top:6px">${ic('wallet',13)} Vždycky z účtu „${esc(accById(it.defAcc).nm)}" (nastaveno v Nastavení položky) — jde přepsat výše.</div>`:''}
+      ${it.defAcc&&accById(it.defAcc)?`<div class="mini" style="margin-top:6px">${ic('wallet',13)} Vždycky z účtu „${esc(accById(it.defAcc).nm)}" (nastaveno v Nastavení položky), jde přepsat výše.</div>`:''}
       <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
         <button class="btn gho sm" onclick="itemModal('${c.id}','${it.id}')">${ic('edit',14)} Nastavení položky</button>
         <div class="mini" style="flex:1;min-width:120px">${[
@@ -1577,23 +1631,32 @@ function catDetail(p,c){
           linkTarget(it)?'→ '+esc(linkTarget(it).obj.nm):'',
           it.kind?KIND_LABEL[it.kind]:''
         ].filter(Boolean).join(' · ')}</div></div>
-      ${it.fixAmt&&!(it.pl>0)?`<div class="mini" style="margin-top:6px;color:var(--gold)">${ic('zap',13)} Pevná částka bez plánu — není co předvyplnit.</div>`:''}</div>`;}
+      ${it.fixAmt&&!(it.pl>0)?`<div class="mini" style="margin-top:6px;color:var(--gold)">${ic('zap',13)} Pevná částka bez plánu, není co předvyplnit.</div>`:''}</div>`;}
     h+=`</div>`;});
   h+=`<div class="logadd" style="border-top:1px solid var(--line);margin-top:6px;padding-top:14px"><input class="inp" id="nit-${c.id}" placeholder="Nová položka" style="flex:2"><input class="inp num" id="nitp-${c.id}" type="number" placeholder="Plán" style="flex:1"><button class="btn fill sm" onclick="addItem('${c.id}')">${ic('plus',15)} Položka</button></div></div>`;
-  h+=`<div class="card cdplan"><div class="ct" style="margin-bottom:10px">Měsíční plán kategorie</div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <input class="inp num" type="number" value="${c.pl||''}" placeholder="0" onchange="setCatPlan('${c.id}',this.value)" style="flex:0 0 120px;text-align:right">
-      ${(c.pl>0&&itemsPlan(c)>0)
-        ?`<span class="mini">Platí tenhle plán. Z položek by jinak vyšlo ${fm(itemsPlan(c))}.</span>`
-        :itemsPlan(c)>0
-          ?`<span class="mini">Nech 0 — plán se sčítá z položek. Zadej číslo, jen když chceš jeden plán za celou kategorii místo nich.</span>`
-          :`<span class="mini">Nechceš rozepisovat položky? Zadej sem jeden plán za celou kategorii.</span>`}</div></div>`;
+  /* Plán kategorie se normálně sčítá z položek. Jeden plán za celou
+     kategorii je výjimka, proto je schovaný za řádkem a vysvětlený až po
+     rozkliknutí; když platí, je to vidět hned na řádku. */
+  const ip=itemsPlan(c),vlastni=c.pl>0;
+  h+=`<div class="card cdplan${catPlanOpen?' op':''}">
+    <button class="cdp-row" onclick="catPlanOpen=!catPlanOpen;R()" aria-expanded="${catPlanOpen}">
+      <span class="m"><span class="t1">Plán kategorie</span>
+        <span class="t2">${vlastni?(ip>0?`jeden za celou kategorii, místo součtu položek ${fm(ip)}`:'jeden za celou kategorii'):(ip>0?'součet plánů položek':'zatím žádný')}</span></span>
+      ${pl>0?`<span class="v">${fm(pl)}</span>`:''}
+      <span class="chev">${ic('cright',16)}</span></button>`;
+  if(catPlanOpen)h+=`<div class="cdp-body">
+      <p>Plán kategorie se normálně <b>sčítá z plánů položek</b>${ip>0?`, teď ${fm(ip)}`:''}. Nemusíš ho zadávat.</p>
+      <p>Nechceš plánovat po položkách? Zadej tady <b>jeden plán za celou kategorii</b>. Pak platí on a plány jednotlivých položek se do plánu kategorie nepočítají.</p>
+      <div class="cdp-in"><input class="inp num" id="cpl-${c.id}" type="number" inputmode="decimal" value="${c.pl||''}" placeholder="${ip>0?ip:0}" aria-label="Jeden plán za celou kategorii" onkeydown="if(event.key==='Enter')setCatPlan('${c.id}',this.value)">
+        <button class="btn fill sm" onclick="setCatPlan('${c.id}',document.getElementById('cpl-${c.id}').value)">Uložit</button>
+        ${vlastni?`<button class="btn gho sm" onclick="setCatPlan('${c.id}',0)">Zpět na součet položek</button>`:''}</div></div>`;
+  h+=`</div>`;
   return h;
 }
 
 /* ---------- OBÁLKY ---------- */
 function vObalky(p){
-  let h=tipBan('bulb','Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky. Zapisuješ starší úspory, co jsi neodkládal teď z výplaty? Uprav zůstatek přímo v ✏️ — nesrazí ti to zbytečně tenhle cyklus.');
+  let h=tipBan('bulb','Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky. Zapisuješ starší úspory, co jsi neodkládal teď z výplaty? Uprav zůstatek přímo v ✏️, nesrazí ti to zbytečně tenhle cyklus.');
   h+=pageHero('Odloženo v obálkách',fm(totalEnvelopes()),`tento cyklus ${fm(savedInPeriod(p.id))}`,'var(--gold)');
   h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn fill" onclick="envModal()">${ic('plus',15)} Nová obálka</button></div>`;
   if(!S.envelopes.length)h+=`<div class="card"><div class="empty">Zatím žádné obálky.</div></div>`;
@@ -1656,7 +1719,7 @@ function vInvestice(p){
     ${put>0?`<div class="gn ${gain>=0?'pos':'neg'}">${gain>=0?'+':'−'}${fm(Math.abs(gain))} · ${gain>=0?'+':'−'}${(Math.abs(gain)/put*100).toFixed(1).replace('.',',')} % <span>od vložení</span></div>`:''}
     <div class="cy">tento cyklus vloženo ${fm(investedInPeriod(p.id))}</div></div>`;
   if(S.investments.length)h+=invChart(S.investments);
-  h+=tipBan('percent',`<b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b> — zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
+  h+=tipBan('percent',`<b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b>. Zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
   h+=`<div class="invtools">
     <button onclick="invModal()">${ic('plus',15)} Nová položka</button>
     ${S.investments.some(i=>i.stock||i.crypto)?`<button onclick="pxOverviewModal()">${ic('list',15)} Kurzy</button>`:''}
@@ -1735,7 +1798,7 @@ function invDetail(p,inv){
       <button onclick="invModal('${inv.id}')">${ic('edit',14)} Upravit</button>
       <button class="dng" title="Smazat" onclick="delInv('${inv.id}')">${ic('trash',14)}</button>
     </div></div>`;
-  if(inv.pxBad)h+=`<div class="banner warn" style="margin-bottom:12px">${ic('zap',15)} Kurz se nedaří načíst — zkontroluj symbol <b>${esc(inv.stock||'')}</b>. Hodnota je poslední známá, ne aktuální.</div>`;
+  if(inv.pxBad)h+=`<div class="banner warn" style="margin-bottom:12px">${ic('zap',15)} Kurz se nedaří načíst, zkontroluj symbol <b>${esc(inv.stock||'')}</b>. Hodnota je poslední známá, ne aktuální.</div>`;
   h+=invChart([inv]);
   const tr=invTrend(inv);
   if(tr||mInt)h+=`<div class="card" style="padding:14px 18px">${tr?`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">${ic('trending',13)}${tr}</div>`:''}
@@ -1817,7 +1880,7 @@ function closeGroup(){detailGroup=null;R();window.scrollTo(0,0);}
 function vDluhy(p){
   if(detailDebt){const d=S.debts.find(x=>x.id===detailDebt);if(d)return debtDetail(d);detailDebt=null;}
   if(detailGroup){if(debtGroupNames().includes(detailGroup))return groupDetail(detailGroup);detailGroup=null;}
-  let h=tipBan('landmark','Přidej si libovolný dluh — půjčku, hypotéku, cokoliv. Pojmenuj si ho, nastav <b>úrok % p.a.</b> (klidně 0) a zapisuj splátky. Vidíš, kolik zbývá doplatit a kolik tě stojí úrok měsíčně.');
+  let h=tipBan('landmark','Přidej si libovolný dluh: půjčku, hypotéku, cokoliv. Pojmenuj si ho, nastav <b>úrok % p.a.</b> (klidně 0) a zapisuj splátky. Vidíš, kolik zbývá doplatit a kolik tě stojí úrok měsíčně.');
   /* Přehled je schválně jednoduchý: kolik zbývá, kdy budeš bez dluhů,
      projekty a dluhy jako seznam. Cena, LTV, vklady, poplatky, refixace
      a splátky jsou až v detailu — dřív bylo všechno na jedné stránce. */
@@ -1834,7 +1897,7 @@ function vDluhy(p){
     <button onclick="debtModal()">${ic('plus',15)} Nový dluh</button>
     <button onclick="newGroupModal()">${ic('plus',15)} Nový projekt</button></div>`;
   const groups=debtGroupNames(),solo=S.debts.map((d,i)=>({d,i})).filter(x=>!(x.d.group||'').trim());
-  if(!S.debts.length&&!groups.length)return h+`<div class="card"><div class="empty">Zatím žádné dluhy. Přidej třeba „Půjčka od rodičů" (0 %) nebo „Hypotéka" — nebo si nejdřív založ projekt, třeba „Byt" nebo „Auto", a dluhy k němu přidáš postupně.</div></div>`;
+  if(!S.debts.length&&!groups.length)return h+`<div class="card"><div class="empty">Zatím žádné dluhy. Přidej třeba „Půjčka od rodičů" (0 %) nebo „Hypotéka". Nebo si nejdřív založ projekt, třeba „Byt" nebo „Auto", a dluhy k němu přidáš postupně.</div></div>`;
   groups.forEach(g=>{const st=groupStats(g);
     h+=`<div class="card catlist">
       <div class="dghead" onclick="openGroup(decodeURIComponent('${encodeURIComponent(g).replace(/'/g,'%27')}'))">
@@ -1983,11 +2046,13 @@ function catIconByName(nm){for(const pp of S.periods){const c=pp.cats.find(x=>x.
 const tipBan=(icon,html,cls)=>S.ui.hideTips?'':`<div class="banner ${cls||'tip'}"><span class="bi">${ic(icon,18)}</span><div>${html}</div></div>`;
 function mrow(arr){return `<div style="display:grid;grid-template-columns:repeat(${arr.length>3?2:arr.length},1fr);gap:10px;margin-bottom:14px">`+arr.map(t=>`<div class="tile"><div class="tl">${t[0]}</div><div class="tv" style="${t[2]||''}">${t[1]}</div></div>`).join('')+`</div>`;}
 function catShare(rows,total,label){if(!rows.length)return '';
-  const R=40,C=2*Math.PI*R;let off=0;
-  const vys=total>0?rows.map((r,k)=>{const l=r.a/total*C,x=`<circle cx="50" cy="50" r="${R}" fill="none" stroke="${catColByName(r.nm,k)}" stroke-width="13" stroke-dasharray="${Math.max(0,l-(rows.length>1?1.2:0))} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 50 50)"/>`;off+=l;return x;}).join(''):'';
+  const R=40,C=2*Math.PI*R,id='dn'+(++donutSeq);let off=0;
+  const vys=total>0?rows.map((r,k)=>{const l=r.a/total*C,x=`<circle ${donutAttr(id,k,r.nm+' '+fm(r.a)+', '+Math.round(r.a/total*100)+' %')} cx="50" cy="50" r="${R}" fill="none" stroke="${catColByName(r.nm,k)}" stroke-width="13" stroke-dasharray="${Math.max(0,l-(rows.length>1?1.2:0))} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 50 50)"/>`;off+=l;return x;}).join(''):'';
+  const def=`<div class="l">celkem</div><div class="v">${fmN(total)}</div>`;
+  donuts[id]={sw:13,def,mid:rows.map((r,k)=>`<div class="l nm"><i class="dd" style="background:${catColByName(r.nm,k)}"></i>${esc(r.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${total>0?Math.round(r.a/total*100):0} %</div>`)};
   return `<div class="card"><div class="ct" style="margin-bottom:12px">${label}</div>
-    <div class="shr"><svg viewBox="0 0 100 100" width="132" height="132" aria-hidden="true"><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="13"/>${vys}</svg>
-    <div class="shl">${rows.map((r,k)=>`<div class="shrow"><span class="dot" style="background:${catColByName(r.nm,k)}"></span><span class="n">${esc(r.nm)}</span><span class="p">${total>0?Math.round(r.a/total*100):0} %</span><span class="v">${fm(r.a)}</span></div>`).join('')}</div></div></div>`;}
+    <div class="shr"><div class="shd" id="${id}"><svg viewBox="0 0 100 100" width="132" height="132" role="group" aria-label="${esc(label)}"><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="13"/>${vys}</svg><div class="shmid dmid">${def}</div></div>
+    <div class="shl">${rows.map((r,k)=>`<div class="shrow"${donutRow(id,k)}><span class="dot" style="background:${catColByName(r.nm,k)}"></span><span class="n">${esc(r.nm)}</span><span class="p">${total>0?Math.round(r.a/total*100):0} %</span><span class="v">${fm(r.a)}</span></div>`).join('')}</div></div></div>`;}
 function topItems(items,n,label){if(!items.length)return '';let h=`<div class="card"><div class="ct" style="margin-bottom:14px">${label}</div>`;items.slice(0,n).forEach((it,k)=>{h+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;border-top:${k?'1px solid var(--line)':'none'}"><span style="color:var(--text4);width:18px">${k+1}.</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.n)} <span class="mini">${esc(it.cat)}</span></span><span class="num">${fm(it.a)}</span></div>`;});return h+`</div>`;}
 function overUnder(over,under){let h=`<div class="grid2" style="margin-bottom:14px"><div class="card" style="margin-bottom:0"><div class="ct" style="margin-bottom:10px;color:var(--neg)">Přečerpané</div>`;
   if(over.length)over.forEach(x=>h+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0"><span>${esc(x.nm)}</span><span class="num neg">${fm(x.d)}</span></div>`);else h+=`<div class="mini" style="text-align:center;padding:8px">Žádné</div>`;
@@ -2124,7 +2189,7 @@ Investice: ${fm(p.inv)} · Obálky: ${fm(p.env)} · Dluhy: −${fm(p.debt)}</tit
     <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1.5px solid var(--line)">
       <span class="mini">Za ${n-1} ${n-1===1?'měsíc':n-1<5?'měsíce':'měsíců'}</span><div style="flex:1"></div>
       <span class="tag ${good?'ok':'bd'}">${diff>=0?'+':'−'}${fm(Math.abs(diff))}</span></div>
-    <div class="mini" style="margin-top:10px">Minulost se dopočítá zpětně ze zapsaných pohybů — vkladů, čerpání z obálek a splátek dluhů. Každá složka má vlastní měřítko, proto se přepíná. Najetím na graf uvidíš celý rozpad k danému dni.</div></div>`;
+    <div class="mini" style="margin-top:10px">Minulost se dopočítá zpětně ze zapsaných pohybů: vkladů, čerpání z obálek a splátek dluhů. Každá složka má vlastní měřítko, proto se přepíná. Najetím na graf uvidíš celý rozpad k danému dni.</div></div>`;
   return h;
 }
 function nwBlock(){return mrow([['Investice',fm(totalInvest()),'color:var(--cyan)'],['Obálky',fm(totalEnvelopes()),'color:var(--gold)'],['Dluhy','−'+fm(totalDebt()),'color:var(--blue)']])+`<div class="card" style="text-align:center"><div class="ct" style="margin-bottom:6px">Čisté jmění</div><div class="num" style="font-size:28px;color:${netWorth()>=0?'var(--teal)':'var(--neg)'}">${fm(netWorth())}</div><div class="mini">investice + obálky − dluhy</div></div>`+nwChart();}
@@ -2202,7 +2267,7 @@ function cmpPrev(p){
   const tot=rows.reduce((s,r)=>s+r.d,0);
   const days=pDays(p),elapsed=Math.max(0,Math.min(days,Math.round((new Date()-new Date(p.from))/864e5)));
   let h=`<div class="card"><div class="ch"><span class="ct">${ic('repeat',15)} Proti minulému cyklu</span><span class="mini">${esc(pv.nm)}</span></div>`;
-  if(todayISO()<p.to)h+=`<div class="mini" style="margin-bottom:12px">Cyklus ještě běží — ${elapsed} z ${days} dní. Do konce se to ještě srovná.</div>`;
+  if(todayISO()<p.to)h+=`<div class="mini" style="margin-bottom:12px">Cyklus ještě běží, uplynulo ${elapsed} z ${days} dní. Do konce se to ještě srovná.</div>`;
   h+=cmpRowsHtml(rows);
   h+=`<div class="totals" style="margin-top:4px"><span style="color:var(--text3)">Celkem</span>
     <span class="num" style="color:${tot>0?'var(--neg)':'var(--teal)'}">${tot>0?'+':'−'}${fm(Math.abs(tot))}</span></div>
@@ -2241,7 +2306,7 @@ function statCompare(){
       <div class="fg" style="margin-top:0;min-width:150px"><span class="fl">Na období</span><select class="inp" onchange="setCmp('b',this.value)">${opt(B.id)}</select></div></div>`;
   if(A.id===B.id)return h+`<div class="empty" style="margin-top:14px">Vyber dvě různá období.</div></div>`;
   const dA=pDays(A),dB=pDays(B);
-  if(Math.abs(dA-dB)>3)h+=`<div class="mini" style="margin-top:12px">${ic('zap',13)} Období nejsou stejně dlouhá (${dA} vs. ${dB} dní) — rozdíly ber s rezervou.</div>`;
+  if(Math.abs(dA-dB)>3)h+=`<div class="mini" style="margin-top:12px">${ic('zap',13)} Období nejsou stejně dlouhá (${dA} vs. ${dB} dní), rozdíly ber s rezervou.</div>`;
   if(todayISO()<B.to)h+=`<div class="mini" style="margin-top:8px">Období „${esc(B.nm)}" ještě běží, takže je zatím neúplné.</div>`;
   h+=`</div>`;
   h+=`<div class="card"><div class="ct" style="margin-bottom:6px">Souhrn</div>`;
@@ -2300,11 +2365,11 @@ function statAvg(){
 /* ---------- NASTAVENÍ ---------- */
 function vNastaveni(p){
   let h=`<div class="card"><div class="ct" style="margin-bottom:6px">${ic('shield',15)} Ochrana dat (nejdůležitější)</div>
-    <p class="mini" style="margin:0 0 14px">${fileOK?('Data se automaticky ukládají do souboru na disku'+(syncOn()?' a zároveň do cloudu':'')+'. Přežije to i smazání historie prohlížeče.'):syncOn()?'Data se ukládají do cloudu, takže nedrží jen na tomhle prohlížeči. Připojovací kód k nim ale žije jen tady — měj ho uložený i jinde.':fsaSupported()?'Data jsou zatím jen v prohlížeči. Připoj soubor na disku, ať o ně nepřijdeš.':'Data se ukládají v prohlížeči tohoto zařízení.'}</p>`;
+    <p class="mini" style="margin:0 0 14px">${fileOK?('Data se automaticky ukládají do souboru na disku'+(syncOn()?' a zároveň do cloudu':'')+'. Přežije to i smazání historie prohlížeče.'):syncOn()?'Data se ukládají do cloudu, takže nedrží jen na tomhle prohlížeči. Připojovací kód k nim ale žije jen tady, měj ho uložený i jinde.':fsaSupported()?'Data jsou zatím jen v prohlížeči. Připoj soubor na disku, ať o ně nepřijdeš.':'Data se ukládají v prohlížeči tohoto zařízení.'}</p>`;
   if(fsaSupported()){if(fileOK)h+=`<div class="banner info" style="margin:0 0 12px"><span class="bi">${ic('coins',16)}</span><div>Ukládá se do připojeného souboru.</div></div>`;
     h+=`<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn fill" onclick="connectFile()">${fileOK?'Připojit jiný soubor':'Připojit datový soubor'}</button>`;
     if(fileHandle&&!fileOK)h+=`<button class="btn" onclick="regrantFile()">Znovu povolit přístup</button>`;
-  }else{h+=`<div class="banner info" style="margin:0 0 12px"><span class="bi">${ic('phone',16)}</span><div><b>Data má každé zařízení svoje.</b> Telefon a počítač se samy nepropojí — appka nic neposílá na internet.<br><br><b>Přenos z počítače do mobilu:</b> na počítači dej <i>Stáhnout zálohu</i>, soubor si pošli (mail, Úložiště, WhatsApp…) a tady dej <i>Obnovit ze zálohy</i>. Stejně to jde i opačně.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap">`;}
+  }else{h+=`<div class="banner info" style="margin:0 0 12px"><span class="bi">${ic('phone',16)}</span><div><b>Data má každé zařízení svoje.</b> Telefon a počítač se samy nepropojí, appka nic neposílá na internet.<br><br><b>Přenos z počítače do mobilu:</b> na počítači dej <i>Stáhnout zálohu</i>, soubor si pošli (mail, Úložiště, WhatsApp…) a tady dej <i>Obnovit ze zálohy</i>. Stejně to jde i opačně.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap">`;}
   h+=`<button class="btn" onclick="exportData()">Stáhnout zálohu</button><button class="btn" onclick="document.getElementById('impf').click()">Obnovit ze zálohy</button><button class="btn" onclick="exportCSV()">Export CSV (Excel)</button></div>
     <p class="mini" style="margin-top:12px">Poslední ruční záloha: ${S.lastExport?fdFull(S.lastExport):'nikdy'}.</p></div>`;
 
@@ -2315,17 +2380,17 @@ function vNastaveni(p){
     h+=`${errBan}<div class="banner info" style="margin:0 0 12px"><span class="bi">${ic('check',16)}</span><div>Připojeno k vlastnímu úložišti <b>${esc(sync.url.replace(/^https:\/\//,''))}</b>. Data se ukládají sem a objeví se na každém zařízení, kde vložíš připojovací kód.</div></div>
       <div class="fg"><span class="fl">Připojovací kód pro další zařízení</span>
         <input class="inp" id="wk_show" readonly value="${esc(connStr())}" style="font-family:ui-monospace,monospace;font-size:12px" onclick="this.select()">
-        <div class="mini" style="margin-top:6px">Kdo ho má, vidí tvůj rozpočet — ber ho jako heslo.</div></div>
+        <div class="mini" style="margin-top:6px">Kdo ho má, vidí tvůj rozpočet. Ber ho jako heslo.</div></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
         <button class="btn fill" onclick="syncNow()">${ic('repeat',15)} Synchronizovat teď</button>
         <button class="btn" onclick="wkCopyConn()">Zkopírovat kód</button>
         <button class="btn" onclick="wkVersions()">${ic('calendar',15)} Starší verze</button>
         <button class="btn gho" onclick="wkDisconnect()">Odpojit zařízení</button></div>`;
   }else{
-    h+=`${errBan}<p class="mini" style="margin:0 0 14px">Vlastní malé úložiště na Cloudflare — zdarma a hlavně se <b>nepozastavuje za nečinnost</b>. Postup je v souboru <a href="SYNC-SETUP.md" target="_blank" rel="noopener">SYNC-SETUP.md</a> (asi 10 minut, nic se neinstaluje).</p>
-      <div class="fg"><span class="fl">1. zařízení — adresa Workeru</span><input class="inp" id="wk_url" placeholder="https://rozpocet-sync.tvuj-ucet.workers.dev">
+    h+=`${errBan}<p class="mini" style="margin:0 0 14px">Vlastní malé úložiště na Cloudflare, zdarma a hlavně se <b>nepozastavuje za nečinnost</b>. Postup je v souboru <a href="SYNC-SETUP.md" target="_blank" rel="noopener">SYNC-SETUP.md</a> (asi 10 minut, nic se neinstaluje).</p>
+      <div class="fg"><span class="fl">1. zařízení: adresa Workeru</span><input class="inp" id="wk_url" placeholder="https://rozpocet-sync.tvuj-ucet.workers.dev">
         <div style="margin-top:10px"><button class="btn fill" onclick="wkCreate()">Vytvořit připojení</button></div></div>
-      <div class="fg" style="margin-top:16px;padding-top:16px;border-top:1.5px solid var(--line)"><span class="fl">Další zařízení — připojovací kód z prvního</span>
+      <div class="fg" style="margin-top:16px;padding-top:16px;border-top:1.5px solid var(--line)"><span class="fl">Další zařízení: připojovací kód z prvního</span>
         <input class="inp" id="wk_conn" placeholder="vlož dlouhý kód" style="font-family:ui-monospace,monospace;font-size:12px">
         <div style="margin-top:10px"><button class="btn" onclick="wkJoin()">Připojit</button></div></div>`;}
   h+=`</div>`;
@@ -2337,12 +2402,12 @@ function vNastaveni(p){
       <label class="swatch" style="background:conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);display:grid;place-items:center;overflow:hidden"><input type="color" value="${S.ui.accent}" oninput="setAccent(this.value)" style="opacity:0;width:100%;height:100%;cursor:pointer"></label></div></div>
     <div class="fg"><span class="fl">Vysvětlivky a průvodce</span>
       <label class="mini" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${S.ui.hideTips?'':'checked'} onchange="toggleTips()" style="width:auto"> Zobrazovat vysvětlivky nahoře na záložkách</label>
-      <div class="mini" style="margin-top:6px">Varování o datech a chybách se tím neskryjou — ta uvidíš vždycky.</div>
+      <div class="mini" style="margin-top:6px">Varování o datech a chybách se tím neskryjou, ta uvidíš vždycky.</div>
       <div style="margin-top:10px">${S.ui.hideIntro?`<button class="btn sm" onclick="showIntro()">${ic('rocket',14)} Zobrazit průvodce začátkem</button>`:`<span class="mini">Průvodce začátkem se ukazuje na Přehledu, dokud ho nedokončíš.</span>`}</div></div>
     <div class="fg"><span class="fl">Font čísel</span><select class="inp" onchange="setNumFont(this.value)">${Object.entries(NUMFONTS).map(([k,f])=>`<option value="${k}" ${S.ui.numFont===k?'selected':''}>${f.label}</option>`).join('')}</select>
       <div class="mini" style="margin-top:8px">Ukázka: <span class="num" style="font-size:20px;color:var(--text)">${fm(1234567)} · 28&nbsp;000 · 15,5&nbsp;%</span></div></div>
     <div class="fg"><span class="fl">Měna</span><select class="inp" onchange="setMena(this.value)">${Object.entries(MENY).map(([k,l])=>`<option value="${k}" ${(S.ui.mena||'CZK')===k?'selected':''}>${l}</option>`).join('')}</select>
-      <div class="mini" style="margin-top:8px">Jen zobrazení — čísla se nepřepočítávají. Kurzy akcií a krypta se stahují v korunách, takže dávají smysl jen s Kč.</div></div>
+      <div class="mini" style="margin-top:8px">Jen zobrazení, čísla se nepřepočítávají. Kurzy akcií a krypta se stahují v korunách, takže dávají smysl jen s Kč.</div></div>
     <div class="fg"><span class="fl">Záložky v menu (přejmenuj, skryj, přeřaď)</span><div style="margin-top:2px">`;
   S.ui.tabs.forEach((t,i)=>{const locked=t.id==='nastaveni';h+=`<div class="cfgrow">
     <span style="color:var(--text3)">${ic(t.icon,17)}</span>
@@ -2368,13 +2433,13 @@ function vNastaveni(p){
     <p class="mini" style="margin-top:10px">Strhává se z úroku připsaného u spořáků a investic (v ČR běžně 15 %).</p></div>`;
 
   h+=`<div class="card"><div class="ct" style="margin-bottom:10px">${ic('coin',15)} O appce</div>
-    <p class="mini" style="margin:0">Můj rozpočet — <a href="https://github.com/psobadal/rozpocet" target="_blank" rel="noopener">otevřený kód na GitHubu</a>.
+    <p class="mini" style="margin:0">Můj rozpočet: <a href="https://github.com/psobadal/rozpocet" target="_blank" rel="noopener">otevřený kód na GitHubu</a>.
     Používat a upravovat smíš zdarma, prodávat ne (<a href="https://github.com/psobadal/rozpocet/blob/main/LICENSE.md" target="_blank" rel="noopener">licence</a>).
     Appka slouží k přehledu o vlastních penězích, není to finanční poradenství.</p></div>`;
 
   h+=`<div class="card"><div class="ct" style="margin-bottom:10px;color:var(--neg)">Nebezpečná zóna</div><p class="mini" style="margin:0 0 12px">Smaže všechna data. Jde vrátit jen ze zálohy.</p><button class="btn dgr" onclick="resetAll()">${ic('trash',15)} Smazat všechna data</button></div>`;
   // až bude synchronizace zapnutá, tahle rada je vyřízená a nemá co ukazovat
-  if(!syncOn())h+=tipBan('rocket','<b>Mobil a synchronizace</b> jsou další krok — až budeš chtít appku i do telefonu se stejnými daty, projdi si SYNC-SETUP.md.');
+  if(!syncOn())h+=tipBan('rocket','<b>Mobil a synchronizace</b> jsou další krok, až budeš chtít appku i do telefonu se stejnými daty, projdi si SYNC-SETUP.md.');
   return h;
 }
 
@@ -2383,7 +2448,8 @@ function vNastaveni(p){
    ===================================================================== */
 function switchPeriod(d){const i=periodIndex()+d;if(i<0||i>=S.periods.length)return;S.curId=S.periods[i].id;detailCat=null;openItem=null;commit();}
 // pozor: nesmí volat go() — to by detailCat hned vynulovalo
-function openCat(id){tab='vydaje';detailCat=id;openItem=null;R();window.scrollTo(0,0);}
+let catPlanOpen=false;
+function openCat(id){tab='vydaje';detailCat=id;openItem=null;catPlanOpen=false;R();window.scrollTo(0,0);}
 function closeCat(){detailCat=null;openItem=null;R();}
 function toggleItem(id){openItem=openItem===id?null:id;R();}
 
@@ -2566,7 +2632,7 @@ function incomeBlock(p){
   if(!ac)return `<div class="card inc-cta" onclick="incomeModal()">
     <div class="ic" style="background:var(--teal-bg);color:var(--teal)">${ic('banknote',20)}</div>
     <div class="m"><div class="t1">Přišla výplata?</div>
-      <div class="t2">${pl>0?`Zapiš, kolik reálně dorazilo. Plánováno ${fm(pl)}.`:'Zapiš, kolik dorazilo — podle toho se počítá zbývá volných.'}</div></div>
+      <div class="t2">${pl>0?`Zapiš, kolik reálně dorazilo. Plánováno ${fm(pl)}.`:'Zapiš, kolik dorazilo, podle toho se počítá zbývá volných.'}</div></div>
     <span style="color:var(--text4)">${ic('cright',16)}</span></div>`;
   return `<div class="card inc-row" onclick="incomeModal()">
     <div class="ic" style="background:var(--teal-bg);color:var(--teal)">${ic('banknote',20)}</div>
@@ -2683,7 +2749,7 @@ function zapisHTML(){
       const c=p.cats.find(x=>'cat:'+x.id===cur),its=(c&&c.it)||[];
       h+=`<div class="zs-lbl">Položka</div>`;
       if(its.length)h+=`<select class="inp" id="qitem" onchange="qaItem=this.value;zapisRe(true)">
-        <option value="" ${qaItem?'':'selected'}>— vyber položku —</option>
+        <option value="" ${qaItem?'':'selected'}>vyber položku…</option>
         ${its.map(it=>`<option value="${it.id}" ${qaItem===it.id?'selected':''}>${esc(it.nm)}${it.fixAmt&&it.pl>0?' · '+fmEx(it.pl):''}</option>`).join('')}
         <option value="__new" ${qaItem==='__new'?'selected':''}>+ nová položka…</option></select>`;
       if(!its.length||qaItem==='__new')h+=`<input class="inp" id="qname" placeholder="Název nové položky" style="margin-top:8px">`;
@@ -2722,10 +2788,10 @@ function logModal(cid,iid,li,pid){
     <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${le.d||todayISO()}"></div>
       <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${le.a||0}" onkeydown="if(event.key==='Enter')saveLog()"></div></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(le.n||'')}" onkeydown="if(event.key==='Enter')saveLog()"></div>
-    ${linkTarget(it)?`<div class="mini" style="margin-top:10px">${ic('check',13)} Propisuje se do „${esc(linkTarget(it).obj.nm)}" — oprava se přenese i tam.</div>`:''}
+    ${linkTarget(it)?`<div class="mini" style="margin-top:10px">${ic('check',13)} Propisuje se do „${esc(linkTarget(it).obj.nm)}", oprava se přenese i tam.</div>`:''}
     ${S.accounts.length?`<div class="fg"><span class="fl">Zaplaceno z účtu</span>
       <select class="inp" id="m_acc">
-        <option value="" ${le.acc?'':'selected'}>— bez účtu —</option>
+        <option value="" ${le.acc?'':'selected'}>Bez účtu</option>
         ${S.accounts.map(a=>`<option value="${a.id}" ${le.acc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
       </select>
       <div class="mini" style="margin-top:5px">Změna účtu peníze přesune: vrátí je tam, odkud odešly, a odečte z nově vybraného.</div></div>`:''}
@@ -2767,7 +2833,7 @@ function itemModal(cid,iid){
     <div class="mini" style="margin-top:5px">V rychlém zadání se pak částka předvyplní z plánu a stačí kliknout. Hodí se na internet nebo předplatné, ne na potraviny.</div>
     <div class="fg"><span class="fl">Propsat platbu do</span>
       <select class="inp" id="m_link">
-        <option value="">— nikam —</option>
+        <option value="">nikam</option>
         ${S.debts.length?`<optgroup label="Dluhy">${S.debts.map(d=>`<option value="debt:${d.id}" ${it.link==='debt:'+d.id?'selected':''}>${esc(d.nm)}</option>`).join('')}</optgroup>`:''}
         ${S.envelopes.length?`<optgroup label="Obálky">${S.envelopes.map(e=>`<option value="env:${e.id}" ${it.link==='env:'+e.id?'selected':''}>${esc(e.nm)}</option>`).join('')}</optgroup>`:''}
         ${S.investments.length?`<optgroup label="Investice">${S.investments.map(v=>`<option value="inv:${v.id}" ${it.link==='inv:'+v.id?'selected':''}>${esc(v.nm)}</option>`).join('')}</optgroup>`:''}
@@ -2782,7 +2848,7 @@ function itemModal(cid,iid){
       </select></div>
     ${S.accounts.length?`<div class="fg"><span class="fl">Vždycky platit z účtu</span>
       <select class="inp" id="m_defacc">
-        <option value="">— podle toho, co je zrovna aktivní —</option>
+        <option value="">podle toho, co je zrovna aktivní</option>
         ${S.accounts.map(a=>`<option value="${a.id}" ${it.defAcc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
       </select>
       <div class="mini" style="margin-top:5px">Hodí se na pravidelnou platbu, co vždycky jde ze stejného účtu (internet z mBank, nájem z Raiffky…), bez ohledu na to, jaký účet je zrovna vybraný na Přehledu.</div></div>`:''}
@@ -2817,7 +2883,7 @@ function saveItemCfg(){
   toast(presunuto?`Uloženo · ${presunuto} ${presunuto===1?'zápis přesunut':presunuto<5?'zápisy přesunuty':'zápisů přesunuto'}`:'Uloženo');
   commit();
 }
-function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);commit();}}
+function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);catPlanOpen=false;commit();toast(c.pl>0?'Plán kategorie uložen':'Plán se zase sčítá z položek');}}
 
 /* modal infra */
 function openModal(html,cls){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov'+(cls?' ov-'+cls:'');ov.id='ov';ov.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);iconPickFit(ov);}
@@ -2840,7 +2906,7 @@ function catModal(id){const c=id?P().cats.find(x=>x.id===id):null;mctx={id,icon:
     <div class="fg"><span class="fl">Výchozí typ položek (50/30/20)</span><div class="seg" id="m_kind" style="font-size:12px">
       ${[['need','Potřeba','50 %'],['want','Přání','30 %'],['save','Úspora','20 %']].map(([k,l,pc])=>
         `<button class="${(mctx.kind||'need')===k?'on':''}" data-k="${k}" onclick="mctx.kind='${k}';document.querySelectorAll('#m_kind button').forEach(b=>b.classList.toggle('on',b.dataset.k==='${k}'))">${l}<br><span style="opacity:.7;font-weight:400">${pc}</span></button>`).join('')}</div>
-      <div class="mini" style="margin-top:6px">Potřeba = nájem, jídlo, doprava… Přání = zábava, věci navíc… Úspora = splátky, odkládání, investice (peníze, které ti zůstávají).<br>Platí pro všechny položky kategorie — u jednotlivé položky to jde nastavit jinak.</div></div>
+      <div class="mini" style="margin-top:6px">Potřeba = nájem, jídlo, doprava… Přání = zábava, věci navíc… Úspora = splátky, odkládání, investice (peníze, které ti zůstávají).<br>Platí pro všechny položky kategorie, u jednotlivé položky to jde nastavit jinak.</div></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveCat()">${c?'Uložit':'Vytvořit'}</button></div>`);}
 function saveCat(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const p=P();if(mctx.id){const c=p.cats.find(x=>x.id===mctx.id);c.nm=nm;c.icon=mctx.icon;c.kind=mctx.kind;}else p.cats.push({id:uid(),nm,icon:mctx.icon,kind:mctx.kind,it:[]});closeModal();commit();}
 function delCat(id){const p=P(),c=p.cats.find(x=>x.id===id);if(!c)return;
@@ -2882,7 +2948,7 @@ function envModal(id){const e=id?S.envelopes.find(x=>x.id===id):null;mctx={id,ic
     <div class="fr"><div class="fg"><span class="fl">Měsíčně odkládat</span><input class="inp num" id="m_mo" type="number" value="${e?e.monthly||0:''}" placeholder="0"></div><div class="fg"><span class="fl">Cíl (nepovinné)</span><input class="inp num" id="m_tg" type="number" value="${e?e.target||0:''}" placeholder="0"></div></div>
     <div class="fg"><span class="fl">Cíl splnit do (nepovinné)</span><input class="inp" id="m_due" type="date" value="${e?e.due||'':''}"></div>
     <div class="fg"><span class="fl">${e?'Zůstatek':'Počáteční zůstatek'}</span><input class="inp num" id="m_bal" type="number" value="${e?e.bal||0:''}" placeholder="0"></div>
-    ${e?`<p class="mini" style="margin-top:2px">Uprav, jen když neodpovídá skutečnosti (třeba zapisuješ starší úsporu) — rozdíl se nezapočítá jako odloženo tenhle cyklus.</p>`:''}
+    ${e?`<p class="mini" style="margin-top:2px">Uprav, jen když neodpovídá skutečnosti (třeba zapisuješ starší úsporu), rozdíl se nezapočítá jako odloženo tenhle cyklus.</p>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveEnv()">${e?'Uložit':'Vytvořit'}</button></div>`);}
 function saveEnv(){const nm=document.getElementById('m_nm').value.trim();if(!nm){toast('Zadej název');return;}const mo=num(document.getElementById('m_mo').value),tg=num(document.getElementById('m_tg').value),due=document.getElementById('m_due').value,bal=num(document.getElementById('m_bal').value);
   if(mctx.id){const e=S.envelopes.find(x=>x.id===mctx.id);e.nm=nm;e.icon=mctx.icon;e.monthly=mo;e.target=tg;e.due=due;
@@ -2892,7 +2958,7 @@ function delEnv(id){const e=S.envelopes.find(x=>x.id===id);if(e.bal>0&&!confirm(
 function envMove(id,dir){const e=S.envelopes.find(x=>x.id===id);mctx={id,dir};openModal(`<h3>${dir==='in'?'Vložit do':'Čerpat z'}: ${esc(e.nm)}</h3><div class="md">Zůstatek: <b>${fm(e.bal||0)}</b>${dir==='in'?' · vklad se započítá jako „odloženo" tento cyklus.':' · ubyde z obálky (do výplaty se už nepočítá).'}</div>
     <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" placeholder="0" onkeydown="if(event.key==='Enter')doEnvMove()"></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" placeholder="${dir==='in'?'nepovinné':'např. Letenky'}" onkeydown="if(event.key==='Enter')doEnvMove()"></div>
-    ${dir==='out'?`<div class="fg"><span class="fl">Zařadit do kategorie (nepovinné, pro statistiky)</span><select class="inp" id="m_cat"><option value="">— nezařazovat —</option>${P().cats.map(c=>`<option value="${esc(c.nm)}">${esc(c.nm)}</option>`).join('')}</select></div>`:''}
+    ${dir==='out'?`<div class="fg"><span class="fl">Zařadit do kategorie (nepovinné, pro statistiky)</span><select class="inp" id="m_cat"><option value="">nezařazovat</option>${P().cats.map(c=>`<option value="${esc(c.nm)}">${esc(c.nm)}</option>`).join('')}</select></div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doEnvMove()">${dir==='in'?'Vložit':'Čerpat'}</button></div>`);
   setTimeout(()=>document.getElementById('m_a')?.focus(),50);}
 function doEnvMove(){const e=S.envelopes.find(x=>x.id===mctx.id);const a=Math.abs(num(document.getElementById('m_a').value));if(!a){toast('Zadej částku');return;}const n=document.getElementById('m_n').value.trim();
@@ -2914,8 +2980,8 @@ function envHistModal(eid,idx){
     <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${h.d||todayISO()}"></div>
       <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${h.a||0}" onkeydown="if(event.key==='Enter')saveEnvHist()"></div></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(h.n||'')}" onkeydown="if(event.key==='Enter')saveEnvHist()"></div>
-    ${h.src?`<div class="mini" style="margin-top:10px">${ic('check',13)} Přišlo z „${esc(h.src)}" — appka to nepočítá znovu do „zbývá volných".</div>`:''}
-    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} Odečteno z účtu „${esc(accById(h.acc).nm)}" — oprava se přenese i tam.</div>`:''}
+    ${h.src?`<div class="mini" style="margin-top:10px">${ic('check',13)} Přišlo z „${esc(h.src)}", appka to nepočítá znovu do „zbývá volných".</div>`:''}
+    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} Odečteno z účtu „${esc(accById(h.acc).nm)}", oprava se přenese i tam.</div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveEnvHist()">Uložit</button></div>
     <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delEnvHist('${eid}',${idx})">${ic('trash',14)} Smazat záznam</button></div>`);
   setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
@@ -2967,7 +3033,7 @@ function actionRow(){
   </div>`;
 }
 function vUcty(p){
-  let h=tipBan('wallet','<b>Účty</b> = kde peníze fyzicky leží (Raiffka, mBank, spořák...). Přesun mezi účty se nikdy nepočítá do „zbývá volných" — je to pořád tvoje volná peníze, jen mění místo. Vyber si aktivní účet dole v Přehledu a běžné zápisy se z něj budou samy odečítat, bez vybírání.');
+  let h=tipBan('wallet','<b>Účty</b> = kde peníze fyzicky leží (Raiffka, mBank, spořák...). Přesun mezi účty se nikdy nepočítá do „zbývá volných", je to pořád tvoje volná peníze, jen mění místo. Vyber si aktivní účet dole v Přehledu a běžné zápisy se z něj budou samy odečítat, bez vybírání.');
   h+=pageHero('Celkem na účtech',fm(totalAccounts()),'');
   h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn fill" onclick="accModal()">${ic('plus',15)} Nový účet</button></div>`;
   if(!S.accounts.length)return h+`<div class="card"><div class="empty">Zatím žádné účty.</div></div>`;
@@ -3010,8 +3076,8 @@ function accModal(id){const a=id?S.accounts.find(x=>x.id===id):null;
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(ACC_ICONS,mctx.icon)}</div>
     <div class="fg"><span class="fl">Barva karty</span><div class="swatches" id="m_cols">${accSwatches()}</div></div>
     <div class="fg"><span class="fl">${a?'Zůstatek':'Počáteční zůstatek'}</span><input class="inp num" id="m_bal" type="number" value="${a?a.bal||0:''}" placeholder="0"></div>
-    ${a?`<p class="mini" style="margin-top:2px">Uprav, jen když neodpovídá skutečnosti — je to jen oprava čísla, žádný pohyb se nezapočítá.</p>`:''}
-    <label class="mini" style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer"><input type="checkbox" id="m_def" ${a&&S.ui.defAcc===a.id?'checked':''} style="width:auto"> Výchozí účet — předvybere se v novém zápisu</label>
+    ${a?`<p class="mini" style="margin-top:2px">Uprav, jen když neodpovídá skutečnosti, je to jen oprava čísla, žádný pohyb se nezapočítá.</p>`:''}
+    <label class="mini" style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer"><input type="checkbox" id="m_def" ${a&&S.ui.defAcc===a.id?'checked':''} style="width:auto"> Výchozí účet, předvybere se v novém zápisu</label>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveAcc()">${a?'Uložit':'Vytvořit'}</button></div>`);}
 function accSwatches(){
   const cur=(mctx.color||'').toLowerCase();
@@ -3174,7 +3240,7 @@ async function invStockPreview(refetch){
       try{const q=await stockPriceCzk(alt);
         if(!porad())return;
         symEl.value=alt;_stockPx=q;_stockCcy=q.ccy;
-        el.innerHTML=stockPxHtml(q,qty)+`<br><span style="color:var(--teal)">${ic('check',12)} Broker píše <b>${esc(sym)}</b>, burza to zná jako <b>${esc(alt)}</b> — přepsal jsem to za tebe.</span>`;
+        el.innerHTML=stockPxHtml(q,qty)+`<br><span style="color:var(--teal)">${ic('check',12)} Broker píše <b>${esc(sym)}</b>, burza to zná jako <b>${esc(alt)}</b>, přepsal jsem to za tebe.</span>`;
         return;
       }catch(e2){}
     }
@@ -3187,7 +3253,7 @@ async function invStockPreview(refetch){
     const radky=hits.map(hitHtml).concat(tipy.filter(t=>!hits.some(h=>h.sym===t)).map(t=>`<a onclick="useSym('${esc(t)}')"><b>${esc(t)}</b></a>`));
     el.innerHTML=radky.length
       ? `Symbol <b>${esc(sym)}</b> burza nezná. Nehledáš některý z těchhle?<div style="margin-top:6px;line-height:1.9">${radky.slice(0,6).join('<br>')}</div>`
-      : `Symbol <b>${esc(sym)}</b> burza nezná a nic podobného jsem nenašel. Zkus do pole Název napsat jméno firmy nebo fondu — hledám i podle něj.`;
+      : `Symbol <b>${esc(sym)}</b> burza nezná a nic podobného jsem nenašel. Zkus do pole Název napsat jméno firmy nebo fondu, hledám i podle něj.`;
   }}
 const stockPxHtml=(q,qty)=>`${q.nm?esc(q.nm)+' · ':''}kurz <b>${fmCcy(q.px,q.ccy)}</b> · v korunách <b>${fm(Math.round(q.czk))}</b> / ks`
   +(qty?` · hodnota ≈ <b>${fm(Math.round(q.czk*qty))}</b>`:'');
@@ -3251,14 +3317,14 @@ function pxOverviewModal(){
     ${akcie.length?`<div style="background:var(--accent-bg);border-radius:var(--r);padding:14px;text-align:center;margin-bottom:6px">
       <div class="mini">Akcie a ETF celkem</div>
       <div class="num" style="font-size:26px;color:var(--accent-d)">${fm(sumA)}</div>
-      ${krypto.length?`<div class="mini" style="margin-top:4px">Krypto (${fm(sumK)}) se schválně nepočítá — v XTB ho nemáš.</div>`:''}</div>`:''}
+      ${krypto.length?`<div class="mini" style="margin-top:4px">Krypto (${fm(sumK)}) se schválně nepočítá, v XTB ho nemáš.</div>`:''}</div>`:''}
     <div class="md">U každého papíru je celý výpočet: kusů × kurz × přepočet měny.</div>
     ${sekce('Akcie a ETF',akcie,sumA)}
     ${sekce('Krypto',krypto,sumK)}
     ${akcie.length&&krypto.length?`<div class="totals" style="margin-top:10px"><span style="color:var(--text3)">Vše dohromady</span>
       <span class="num">${fm(sumA+sumK)}</span></div>`:''}
     <p class="mini" style="margin-top:10px">${kdy?`Kurzy stažené ${agoTxt(kdy)}.`:''}</p>
-    <div class="banner tip" style="margin-top:12px"><span class="bi">${ic('bulb',16)}</span><div><b>Drobný rozdíl proti brokerovi je normální.</b> Appka přepočítává denním kurzem ECB, broker si účtuje vlastní kurz s marží — to samo dělá zhruba procento. K tomu se liší okamžik, kdy byla cena stažená. <b>Rozdíl do pár procent neřeš.</b> Když je hodnota o desítky procent jinde nebo skoro dvojnásobná, je špatně symbol — nejspíš jiná třída akcie nebo jiná burza.</div></div>
+    <div class="banner tip" style="margin-top:12px"><span class="bi">${ic('bulb',16)}</span><div><b>Drobný rozdíl proti brokerovi je normální.</b> Appka přepočítává denním kurzem ECB, broker si účtuje vlastní kurz s marží, to samo dělá zhruba procento. K tomu se liší okamžik, kdy byla cena stažená. <b>Rozdíl do pár procent neřeš.</b> Když je hodnota o desítky procent jinde nebo skoro dvojnásobná, je špatně symbol, nejspíš jiná třída akcie nebo jiná burza.</div></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zavřít</button><button class="btn fill" onclick="pxRefreshAll()">${ic('repeat',15)} Aktualizovat vše</button></div>`);
 }
 async function pxRefreshAll(){
@@ -3338,7 +3404,7 @@ function invCalc(p0,pm,yr,rate,taxOn){
   const put=p0+pm*n;return {pts,val:v,put,gain:v-put,r,n};
 }
 function invCalcModal(){
-  openModal(`<h3>Investiční kalkulačka</h3><div class="md">Co z peněz bude, když je necháš pracovat. Nic se neukládá — je to jen počítadlo.</div>
+  openModal(`<h3>Investiční kalkulačka</h3><div class="md">Co z peněz bude, když je necháš pracovat. Nic se neukládá, je to jen počítadlo.</div>
     <div class="fr"><div class="fg"><span class="fl">Mám teď</span><input class="inp num" id="c_p0" type="number" value="${totalInvest()}" oninput="invCalcRun()"></div>
       <div class="fg"><span class="fl">Měsíčně přidám</span><input class="inp num" id="c_pm" type="number" value="${invCalcAvg()}" oninput="invCalcRun()"></div></div>
     <div class="fr"><div class="fg"><span class="fl">Na kolik let</span><input class="inp num" id="c_yr" type="number" value="10" min="1" max="60" oninput="invCalcRun()"></div>
@@ -3370,10 +3436,10 @@ function invCalcRun(){
     <div style="display:flex;gap:10px;margin-top:12px">
       <div class="tile" style="flex:1"><div class="tl">Vložil jsi</div><div class="tv" style="font-size:15px">${fm(c.put)}</div></div>
       <div class="tile" style="flex:1"><div class="tl">Vydělaly peníze</div><div class="tv" style="font-size:15px;color:${c.gain>=0?'var(--teal)':'var(--neg)'}">${c.gain>=0?'+':'−'}${fm(Math.abs(c.gain))}</div></div></div>
-    <div class="mini" style="margin-top:12px">Plná čára je hodnota, čárkovaná to, co jsi tam sám dal — mezera mezi nimi je výnos.${taxOn?` Počítá se s čistým výnosem po dani, tedy ${(''+Math.round(rate*(1-(S.tax||0)/100)*100)/100).replace('.',',')} % ročně.`:' Bez daně — reálně si stát část výnosu vezme.'} Je to odhad při stálém výnosu; trh takhle hladký nikdy není.</div>`;
+    <div class="mini" style="margin-top:12px">Plná čára je hodnota, čárkovaná to, co jsi tam sám dal. Mezera mezi nimi je výnos.${taxOn?` Počítá se s čistým výnosem po dani, tedy ${(''+Math.round(rate*(1-(S.tax||0)/100)*100)/100).replace('.',',')} % ročně.`:' Bez daně, reálně si stát část výnosu vezme.'} Je to odhad při stálém výnosu; trh takhle hladký nikdy není.</div>`;
 }
 function invRevalue(id){const inv=S.investments.find(x=>x.id===id);mctx={id};
-  openModal(`<h3>Přecenit: ${esc(inv.nm)}</h3><div class="md">Zadej, kolik to má dnes hodnotu podle brokera. Rozdíl se zapíše jako zhodnocení — nezamíchá se ti to mezi vklady.</div>
+  openModal(`<h3>Přecenit: ${esc(inv.nm)}</h3><div class="md">Zadej, kolik to má dnes hodnotu podle brokera. Rozdíl se zapíše jako zhodnocení, nezamíchá se ti to mezi vklady.</div>
     <div class="fg"><span class="fl">Aktuální hodnota</span><input class="inp num" id="m_v" type="number" value="${inv.val||0}" onkeydown="if(event.key==='Enter')doInvRevalue()"></div>
     <div class="mini" id="m_diff" style="margin-top:8px">Teď evidováno ${fm(inv.val||0)} · vloženo ${fm(invIn(inv))}</div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doInvRevalue()">Přecenit</button></div>`);
@@ -3402,7 +3468,7 @@ function invHistModal(invId,idx){
     <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${h.d||todayISO()}"></div>
       <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${Math.abs(h.a||0)}" onkeydown="if(event.key==='Enter')saveInvHist()"></div></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(h.n||'')}" onkeydown="if(event.key==='Enter')saveInvHist()"></div>
-    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} ${h.a<0?'Připsáno na':'Odečteno z'} účet „${esc(accById(h.acc).nm)}" — oprava se přenese i tam.</div>`:''}
+    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} ${h.a<0?'Připsáno na':'Odečteno z'} účet „${esc(accById(h.acc).nm)}", oprava se přenese i tam.</div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveInvHist()">Uložit</button></div>
     <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delInvHist('${invId}',${idx})">${ic('trash',14)} Smazat záznam</button></div>`);
   setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
@@ -3436,16 +3502,16 @@ function debtModal(id,presetGroup){const d=id?S.debts.find(x=>x.id===id):null;mc
     <div class="fr"><div class="fg"><span class="fl">Celková částka (jistina)</span><input class="inp num" id="m_pr" type="number" value="${d?d.principal||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Úrok % p.a. (0 = bez)</span><input class="inp num" id="m_rate" type="number" step="0.01" value="${d?d.rate||0:''}" placeholder="0"></div></div>
     <div class="mini" id="m_ltvsug" style="margin-top:2px"></div>
-    <div class="fg"><span class="fl">Nebo doba splácení v letech (nepovinné) — spočítám splátku</span><input class="inp num" id="m_term" type="number" placeholder="např. 30"></div>
+    <div class="fg"><span class="fl">Nebo doba splácení v letech (nepovinné), spočítám splátku</span><input class="inp num" id="m_term" type="number" placeholder="např. 30"></div>
     <div class="mini" id="m_termsug" style="margin-top:2px"></div>
     <div class="fr"><div class="fg"><span class="fl">Už splaceno (bez data)</span><input class="inp num" id="m_p0" type="number" value="${d?d.paid0||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Měsíční splátka</span><input class="inp num" id="m_dm" type="number" value="${d?d.monthly||0:''}" placeholder="0"></div></div>
     <div class="mini" id="m_preview" style="margin-top:8px"></div>
     <div class="fr" style="margin-top:13px"><div class="fg" style="margin-top:0"><span class="fl">Fixace končí (nepovinné)</span><input class="inp" id="m_fix" type="date" value="${d?d.fixDate||'':''}"></div>
       <div class="fg" style="margin-top:0"><span class="fl">Úrok po fixaci % (nepovinné)</span><input class="inp num" id="m_ratea" type="number" step="0.01" value="${d&&d.fixDate?d.rateAfter||0:''}" placeholder="např. 3,9"></div></div>
-    <p class="mini" style="margin-top:6px">Vyplň, jen když víš, že se ti po fixaci úrok změní — třeba za 3 roky refix.</p>
+    <p class="mini" style="margin-top:6px">Vyplň, jen když víš, že se ti po fixaci úrok změní, třeba za 3 roky refix.</p>
     <label class="mini" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:13px"><input type="checkbox" id="m_ptp" ${d&&d.paidToPrice?'checked':''} style="width:auto"> Peníze z téhle půjčky už reálně šly do koupě (do ceny skupiny)</label>
-    <p class="mini" style="margin-top:2px">Dokud nezaškrtneš, dluh existuje, ale do „chybí dofinancovat" u skupiny se nepočítá — přesně pro sjednané, ale ještě nečerpané půjčky nebo budoucí hypotéku.</p>
+    <p class="mini" style="margin-top:2px">Dokud nezaškrtneš, dluh existuje, ale do „chybí dofinancovat" u skupiny se nepočítá, přesně pro sjednané, ale ještě nečerpané půjčky nebo budoucí hypotéku.</p>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveDebt()">${d?'Uložit':'Vytvořit'}</button></div>`);
   const upd=()=>{
     const pr=num(document.getElementById('m_pr').value),rate=num(document.getElementById('m_rate').value),dm=num(document.getElementById('m_dm').value);
@@ -3462,14 +3528,14 @@ function debtModal(id,presetGroup){const d=id?S.debts.find(x=>x.id===id):null;mc
     const term=termIn>0?termIn:(looksLikeMortgage&&dm<=0?30:0);
     const termEl=document.getElementById('m_termsug');
     if(term>0&&pr>0){const sugPay=annuityPayment(pr,rate,term*12);
-      termEl.innerHTML=`${termIn>0?'Při':'Při obvyklých'} ${term} letech${rate>0?` a ${(''+rate).replace('.',',')} % p.a.`:''} by splátka byla ~<b class="num">${fm(sugPay)}</b>/měs.${termIn>0?'':' <span class="mini">(nevyplnil jsi dobu, tak zkouším typický odhad — uprav si ji výše)</span>'} <a onclick="document.getElementById('m_dm').value=${sugPay};document.getElementById('m_dm').dispatchEvent(new Event('input'))">Použít</a>`;
+      termEl.innerHTML=`${termIn>0?'Při':'Při obvyklých'} ${term} letech${rate>0?` a ${(''+rate).replace('.',',')} % p.a.`:''} by splátka byla ~<b class="num">${fm(sugPay)}</b>/měs.${termIn>0?'':' <span class="mini">(nevyplnil jsi dobu, tak zkouším typický odhad, uprav si ji výše)</span>'} <a onclick="document.getElementById('m_dm').value=${sugPay};document.getElementById('m_dm').dispatchEvent(new Event('input'))">Použít</a>`;
     }else termEl.innerHTML='';
     // živý náhled celkových nákladů
     const prev=loanPreview(pr,rate,dm,fix,ratea===''?null:num(ratea));
     const pv=document.getElementById('m_preview');
     if(!prev)pv.textContent='';
     else if(prev.unknown)pv.textContent=pr>0?'Zadej měsíční splátku, ať spočítám celkové náklady.':'';
-    else if(prev.never)pv.innerHTML=`<span style="color:var(--neg)">Tahle splátka nepokryje ani úrok — dluh by nikdy nesplatil.</span>`;
+    else if(prev.never)pv.innerHTML=`<span style="color:var(--neg)">Tahle splátka nepokryje ani úrok, dluh by se nikdy nesplatil.</span>`;
     else pv.innerHTML=`Při těchhle číslech <b>zaplatíš celkem ~${fm(prev.total)}</b>${prev.interest>0?` (z toho úroky ~${fm(prev.interest)})`:''} · doplatíš ~<b>${prev.date}</b>`;
   };
   ['m_pr','m_rate','m_dm','m_gr','m_fix','m_ratea','m_term','m_nm','m_ty'].forEach(id=>document.getElementById(id).oninput=upd);
@@ -3496,7 +3562,7 @@ function debtPayEditModal(did,idx){
     <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${h.d||todayISO()}"></div>
       <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${h.a||0}" onkeydown="if(event.key==='Enter')saveDebtPay()"></div></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(h.n||'')}" onkeydown="if(event.key==='Enter')saveDebtPay()"></div>
-    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} Zaplaceno z účtu „${esc(accById(h.acc).nm)}" — oprava se přenese i tam.</div>`:''}
+    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} Zaplaceno z účtu „${esc(accById(h.acc).nm)}", oprava se přenese i tam.</div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveDebtPay()">Uložit</button></div>
     <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delDebtPay('${did}',${idx})">${ic('trash',14)} Smazat splátku</button></div>`);
   setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
@@ -3511,7 +3577,7 @@ function saveDebtPay(){
 
 /* skupina dluhů: cena celku (např. Byt) — vklady i poplatky se přidávají zvlášť jako log, ne jedno číslo */
 function newGroupModal(){
-  openModal(`<h3>Nový projekt</h3><div class="md">Třeba „Byt" nebo „Auto" — založíš ho hned, cenu a % hypotéky nastavíš v dalším kroku, a dluhy (i víc) k němu přidáš, až budeš mít podepsáno.</div>
+  openModal(`<h3>Nový projekt</h3><div class="md">Třeba „Byt" nebo „Auto". Založíš ho hned, cenu a % hypotéky nastavíš v dalším kroku, a dluhy (i víc) k němu přidáš, až budeš mít podepsáno.</div>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_gname" placeholder="např. Byt" onkeydown="if(event.key==='Enter')createGroup()"></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="createGroup()">Vytvořit</button></div>`);
   setTimeout(()=>document.getElementById('m_gname')?.focus(),50);}
@@ -3524,11 +3590,11 @@ function delGroupMeta(gEnc){const g=decodeURIComponent(gEnc);const hasDebts=S.de
   if(!confirm(hasDebts?`Smazat nastavení projektu „${g}" (cenu, vklady, poplatky)? Dluhy v něm zůstanou, jen bez sledování ceny.`:`Smazat prázdný projekt „${g}"?`))return;
   delete S.debtGroups[g];commit();}
 function groupModal(gEnc){const g=decodeURIComponent(gEnc);const gm=groupMeta(g);mctx={g};
-  openModal(`<h3>${esc(g)}</h3><div class="md">Ať vidíš celkový obrázek — kolik to celé stojí a jak si to naplánuješ financovat.</div>
+  openModal(`<h3>${esc(g)}</h3><div class="md">Ať vidíš celkový obrázek: kolik to celé stojí a jak si to naplánuješ financovat.</div>
     <div class="fg"><span class="fl">Kupní cena (nepovinné)</span><input class="inp num" id="m_price" type="number" value="${gm.price||''}" placeholder="např. 3500000"></div>
     <div class="fg"><span class="fl">Kolik % chceš financovat hypotékou (LTV, nepovinné)</span><input class="inp num" id="m_ltv" type="number" step="1" value="${gm.ltv||''}" placeholder="např. 80"></div>
     <p class="mini" id="m_ltvhint" style="margin-top:6px"></p>
-    <p class="mini" style="margin-top:6px">LTV se počítá z čisté kupní ceny (bez poplatků) — stejně jako to dělá banka. Vlastní vklady a poplatky (advokát, katastr…) přidáš pak jednotlivě přímo u skupiny — každý zvlášť, appka je sečte sama.</p>
+    <p class="mini" style="margin-top:6px">LTV se počítá z čisté kupní ceny (bez poplatků), stejně jako to dělá banka. Vlastní vklady a poplatky (advokát, katastr…) přidáš pak jednotlivě přímo u skupiny, každý zvlášť, appka je sečte sama.</p>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveGroupMeta()">Uložit</button></div>`);
   const upd=()=>{const p=num(document.getElementById('m_price').value),l=num(document.getElementById('m_ltv').value);
     const hint=document.getElementById('m_ltvhint');
@@ -3539,7 +3605,7 @@ function saveGroupMeta(){const g=mctx.g;const price=num(document.getElementById(
   if(price||ltv||contrib.length||fees.length)S.debtGroups[g]={price,ltv,contrib,fees};else delete S.debtGroups[g];
   closeModal();commit();}
 function contribModal(gEnc){const g=decodeURIComponent(gEnc);mctx={g};
-  openModal(`<h3>Vklad do: ${esc(g)}</h3><div class="md">Vlastní peníze, které jsi na koupi reálně dal ze svého — mimo dluhy. Klidně přidávej postupně, jak se to bude dít.</div>
+  openModal(`<h3>Vklad do: ${esc(g)}</h3><div class="md">Vlastní peníze, které jsi na koupi reálně dal ze svého, mimo dluhy. Klidně přidávej postupně, jak se to bude dít.</div>
     <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" placeholder="0" onkeydown="if(event.key==='Enter')doContrib()"></div>
     <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${todayISO()}"></div><div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" placeholder="nepovinné"></div></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doContrib()">Přidat</button></div>`);
@@ -3551,7 +3617,7 @@ function doContrib(){const g=mctx.g;const a=Math.abs(num(document.getElementById
   closeModal();toast(`+${fm(a)} · ${g}`);commit();}
 function delContrib(gEnc,i){const g=decodeURIComponent(gEnc);const gm=S.debtGroups[g];if(!gm)return;gm.contrib.splice(i,1);commit();}
 function feeModal(gEnc){const g=decodeURIComponent(gEnc);mctx={g};
-  openModal(`<h3>Poplatek k: ${esc(g)}</h3><div class="md">Jednotlivé poplatky spojené s koupí — advokát, katastr, znalec, daň z nabytí… Přidávej po jednom, appka je sečte.</div>
+  openModal(`<h3>Poplatek k: ${esc(g)}</h3><div class="md">Jednotlivé poplatky spojené s koupí: advokát, katastr, znalec, daň z nabytí… Přidávej po jednom, appka je sečte.</div>
     <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" placeholder="0" onkeydown="if(event.key==='Enter')doFee()"></div>
     <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${todayISO()}"></div><div class="fg"><span class="fl">Za co</span><input class="inp" id="m_n" placeholder="např. Advokát"></div></div>
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="doFee()">Přidat</button></div>`);
@@ -3564,7 +3630,7 @@ function doFee(){const g=mctx.g;const a=Math.abs(num(document.getElementById('m_
 function delFee(gEnc,i){const g=decodeURIComponent(gEnc);const gm=S.debtGroups[g];if(!gm)return;gm.fees.splice(i,1);commit();}
 
 /* customization actions */
-function hideIntro(){S.ui.hideIntro=true;toast('Skryto — vrátíš v Nastavení');commit();}
+function hideIntro(){S.ui.hideIntro=true;toast('Skryto, vrátíš v Nastavení');commit();}
 function toggleTips(){if(S.ui.hideTips)delete S.ui.hideTips;else S.ui.hideTips=true;
   toast(S.ui.hideTips?'Vysvětlivky skryté':'Vysvětlivky zpátky');commit();}
 function showIntro(){S.ui.hideIntro=false;go('prehled');}
@@ -3575,7 +3641,7 @@ function moveTab(id,dir){const i=S.ui.tabs.findIndex(x=>x.id===id);const j=i+dir
 
 /* periods */
 function newPeriodModal(){const last=S.periods[S.periods.length-1];const from=last?last.to:todayISO();const to=addMonth(from);
-  openModal(`<h3>Nové výplatní období</h3><div class="md">Zadej skutečná data — od dne, kdy přišla výplata, do příští výplaty. Klidně pokaždé jiná.</div>
+  openModal(`<h3>Nové výplatní období</h3><div class="md">Zadej skutečná data: od dne, kdy přišla výplata, do příští výplaty. Klidně pokaždé jiná.</div>
     <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="Výplata ${monthName(from)}"></div>
     <div class="fr"><div class="fg"><span class="fl">Od výplaty</span><input class="inp" id="m_f" type="date" value="${from}"></div><div class="fg"><span class="fl">Příští výplata</span><input class="inp" id="m_t" type="date" value="${to}"></div></div>
     <label class="fg" style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="m_copy" checked style="width:auto"> Zkopírovat plán výdajů z aktuálního</label>
