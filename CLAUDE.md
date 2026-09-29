@@ -387,6 +387,18 @@ S.tax            — daň z úroků (výchozí 15 %)
   výjimka, vysvětlená až po rozkliknutí, a když platí, řádek to říká
   hned. Dřív to byla karta s polem „0" a textem, kterému nikdo nerozuměl.
 
+- **Psaní na mobilu nesmí skákat** (nahlásil Patrik 29. 9. 2026: datum
+  v Zápisu přiblížilo stránku a musel oddalovat). Tři pravidla:
+  (1) na dotyku (`pointer:coarse`) mají všechna pole písmo aspoň 16 px,
+  jinak je iPhone při klepnutí přiblíží; přibližování prsty zůstává
+  zapnuté, vypnuté je jen dvojí klepnutí (`touch-action:manipulation`).
+  (2) Překryv dialogu se drží ve viditelné části obrazovky (`drzOverlay`
+  přes `visualViewport`), takže Zápis nezajede za klávesnici; Android to
+  dělá sám díky `interactive-widget=resizes-content` ve viewportu.
+  (3) Během psaní se nepřekresluje celá stránka: hledání v Pohybech mění
+  jen `#pohres` (`pohObnov`), pole zůstává a klávesnice se nezavře.
+  Ověřeno jen v emulaci mobilu; simulátor iPhonu bez plného Xcode nejde.
+
 - **`fm()` zaokrouhluje na celé koruny, `fmEx()` ne.** Na částky, které si
   uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —
   jinak by viděl „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení nevadí.

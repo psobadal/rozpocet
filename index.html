@@ -14,7 +14,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
 <title>Můj rozpočet</title>
 <!-- Ikona se kreslí až v JS (applyAccent), aby držela barvu, kterou si
      uživatel nastavil. Tyhle značky jsou jen prázdné přihrádky. -->
@@ -60,6 +60,20 @@ body{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,san
 input,select,textarea,button{font-family:inherit}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 input[type=number]{-moz-appearance:textfield}
+/* Dotykové displeje. Pole s písmem pod 16 px iPhone při klepnutí přiblíží
+   a pak se musí ručně oddalovat (nahlásil Patrik 29. 9. 2026 u data
+   v Zápisu, to mělo 12,5 px). Proto mají všechna pole na dotyku aspoň
+   16 px; částka v Zápisu má víc a zůstává. touch-action vypne přiblížení
+   dvojím klepnutím, sevřením prstů jde přibližovat dál (přístupnost). */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
+@media (pointer:coarse){
+  .inp,.zp input,.zp select,select,textarea,input[type=date],input[type=text],input[type=email],input[type=search]{font-size:16px!important}
+  /* datum a účet v Zápisu: dva stejné sloupce, jinak by s větším písmem spadly pod sebe */
+  .modal .zs-pills{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px}
+  .modal .zp{min-width:0}
+  .modal .zp input,.modal .zp select{flex:1;min-width:0;width:100%;max-width:none}
+}
+
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
 a{color:var(--accent-d);cursor:pointer}
 svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
@@ -502,14 +516,15 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .modal .md{color:var(--text3);font-size:13px;margin-bottom:16px}
 .fg{margin-top:13px}
 .fg>.fl{font-size:12px;color:var(--text3);font-weight:500;margin-bottom:6px;display:block}
-.fr{display:flex;gap:10px}.fr>*{flex:1}
+.fr{display:flex;gap:10px}.fr>*{flex:1;min-width:0}
+.inp{min-width:0}
 .macts{display:flex;gap:10px;margin-top:20px}.macts .btn{flex:1;justify-content:center}
 /* Panel zápisu: na počítači obyčejný modal uprostřed, na mobilu vyjede
    zespoda a drží se dole, jak je u appek zvykem. */
 .modal.sheet{max-width:440px;padding:20px 20px 22px}
 @media(max-width:640px){
   .ov-sheet{align-items:flex-end;padding:0}
-  .modal.sheet{max-width:none;border-radius:24px 24px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));animation:rise .22s}
+  .modal.sheet{max-width:none;border-radius:24px 24px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));animation:rise .22s;max-height:100%;overflow-y:auto}
 }
 .zs-top{display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:500;margin-bottom:6px}
 .zs-x{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;border-radius:9px;display:grid;place-items:center}
@@ -2635,7 +2650,7 @@ function allMovements(od){
   out.sort((x,y)=>y.d.localeCompare(x.d)||y.rid.localeCompare(x.rid));
   return out;
 }
-function pohSetQ(v){pohHledej=v;R();setTimeout(()=>{const el=document.getElementById('pohq');if(el){el.focus();el.setSelectionRange(v.length,v.length);}},20);}
+function pohSetQ(v){pohHledej=v;pohObnov();}
 function pohClick(x){
   if(x.kind==='cat')logModal(x.cid,x.iid,x.li,x.pid);
   else if(x.kind==='env')envHistModal(x.eid,x.hidx);
@@ -2652,7 +2667,7 @@ function pohDen(d){
   if(d===dateMinus(t,1))return 'Včera';
   return fdFull(d);
 }
-function pohSetFiltr(k){pohFiltr=pohFiltr===k?'':k;pohLimit=5;R();}
+function pohSetFiltr(k){pohFiltr=pohFiltr===k?'':k;pohLimit=5;pohObnov();}
 function incomeBlock(p){
   const ac=incActual(p),pl=incPlan(p);
   if(!ac)return `<div class="card inc-cta" onclick="incomeModal()">
@@ -2667,7 +2682,17 @@ function incomeBlock(p){
     <span class="num" style="color:var(--teal);font-size:18px">${fm(ac)}</span>
     <span style="color:var(--text4)">${ic('cright',16)}</span></div>`;
 }
+/* Pohyby: pole hledání stojí mimo překreslovanou část. Dřív se po
+   každém písmenu překreslila celá stránka a na mobilu to skákalo
+   a zavíralo klávesnici; teď se mění jen výsledky pod polem. */
 function vPohybyList(){
+  let h=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('list',15)} Pohyby</span></div>
+    <input class="inp" id="pohq" type="search" enterkeyhint="search" aria-label="Hledat v pohybech" placeholder="Hledat podle názvu, částky, data…" value="${esc(pohHledej)}" oninput="pohSetQ(this.value)" style="margin-bottom:10px">`;
+  h+=`<div id="pohres">${pohVysledky()}</div></div>`;
+  return h;
+}
+function pohObnov(){const el=document.getElementById('pohres');if(el)el.innerHTML=pohVysledky();else R();}
+function pohVysledky(){
   const od=S.ui.pohybyOd||todayISO();
   let list=allMovements(od);
   const vse=list;
@@ -2676,8 +2701,7 @@ function vPohybyList(){
   if(q)list=list.filter(x=>(x.label+' '+x.sub+' '+x.a+' '+fd(x.d)).toLowerCase().includes(q));
   const shown=q?list:list.slice(0,pohLimit);
   poh=shown;   // kliká se přes index, ať se nemusí IDčka lepit do onclick atributu
-  let h=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('list',15)} Pohyby</span></div>
-    <input class="inp" id="pohq" placeholder="Hledat podle názvu, částky, data…" value="${esc(pohHledej)}" oninput="pohSetQ(this.value)" style="margin-bottom:10px">`;
+  let h='';
   const druhy=POH_DRUHY.filter(d=>vse.some(x=>x.kind===d.k));
   if(druhy.length>1){
     h+=`<div class="pohchips"><button class="pchip ${pohFiltr?'':'on'}" onclick="pohSetFiltr('')">Vše</button>`
@@ -2692,8 +2716,7 @@ function vPohybyList(){
       <div class="mvi" style="background:${x.volne?'var(--neg-bg)':'var(--teal-bg)'};color:${x.volne?'var(--neg)':'var(--teal)'}">${ic(x.ikona||'coins',19)}</div>
       <div class="m"><div class="t1">${esc(x.label)}</div><div class="t2">${esc(x.sub)}</div></div>
       <span class="num mva" style="color:${x.volne?'var(--neg)':'var(--text2)'}">${x.volne?'−':''}${fm(x.a)}</span></div>`;});
-  if(!q&&list.length>pohLimit)h+=`<button class="btn gho" style="width:100%;margin-top:12px" onclick="pohLimit+=5;R()">Načíst další</button>`;
-  h+=`</div>`;
+  if(!q&&list.length>pohLimit)h+=`<button class="btn gho" style="width:100%;margin-top:12px" onclick="pohLimit+=5;pohObnov()">Načíst další</button>`;
   return h;
 }
 /* ---------- panel zápisu ----------
@@ -2913,14 +2936,29 @@ function saveItemCfg(){
 function setCatPlan(cid,v){const c=P().cats.find(x=>x.id===cid);if(c){c.pl=num(v);catPlanOpen=false;commit();toast(c.pl>0?'Plán kategorie uložen':'Plán se zase sčítá z položek');}}
 
 /* modal infra */
-function openModal(html,cls){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov'+(cls?' ov-'+cls:'');ov.id='ov';ov.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);iconPickFit(ov);}
+/* iPhone: klávesnice stránku nezmenší, jen ji překryje, a Safari pak pod
+   dialogem posouvá obsah, aby bylo vidět pole. Spodní panel (Zápis) proto
+   skákal a zajížděl za klávesnici. Překryv se drží v té části obrazovky,
+   která je opravdu vidět (visualViewport); při přiblížení prsty se to
+   vypne, ať nepřekáží. Android to zvládne sám díky interactive-widget. */
+function drzOverlay(){
+  const ov=document.getElementById('ov'),vv=window.visualViewport;if(!ov||!vv)return;
+  if(vv.scale>1.01){ov.style.top=ov.style.height=ov.style.bottom='';return;}
+  ov.style.top=vv.offsetTop+'px';ov.style.height=vv.height+'px';ov.style.bottom='auto';
+}
+if(window.visualViewport){visualViewport.addEventListener('resize',drzOverlay);visualViewport.addEventListener('scroll',drzOverlay);}
+function openModal(html,cls){document.getElementById('ov')?.remove();const ov=document.createElement('div');ov.className='ov'+(cls?' ov-'+cls:'');ov.id='ov';ov.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;ov.onclick=e=>{if(e.target===ov)closeModal();};document.body.appendChild(ov);drzOverlay();iconPickFit(ov);}
 /* Výběr ikon: počet sloupců se volí podle počtu ikon, ať poslední řádek
    nezůstane poloprázdný (14 ikon = 7+7, ne 9+5). */
 function iconPickFit(root){
   (root||document).querySelectorAll('.iconpick').forEach(el=>{
     const n=el.children.length,w=el.clientWidth;if(!n||!w)return;
-    const max=Math.max(1,Math.floor((w+6)/46)),rady=Math.ceil(n/max);
-    el.style.gridTemplateColumns=`repeat(${Math.ceil(n/rady)},40px)`;});
+    const max=Math.max(1,Math.floor((w+6)/46));
+    // nejvíc sloupců, při kterých poslední řada není o dvě a víc kratší:
+    // 31 ikon na mobilu = 7 řad po 4 a 3, ne 5 řad po 6 a jedna ikona sama
+    let cols=Math.min(max,n);
+    for(let c=cols;c>=Math.ceil(max/2);c--){const r=n%c;if(r===0||r>=c-1){cols=c;break;}}
+    el.style.gridTemplateColumns=`repeat(${cols},40px)`;});
 }
 function closeModal(){document.getElementById('ov')?.remove();}
 function iconPicker(list,cur){return `<div class="iconpick" id="m_ic">${list.map(n=>`<button class="${cur===n?'on':''}" data-ic="${n}" onclick="mctx.icon='${n}';document.querySelectorAll('#m_ic button').forEach(b=>b.classList.toggle('on',b.dataset.ic==='${n}'))">${ic(n,20)}</button>`).join('')}</div>`;}
