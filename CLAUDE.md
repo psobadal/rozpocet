@@ -573,6 +573,14 @@ S.tax            — daň z úroků (výchozí 15 %)
 - **Font čísel** je volitelný (Nastavení → Přizpůsobení), výchozí Bahnschrift,
   ukládá se do `S.ui.numFont`, aplikuje se přes CSS proměnnou `--numfont`.
 
+- **Obnova ze zálohy musí být „nejnovější" a jít do cloudu** (`importFile`,
+  opraveno 2. 10. 2026). Dřív se obnovený stav jen uložil v zařízení se
+  starým `mt` ze souboru a první synchronizace ho přepsala tím, co bylo
+  v cloudu, takže obnova potichu zmizela. Teď `pushBackup()`,
+  `S.mt=Date.now()` a `schedulePush()`. Prázdná záloha se neobnoví vůbec.
+  Stejná záloha jde obnovit v Můj budget (přesun dat, viz
+  `mujrozpocet/CLAUDE.md`); akcie a ETF se tam vedou ručně.
+
 ## Nástrahy při editaci/testování
 
 - **Read/Grep tool občas zobrazí `/` jako `\`** ve výstupu (vizuální artefakt,

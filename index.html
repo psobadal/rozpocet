@@ -4162,7 +4162,19 @@ function exportCSV(){const rows=[['Období','Kategorie','Položka','Datum','Pozn
     rows.push([p?p.nm:'','Investice: '+v.nm,x.k==='gain'?'zhodnocení':'vklad',x.d||'',x.n||'',x.a]);}));
   const csv='﻿'+rows.map(r=>r.map(v=>'"'+(''+v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='rozpocet-'+todayISO()+'.csv';a.click();URL.revokeObjectURL(url);toast('CSV pro Excel staženo');}
-function importFile(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.periods||!Array.isArray(d.periods)){toast('Neplatný soubor');return;}if(confirm('Nahradit aktuální data daty ze zálohy?')){S=migrate(d);applyTheme();saveLS();autosaveFile();tab='prehled';detailCat=null;toast('Obnoveno');R();}}catch(e){toast('Nepodařilo se načíst');}ev.target.value='';};r.readAsText(f);}
+/* Obnova ze zálohy je rozhodnutí člověka, takže obnovený stav musí být
+   „nejnovější" a jít do cloudu. Dřív se jen uložil v zařízení se starým
+   časem ze souboru a první synchronizace ho přepsala tím, co v cloudu
+   bylo, takže obnova potichu zmizela. Původní stav jde do interní zálohy.
+   Prázdná záloha se neobnovuje vůbec (pojistka proti přepsání dat). */
+function importFile(ev){const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>{ev.target.value='';
+    try{const d=JSON.parse(r.result);
+      if(!d.periods||!Array.isArray(d.periods)){toast('Neplatný soubor');return;}
+      if(stateEmpty(d)){toast('Záloha je prázdná, není co obnovit');return;}
+      if(!confirm(syncOn()?'Nahradit aktuální data daty ze zálohy? Nahradí se i v cloudu a na ostatních zařízeních.':'Nahradit aktuální data daty ze zálohy?'))return;
+      pushBackup();S=migrate(d);S.mt=Date.now();applyTheme();saveLS();autosaveFile();schedulePush();tab='prehled';detailCat=null;toast('Obnoveno');R();
+    }catch(e){toast('Nepodařilo se načíst');}};r.readAsText(f);}
 function resetAll(){if(confirm('Smazat VŠECHNA data a začít od nuly?')&&confirm('Fakt? Jde vrátit jen ze zálohy.')){S=defState();applyTheme();saveLS();autosaveFile();tab='prehled';detailCat=null;R();}}
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
