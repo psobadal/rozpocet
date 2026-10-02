@@ -222,8 +222,10 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 /* Čísla v řadě dlaždic ve stejné výšce: když se popisek zalomí na dva
    řádky (Z plánu utraceno na mobilu), číslo nespadne níž než sousední,
    všechna sedí dole (Patrik 29. 9. 2026). */
-.tile{display:flex;flex-direction:column}
-.tile .tv{margin-top:auto}
+.tile{display:flex;flex-direction:column;min-width:0}
+.tile .tv{margin-top:auto;white-space:nowrap;overflow:hidden}
+.tiles{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+@media(max-width:640px){.mrow .tile{padding:12px 8px}}
 .pos{color:var(--teal)} .neg{color:var(--neg)} .warn{color:var(--gold)}
 
 
@@ -628,6 +630,23 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
   background:linear-gradient(135deg,var(--accent),var(--accent-d));color:#fff;cursor:pointer;
   box-shadow:0 10px 26px rgba(0,0,0,.22);display:grid;place-items:center}
 .fab:hover{filter:brightness(1.06)}
+/* ---- prohlídka appky: bubliny při prvním přihlášení ---- */
+.tour{position:fixed;inset:0;z-index:150;touch-action:none}
+/* Ztmavení je vrstva přes celou obrazovku s vyříznutým otvorem (clip-path).
+   Obří stín kolem malého výřezu se nevykresloval spolehlivě: u malého
+   cíle bylo ztmavení skoro neznatelné. */
+.tour-dim{position:fixed;inset:0;background:rgba(22,21,26,.6)}
+.tour-hole{position:fixed;border-radius:16px;pointer-events:none;box-shadow:0 0 0 3px var(--accent);
+  transition:top .25s,left .25s,width .25s,height .25s}
+.tour-hole.bez{display:none}
+.tour-b{position:fixed;width:min(340px,calc(100vw - 32px));background:var(--white);border-radius:18px;padding:16px 18px 14px;
+  box-shadow:var(--sh-lg);transition:top .25s,left .25s}
+.tour-n{font-size:11.5px;color:var(--text3);font-weight:500;margin-bottom:5px}
+.tour-b h3{font-size:16.5px;margin:0 0 5px}
+.tour-b p{font-size:13.5px;color:var(--text2);line-height:1.5;margin:0}
+.tour-a{display:flex;align-items:center;gap:8px;margin-top:14px}
+.tour-sip{position:absolute;width:14px;height:14px;background:var(--white);transform:rotate(45deg);border-radius:3px}
+@media (prefers-reduced-motion:reduce){.tour-hole,.tour-b{transition:none}}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:11px 22px;border-radius:12px;font-size:13px;font-weight:500;z-index:200;box-shadow:var(--sh-lg);animation:tin .25s}
 /* Mobil: plusko a hláška nad spodní lištou. Musí stát až tady, za
    obecným .fab a .toast; uvnitř horní mobilní sekce je obecná pravidla
@@ -873,7 +892,7 @@ function defState(){
   const c=curCycleDates();const per=defPeriod('Výplata '+monthName(c.from),c.from,c.to);
   return{
     v:2,created:todayISO(),tax:CONFIG.taxRate,
-    ui:{appName:CONFIG.appName,accent:CONFIG.accent,numFont:CONFIG.numFont,tabs:defTabs()},
+    ui:{appName:CONFIG.appName,accent:CONFIG.accent,numFont:CONFIG.numFont,tabs:defTabs(),tourDone:false},
     periods:[per],curId:per.id,
     accounts:[],
     envelopes:CONFIG.envelopes.map(e=>({id:uid(),nm:e.nm,icon:e.icon,bal:0,monthly:0,target:0,hist:[]})),
@@ -902,6 +921,8 @@ function migrate(s){
      starší historie zpětně — appka ukazuje jen pohyby od tohohle data,
      stará data zůstávají beze změny vidět postaru v jednotlivých záložkách. */
   if(!s.ui.pohybyOd)s.ui.pohybyOd=todayISO();
+  // prohlídka bublinami je pro čerstvou appku; kdo už data má, najde ji v Nastavení
+  if(s.ui.tourDone===undefined)s.ui.tourDone=!stateEmpty(s);
   s.debts.forEach(d=>{d.paid0=d.paid0||0;d.monthly=d.monthly||0;d.group=d.group||'';d.pay||=[];d.paidToPrice=!!d.paidToPrice;d.fixDate=d.fixDate||'';});
   s.debtGroups=s.debtGroups||{};
   Object.keys(s.debtGroups).forEach(g=>{const gm=s.debtGroups[g];gm.contrib||=[];gm.ltv=gm.ltv||0;
@@ -1448,6 +1469,112 @@ function updateSavePill(){const el=document.getElementById('savepill');if(!el)re
 /* =====================================================================
    RENDER
    ===================================================================== */
+/* ---- prohlídka appky ----
+   Při prvním otevření prázdné appky projde appku bublinami: co je
+   hlavní číslo, kde se zapisuje, co která záložka eviduje a že si to
+   člověk v Nastavení přizpůsobí. Patrik to tak chtěl 2. 10. 2026: škola
+   rozpočtu a seznam „Začínáme" učí postupně, tohle je první rozhlédnutí.
+   Každý krok přepne na svou záložku a zvýrazní ji, takže je vidět i
+   stránka, o které se mluví. Záložky, které má člověk vypnuté, se
+   přeskočí. Hotovo nebo přeskočeno = S.ui.tourDone; znovu jde spustit
+   z Nastavení. Kdo už v appce data má, sám ji neuvidí (viz migrate). */
+let tourI=-1,tourKroky=[];
+function tourSeznam(){
+  const vid=id=>S.ui.tabs.some(t=>t.id===id&&t.visible);
+  const k=[
+    {tab:'prehled',co:'.hero',t:'Kolik ti zbývá',x:'Tohle číslo je hlavní: kolik volných peněz máš do další výplaty a kolik to dělá na den. Každý zápis ho hned přepočítá.'},
+    {tab:'prehled',co:'.acts .prim',t:'Zapisování',x:'Tady zapíšeš, co jsi zaplatil: vybereš za co a napíšeš kolik. Stejně zapíšeš vklad do obálky, investici nebo splátku. Plus vpravo dole dělá totéž z každé stránky.'},
+  ];
+  [['vydaje','Výdaje a plán','Výdaje se dělí do kategorií (Bydlení, Jídlo, Doprava) a položek. Ke každé si můžeš nastavit plán a appka ukáže, jestli ho držíš.'],
+   ['ucty','Účty','Kde peníze leží: běžný účet, spořicí účet, hotovost. Je to nepovinné, bez účtů appka funguje stejně.'],
+   ['obalky','Obálky','Peníze odložené na konkrétní cíl, třeba dovolenou nebo rezervu. Vidíš, kolik už máš a kolik chybí.'],
+   ['investice','Investice a spoření','Spořicí účty, fondy, akcie i kryptoměny na jednom místě. U spořicího účtu se úrok připisuje sám.'],
+   ['dluhy','Úvěry a hypotéka','Hypotéka, úvěr nebo leasing i s úrokem. Appka spočítá, kolik zbývá doplatit, kdy skončíš a kolik zaplatíš na úrocích.'],
+   ['statistiky','Statistiky','Kam peníze jdou, porovnání s minulým cyklem a vývoj celého majetku v čase.'],
+  ].forEach(([id,t,x])=>{if(vid(id))k.push({tab:id,co:'.tabs .tab.on',t,x});});
+  k.push({tab:'nastaveni',co:'.tabs .tab.on',t:'Nastav si to po svém',x:'Nepotřebuješ všechno? Záložky, které nevyužiješ, tady vypneš, přejmenuješ nebo přeřadíš. Změníš i barvu a název appky. Najdeš tu také tuhle prohlídku.'});
+  return k;
+}
+function prohlidkaStart(){
+  closeModal();document.getElementById('tour')?.remove();
+  tourKroky=tourSeznam();tourI=0;
+  const el=document.createElement('div');el.id='tour';el.className='tour';
+  el.innerHTML=`<div class="tour-dim"></div><div class="tour-hole"></div><div class="tour-b" role="dialog" aria-modal="true" aria-labelledby="tour-t" aria-describedby="tour-x"></div>`;
+  document.body.appendChild(el);tourUkaz();
+}
+// první spuštění: jen když ji člověk ještě neviděl
+function prohlidkaAuto(){if(!S.ui.tourDone&&tourI<0)setTimeout(()=>{if(!S.ui.tourDone&&tourI<0&&!document.getElementById('ov'))prohlidkaStart();},400);}
+function tourUkaz(){
+  const k=tourKroky[tourI],b=document.querySelector('#tour .tour-b');if(!k||!b)return;
+  if(tab!==k.tab||detailCat||detailInv||detailDebt||detailGroup)go(k.tab);
+  const posl=tourI===tourKroky.length-1;
+  b.innerHTML=`<div class="tour-n">${tourI+1} z ${tourKroky.length}</div>
+    <h3 id="tour-t">${k.t}</h3><p id="tour-x">${k.x}</p>
+    <div class="tour-a">${posl?'':`<button class="btn gho sm" onclick="tourKonec()">Přeskočit</button>`}<span class="sp"></span>
+      ${tourI>0?`<button class="btn sm" onclick="tourDal(-1)">Zpět</button>`:''}
+      <button class="btn fill sm" id="tour-dal" onclick="tourDal(1)">${posl?'Hotovo':'Dál'}</button></div>
+    <i class="tour-sip"></i>`;
+  document.querySelector(k.co)?.scrollIntoView({block:'center',behavior:'instant'});
+  tourPos();
+  document.getElementById('tour-dal')?.focus({preventScroll:true});
+}
+function tourPos(){
+  const k=tourKroky[tourI],t=document.getElementById('tour');if(!k||!t)return;
+  const dira=t.querySelector('.tour-hole'),dim=t.querySelector('.tour-dim'),b=t.querySelector('.tour-b'),sip=t.querySelector('.tour-sip');
+  const el=document.querySelector(k.co),vw=innerWidth,vh=innerHeight,bw=b.offsetWidth,bh=b.offsetHeight,o=6;
+  if(!el){   // cíl na stránce není (vypnutý prvek): bublina doprostřed, bez výřezu
+    dira.className='tour-hole bez';dim.style.clipPath='';
+    b.style.top=Math.max(16,(vh-bh)/2)+'px';b.style.left=(vw-bw)/2+'px';if(sip)sip.style.display='none';return;
+  }
+  const r=el.getBoundingClientRect();
+  dira.className='tour-hole';
+  const x=r.left-o,y=r.top-o,w=r.width+2*o,h=r.height+2*o,rr=Math.min(16,h/2,w/2);
+  dira.style.cssText=`top:${y}px;left:${x}px;width:${w}px;height:${h}px;border-radius:${rr}px`;
+  dim.style.clipPath=`path(evenodd,'M0 0H${vw}V${vh}H0Z M${x+rr} ${y}H${x+w-rr}A${rr} ${rr} 0 0 1 ${x+w} ${y+rr}V${y+h-rr}A${rr} ${rr} 0 0 1 ${x+w-rr} ${y+h}H${x+rr}A${rr} ${rr} 0 0 1 ${x} ${y+h-rr}V${y+rr}A${rr} ${rr} 0 0 1 ${x+rr} ${y}Z')`;
+  const dole=vh-r.bottom,pod=dole>=bh+o+28,nad=!pod&&r.top>=bh+o+28;
+  const top=pod?r.bottom+o+14:nad?r.top-o-14-bh:Math.max(16,(vh-bh)/2);
+  const left=Math.min(Math.max(16,r.left+r.width/2-bw/2),vw-16-bw);
+  b.style.top=top+'px';b.style.left=left+'px';
+  if(sip){
+    sip.style.display=(pod||nad)?'':'none';
+    sip.style.left=Math.min(Math.max(18,r.left+r.width/2-left-7),bw-32)+'px';
+    sip.style.top=pod?'-6px':'';sip.style.bottom=nad?'-6px':'';
+  }
+}
+function tourDal(d){tourI+=d;if(tourI>=tourKroky.length){tourKonec();return;}if(tourI<0)tourI=0;tourUkaz();}
+function tourKonec(){
+  document.getElementById('tour')?.remove();tourI=-1;
+  const poprve=!S.ui.tourDone;S.ui.tourDone=true;
+  go('prehled');
+  if(poprve){commit();toast('Prohlídku najdeš znovu v Nastavení',3200);}
+}
+window.addEventListener('resize',()=>{if(tourI>=0)tourPos();});
+window.addEventListener('scroll',()=>{if(tourI>=0)tourPos();},{passive:true});
+document.addEventListener('keydown',e=>{
+  if(tourI<0)return;
+  if(e.key==='Escape'){e.preventDefault();tourKonec();}
+  else if(e.key==='ArrowRight'){e.preventDefault();tourDal(1);}
+  else if(e.key==='ArrowLeft'){e.preventDefault();tourDal(-1);}
+  else if(e.key==='Tab'){   // focus zůstává v bublině
+    const f=[...document.querySelectorAll('#tour button')];if(!f.length)return;
+    const i=f.indexOf(document.activeElement);e.preventDefault();
+    f[(i+(e.shiftKey?-1:1)+f.length)%f.length].focus();
+  }
+});
+
+/* Čísla v dlaždicích se musí vejít. Sloupce mají pevný podíl šířky; dlouhé
+   číslo (dluh nebo hypotéka v milionech, tři dlaždice vedle sebe na mobilu)
+   dřív roztáhlo celou stránku do strany. Když se nevejde, zmenší se písmo
+   v celé řadě stejně, ať čísla vedle sebe nejsou každé jinak velké. */
+function tilesFit(){
+  document.querySelectorAll('.mrow,.tiles').forEach(row=>{
+    const tv=[...row.querySelectorAll('.tile .tv')];if(!tv.length)return;
+    tv.forEach(e=>e.style.fontSize='');
+    let k=1;tv.forEach(e=>{if(e.scrollWidth>e.clientWidth+1)k=Math.min(k,e.clientWidth/e.scrollWidth);});
+    if(k<1){const fs=parseFloat(getComputedStyle(tv[0]).fontSize);tv.forEach(e=>e.style.fontSize=Math.max(10,Math.floor(fs*k*10)/10)+'px');}
+  });
+}
+window.addEventListener('resize',tilesFit);
 function go(t){tab=t;detailCat=null;detailInv=null;detailDebt=null;detailGroup=null;openItem=null;R();window.scrollTo(0,0);}
 const VIEWS={prehled:vPrehled,vydaje:vVydaje,ucty:vUcty,obalky:vObalky,investice:vInvestice,dluhy:vDluhy,statistiky:vStat,nastaveni:vNastaveni};
 
@@ -1472,6 +1599,8 @@ function R(){
   document.getElementById('app').innerHTML=h;
   document.querySelector('.fab').innerHTML=ic('plus',26,'#fff');
   updateSavePill();
+  tilesFit();
+  if(tourI>=0)tourPos();
 }
 
 /* ---------- pevné platby ----------
@@ -1844,7 +1973,7 @@ function vInvestice(p){
     ${put>0?`<div class="gn ${gain>=0?'pos':'neg'}">${gain>=0?'+':'−'}${fm(Math.abs(gain))} · ${gain>=0?'+':'−'}${(Math.abs(gain)/put*100).toFixed(1).replace('.',',')} % <span>od vložení</span></div>`:''}
     <div class="cy">tento cyklus vloženo ${fm(investedInPeriod(p.id))}</div></div>`;
   if(S.investments.length)h+=invChart(S.investments);
-  h+=tipBan('percent',`<b>Spořák s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b>. Zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
+  h+=tipBan('percent',`<b>Spořicí účet s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b>. Zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
   h+=`<div class="invtools">
     <button onclick="invModal()">${ic('plus',15)} Nová položka</button>
     ${S.investments.some(i=>i.stock||i.crypto)?`<button onclick="pxOverviewModal()">${ic('list',15)} Kurzy</button>`:''}
@@ -2022,7 +2151,7 @@ function vDluhy(p){
     <button onclick="debtModal()">${ic('plus',15)} Nový dluh</button>
     <button onclick="newGroupModal()">${ic('plus',15)} Nový projekt</button></div>`;
   const groups=debtGroupNames(),solo=S.debts.map((d,i)=>({d,i})).filter(x=>!(x.d.group||'').trim());
-  if(!S.debts.length&&!groups.length)return h+`<div class="card"><div class="empty">Zatím žádné dluhy. Přidej třeba „Půjčka od rodičů" (0 %) nebo „Hypotéka". Nebo si nejdřív založ projekt, třeba „Byt" nebo „Auto", a dluhy k němu přidáš postupně.</div></div>`;
+  if(!S.debts.length&&!groups.length)return h+`<div class="card"><div class="empty">Zatím žádné dluhy. Přidej třeba „Hypotéka" nebo „Spotřebitelský úvěr". Nebo si nejdřív založ projekt, třeba „Byt" nebo „Auto", a dluhy k němu přidáš postupně.</div></div>`;
   groups.forEach(g=>{const st=groupStats(g);
     h+=`<div class="card catlist">
       <div class="dghead" onclick="openGroup(decodeURIComponent('${encodeURIComponent(g).replace(/'/g,'%27')}'))">
@@ -2169,7 +2298,7 @@ function catIconByName(nm){for(const pp of S.periods){const c=pp.cats.find(x=>x.
    jen o tutoriálové texty — varování a stavové hlášky přes tohle NIKDY
    neposílat, ty musí být vidět, i když si je člověk nepřeje. */
 const tipBan=(icon,html,cls)=>S.ui.hideTips?'':`<div class="banner ${cls||'tip'}"><span class="bi">${ic(icon,18)}</span><div>${html}</div></div>`;
-function mrow(arr){return `<div style="display:grid;grid-template-columns:repeat(${arr.length>3?2:arr.length},1fr);gap:10px;margin-bottom:14px">`+arr.map(t=>`<div class="tile"><div class="tl">${t[0]}</div><div class="tv" style="${t[2]||''}">${t[1]}</div></div>`).join('')+`</div>`;}
+function mrow(arr){return `<div class="mrow" style="display:grid;grid-template-columns:repeat(${arr.length>3?2:arr.length},minmax(0,1fr));gap:10px;margin-bottom:14px">`+arr.map(t=>`<div class="tile"><div class="tl">${t[0]}</div><div class="tv" style="${t[2]||''}">${t[1]}</div></div>`).join('')+`</div>`;}
 function catShare(rows,total,label){if(!rows.length)return '';
   const R=40,C=2*Math.PI*R,id='dn'+(++donutSeq);let off=0;
   const vys=total>0?rows.map((r,k)=>{const l=r.a/total*C,x=`<circle ${donutAttr(id,k,r.nm+' '+fm(r.a)+', '+Math.round(r.a/total*100)+' %')} cx="50" cy="50" r="${R}" fill="none" stroke="${catColByName(r.nm,k)}" stroke-width="13" stroke-dasharray="${Math.max(0,l-(rows.length>1?1.2:0))} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 50 50)"/>`;off+=l;return x;}).join(''):'';
@@ -2528,7 +2657,8 @@ function vNastaveni(p){
     <div class="fg"><span class="fl">Vysvětlivky a průvodce</span>
       <label class="mini" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${S.ui.hideTips?'':'checked'} onchange="toggleTips()" style="width:auto"> Zobrazovat vysvětlivky nahoře na záložkách</label>
       <div class="mini" style="margin-top:6px">Varování o datech a chybách se tím neskryjou, ta uvidíš vždycky.</div>
-      <div style="margin-top:10px">${S.ui.hideIntro?`<button class="btn sm" onclick="showIntro()">${ic('rocket',14)} Zobrazit průvodce začátkem</button>`:`<span class="mini">Průvodce začátkem se ukazuje na Přehledu, dokud ho nedokončíš.</span>`}</div></div>
+      <div style="margin-top:10px">${S.ui.hideIntro?`<button class="btn sm" onclick="showIntro()">${ic('rocket',14)} Zobrazit průvodce začátkem</button>`:`<span class="mini">Průvodce začátkem se ukazuje na Přehledu, dokud ho nedokončíš.</span>`}</div>
+      <div style="margin-top:10px"><button class="btn sm" onclick="prohlidkaStart()">${ic('grid',14)} Projít prohlídku appky</button></div></div>
     <div class="fg"><span class="fl">Font čísel</span><select class="inp" onchange="setNumFont(this.value)">${Object.entries(NUMFONTS).map(([k,f])=>`<option value="${k}" ${S.ui.numFont===k?'selected':''}>${f.label}</option>`).join('')}</select>
       <div class="mini" style="margin-top:8px">Ukázka: <span class="num" style="font-size:20px;color:var(--text)">${fm(1234567)} · 28&nbsp;000 · 15,5&nbsp;%</span></div></div>
     <div class="fg"><span class="fl">Měna</span><select class="inp" onchange="setMena(this.value)">${Object.entries(MENY).map(([k,l])=>`<option value="${k}" ${(S.ui.mena||'CZK')===k?'selected':''}>${l}</option>`).join('')}</select>
@@ -2555,7 +2685,7 @@ function vNastaveni(p){
   // finance settings
   h+=`<div class="card"><div class="ct" style="margin-bottom:14px">${ic('percent',15)} Daň z úroků</div>
     <div style="max-width:200px"><div class="fg"><span class="fl">Sazba %</span><input class="inp num" type="number" value="${S.tax}" onchange="S.tax=+this.value;commit()"></div></div>
-    <p class="mini" style="margin-top:10px">Strhává se z úroku připsaného u spořáků a investic (v ČR běžně 15 %).</p></div>`;
+    <p class="mini" style="margin-top:10px">Strhává se z úroku připsaného u spořicích účtů a investic (v ČR běžně 15 %).</p></div>`;
 
   h+=`<div class="card"><div class="ct" style="margin-bottom:10px">${ic('coin',15)} O appce</div>
     <p class="mini" style="margin:0">Můj rozpočet: <a href="https://github.com/psobadal/rozpocet" target="_blank" rel="noopener">otevřený kód na GitHubu</a>.
@@ -3394,7 +3524,7 @@ function actionRow(){
   </div>`;
 }
 function vUcty(p){
-  let h=tipBan('wallet','<b>Účty</b> = kde peníze fyzicky leží (Raiffka, mBank, spořák...). Přesun mezi účty se nikdy nepočítá do „zbývá volných", je to pořád tvoje volná peníze, jen mění místo. Vyber si aktivní účet dole v Přehledu a běžné zápisy se z něj budou samy odečítat, bez vybírání.');
+  let h=tipBan('wallet','<b>Účty</b> = kde peníze fyzicky leží (běžný účet, spořicí účet, hotovost…). Přesun mezi účty se nikdy nepočítá do „zbývá volných", je to pořád tvoje volná peníze, jen mění místo. Vyber si aktivní účet dole v Přehledu a běžné zápisy se z něj budou samy odečítat, bez vybírání.');
   h+=pageHero('Celkem na účtech',fm(totalAccounts()),'');
   h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn fill" onclick="accModal()">${ic('plus',15)} Nový účet</button></div>`;
   if(!S.accounts.length)return h+`<div class="card"><div class="empty">Zatím žádné účty.</div></div>`;
@@ -3527,7 +3657,7 @@ function invModal(id){const inv=id?S.investments.find(x=>x.id===id):null;mctx={i
   const isC=!!(inv&&inv.crypto),isS=!!(inv&&inv.stock);
   _cryptoPx=null;_stockPx=null;
   openModal(`<h3>${inv?'Upravit':'Nová'} investice / úspora</h3>
-    <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${inv?esc(inv.nm):''}" placeholder="např. ETF, Bitcoin, Spořák"></div>
+    <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${inv?esc(inv.nm):''}" placeholder="např. ETF, Bitcoin, Spořicí účet"></div>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(INV_ICONS,mctx.icon)}</div>
     <div class="fg"><span class="fl">Typ</span><select class="inp" id="m_ctype" onchange="invTypeToggle()">
       <option value=""${isC||isS?'':' selected'}>Ručně</option>
@@ -3854,11 +3984,11 @@ function debtModal(id,presetGroup){const d=id?S.debts.find(x=>x.id===id):null;mc
   const gVal=d?(d.group||''):(presetGroup?decodeURIComponent(presetGroup):'');
   const allGroups=[...new Set([...S.debts.map(x=>(x.group||'').trim()),...Object.keys(S.debtGroups)].filter(Boolean))];
   openModal(`<h3>${d?'Upravit':'Nový'} dluh</h3>
-    <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${d?esc(d.nm):''}" placeholder="např. Půjčka od rodičů"></div>
-    <div class="fr"><div class="fg"><span class="fl">Typ (štítek, nepovinné)</span><input class="inp" id="m_ty" value="${d?esc(d.type||''):''}" placeholder="např. Půjčka, Hypotéka"></div>
+    <div class="fg"><span class="fl">Název</span><input class="inp" id="m_nm" value="${d?esc(d.nm):''}" placeholder="např. Hypotéka"></div>
+    <div class="fr"><div class="fg"><span class="fl">Typ (štítek, nepovinné)</span><input class="inp" id="m_ty" value="${d?esc(d.type||''):''}" placeholder="např. Hypotéka, Úvěr"></div>
       <div class="fg"><span class="fl">Skupina (nepovinné)</span><input class="inp" id="m_gr" list="m_grlist" value="${esc(gVal)}" placeholder="např. Byt">
         <datalist id="m_grlist">${allGroups.map(g=>`<option value="${esc(g)}">`).join('')}</datalist></div></div>
-    <p class="mini" style="margin-top:6px">Dluhy se stejnou skupinou (třeba půjčky od rodičů i hypotéka na byt) se sečtou do společného souhrnu.</p>
+    <p class="mini" style="margin-top:6px">Dluhy se stejnou skupinou (třeba hypotéka a úvěr ze stavebního spoření na byt) se sečtou do společného souhrnu.</p>
     <div class="fg"><span class="fl">Ikona</span>${iconPicker(DEBT_ICONS,mctx.icon)}</div>
     <div class="fr"><div class="fg"><span class="fl">Celková částka (jistina)</span><input class="inp num" id="m_pr" type="number" value="${d?d.principal||0:''}" placeholder="0"></div>
       <div class="fg"><span class="fl">Úrok % p.a. (0 = bez)</span><input class="inp num" id="m_rate" type="number" step="0.01" value="${d?d.rate||0:''}" placeholder="0"></div></div>
@@ -4053,6 +4183,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
   // hodnotu, kterou za chvíli přetáhne novější stav z cloudu
   autoPriceRefresh(true);
   window.addEventListener('focus',()=>autoPriceRefresh());
+  prohlidkaAuto();
 })();
 </script>
 </body>

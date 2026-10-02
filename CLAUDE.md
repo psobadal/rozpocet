@@ -460,6 +460,19 @@ S.tax            — daň z úroků (výchozí 15 %)
   obecné `.fab{bottom:22px}` přebilo, plusko sedělo přes „Více" a lišta
   nad ním chytala klepnutí.
 
+- **Prohlídka appky bublinami** (`prohlidkaStart`, `tourSeznam`,
+  `tourPos`, 2. 10. 2026): devět kroků přes hlavní číslo, Zápis, každou
+  záložku a Nastavení. Spustí se sama jen v čerstvé prázdné appce
+  (`S.ui.tourDone`, `migrate` ho u stávajících dat nastaví na true),
+  jinak tlačítkem v Nastavení. Ztmavení je vrstva s vyříznutým otvorem
+  (`clip-path`), ne obří stín. Stejný kód jako v Můj budget, podrobnosti
+  v `mujrozpocet/CLAUDE.md`.
+- **Pojmy jen odborné** (hypotéka, úvěr, spořicí účet), ne „půjčka od
+  rodičů" ani „spořák": pravidlo z manuálu značky, oddíl 8.
+- **Dlaždice s čísly se musí vejít** (`tilesFit`, `.mrow`, `.tiles`):
+  sloupce `minmax(0,1fr)`, při přetečení se zmenší písmo v celé řadě.
+  Dřív dlouhé číslo roztáhlo na mobilu celou stránku do strany.
+
 - **`fm()` zaokrouhluje na celé koruny, `fmEx()` ne.** Na částky, které si
   uživatel sám nastavil (plán u položky s `fixAmt`), se používá `fmEx` —
   jinak by viděl „329 Kč" tam, kde zadal 329,35. Jinde zaokrouhlení nevadí.
