@@ -3508,7 +3508,7 @@ function doEnvMove(){const e=S.envelopes.find(x=>x.id===mctx.id);const a=Math.ab
 
 function delEnvHist(id,idx){const e=S.envelopes.find(x=>x.id===id);if(!e||!e.hist||!e.hist[idx])return;
   const x=e.hist[idx];if(!confirm('Smazat tenhle záznam z historie obálky?'))return;
-  if(x.acc)accBump(x.acc,x.a);
+  if(x.acc)accBump(x.acc,x.t==='in'?x.a:-x.a);   // vklad se účtu vrátí, vrácení na účet se z něj zase odečte
   e.bal=(e.bal||0)-(x.t==='in'?x.a:-x.a);e.hist.splice(idx,1);commit();}
 // úprava záznamu z obálky (i z Pohybů) — směr (vklad/čerpání) se neopravuje, jen částka/datum/poznámka
 function envHistModal(eid,idx){
@@ -3519,7 +3519,7 @@ function envHistModal(eid,idx){
       <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${h.a||0}" onkeydown="if(event.key==='Enter')saveEnvHist()"></div></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(h.n||'')}" onkeydown="if(event.key==='Enter')saveEnvHist()"></div>
     ${h.src?`<div class="mini" style="margin-top:10px">${ic('check',13)} Přišlo z „${esc(h.src)}", appka to nepočítá znovu do „zbývá volných".</div>`:''}
-    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} Odečteno z účtu „${esc(accById(h.acc).nm)}", oprava se přenese i tam.</div>`:''}
+    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} ${h.t==='in'?'Odečteno z účtu':'Připsáno na účet'} „${esc(accById(h.acc).nm)}", oprava se přenese i tam.</div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveEnvHist()">Uložit</button></div>
     <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delEnvHist('${eid}',${idx})">${ic('trash',14)} Smazat záznam</button></div>`);
   setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
@@ -3529,7 +3529,8 @@ function saveEnvHist(){
   const a=Math.abs(num(document.getElementById('m_a').value));if(!a){toast('Zadej částku');return;}
   const d=document.getElementById('m_d').value||h.d,n=document.getElementById('m_n').value.trim();
   e.bal=(e.bal||0)-(h.t==='in'?h.a:-h.a)+(h.t==='in'?a:-a);
-  if(h.acc){accBump(h.acc,h.a);accBump(h.acc,-a);}
+  // vklad účtu ubral, vrácení na účet mu přidalo: oprava jde pokaždé opačným směrem
+  if(h.acc){const z=h.t==='in'?1:-1;accBump(h.acc,z*h.a);accBump(h.acc,-z*a);}
   h.a=a;h.d=d;h.n=n;
   closeModal();toast('Upraveno');commit();
 }
@@ -4006,7 +4007,7 @@ function invHistModal(invId,idx){
     <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${h.d||todayISO()}"></div>
       <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${Math.abs(h.a||0)}" onkeydown="if(event.key==='Enter')saveInvHist()"></div></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(h.n||'')}" onkeydown="if(event.key==='Enter')saveInvHist()"></div>
-    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} ${h.a<0?'Připsáno na':'Odečteno z'} účet „${esc(accById(h.acc).nm)}", oprava se přenese i tam.</div>`:''}
+    ${h.acc&&accById(h.acc)?`<div class="mini" style="margin-top:10px">${ic('wallet',13)} ${h.a<0?'Připsáno na účet':'Odečteno z účtu'} „${esc(accById(h.acc).nm)}", oprava se přenese i tam.</div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveInvHist()">Uložit</button></div>
     <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delInvHist('${invId}',${idx})">${ic('trash',14)} Smazat záznam</button></div>`);
   setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
