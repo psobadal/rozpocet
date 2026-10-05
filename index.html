@@ -2899,8 +2899,13 @@ function incomeBlock(p){
 /* Pohyby: pole hledání stojí mimo překreslovanou část. Dřív se po
    každém písmenu překreslila celá stránka a na mobilu to skákalo
    a zavíralo klávesnici; teď se mění jen výsledky pod polem. */
+/* Vybraný účet v pruhu nad hlavním číslem zúží i Pohyby: kdo klikne na
+   účet, chce vidět, co se na něm dělo (Patrik 5. 10. 2026). Částky se pak
+   ukazují ze strany účtu, s plusem a mínusem jako na výpisu z banky. */
+const pohAcc=()=>S.ui.activeAcc&&accById(S.ui.activeAcc)?accById(S.ui.activeAcc):null;
 function vPohybyList(){
-  let h=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('list',15)} Pohyby</span></div>
+  const ua=pohAcc();
+  let h=`<div class="card"><div class="ch" style="margin-bottom:10px"><span class="ct">${ic('list',15)} Pohyby${ua?': '+esc(ua.nm):''}</span>${ua?`<a onclick="setActiveAcc('')">všechny účty</a>`:''}</div>
     <input class="inp" id="pohq" type="search" enterkeyhint="search" aria-label="Hledat v pohybech" placeholder="Hledat podle názvu, částky, data…" value="${esc(pohHledej)}" oninput="pohSetQ(this.value)" style="margin-bottom:10px">`;
   h+=`<div id="pohres">${pohVysledky()}</div></div>`;
   return h;
@@ -2909,6 +2914,8 @@ function pohObnov(){const el=document.getElementById('pohres');if(el)el.innerHTM
 function pohVysledky(){
   const od=S.ui.pohybyOd||todayISO();
   let list=allMovements(od);
+  const ua=pohAcc();
+  if(ua)list=list.filter(x=>x.acc===ua.id);
   const vse=list;
   const q=pohHledej.trim().toLowerCase();
   if(pohFiltr)list=list.filter(x=>x.kind===pohFiltr);
@@ -2921,15 +2928,16 @@ function pohVysledky(){
     h+=`<div class="pohchips"><button class="pchip ${pohFiltr?'':'on'}" onclick="pohSetFiltr('')">Vše</button>`
       +druhy.map(d=>`<button class="pchip ${pohFiltr===d.k?'on':''}" onclick="pohSetFiltr('${d.k}')">${d.l}</button>`).join('')+`</div>`;
   }
-  if(!shown.length)h+=`<div class="empty">${q||pohFiltr?'Nic jsme nenašli.':'Zatím nic k zobrazení.'}</div>`;
+  if(!shown.length)h+=`<div class="empty">${q||pohFiltr?'Nic jsme nenašli.':ua?`Na účtu ${esc(ua.nm)} zatím nejsou žádné pohyby.`:'Zatím nic k zobrazení.'}</div>`;
   let den='';
   shown.forEach((x,i)=>{
     const d=pohDen(x.d);
     if(d!==den){den=d;h+=`<div class="pohden">${esc(d)}</div>`;}
+    const ven=ua?x.accSign<0:x.volne;
     h+=`<div class="mv" onclick="pohClick(poh[${i}])">
-      <div class="mvi" style="background:${x.volne?'var(--neg-bg)':'var(--teal-bg)'};color:${x.volne?'var(--neg)':'var(--teal)'}">${ic(x.ikona||'coins',19)}</div>
+      <div class="mvi" style="background:${ven?'var(--neg-bg)':'var(--teal-bg)'};color:${ven?'var(--neg)':'var(--teal)'}">${ic(x.ikona||'coins',19)}</div>
       <div class="m"><div class="t1">${esc(x.label)}</div><div class="t2">${esc(x.sub)}</div></div>
-      <span class="num mva" style="color:${x.volne?'var(--neg)':'var(--text2)'}">${x.volne?'−':''}${fm(x.a)}</span></div>`;});
+      <span class="num mva" style="color:${ven?'var(--neg)':ua?'var(--teal)':'var(--text2)'}">${ven?'−':ua?'+':''}${fm(x.a)}</span></div>`;});
   if(!q&&list.length>pohLimit)h+=`<button class="btn gho" style="width:100%;margin-top:12px" onclick="pohLimit+=5;pohObnov()">Načíst další</button>`;
   return h;
 }
@@ -3243,11 +3251,13 @@ function logModal(cid,iid,li,pid){
   const per=pid?(S.periods.find(x=>x.id===pid)||P()):P();
   const c=per.cats.find(x=>x.id===cid),it=c&&c.it.find(x=>x.id===iid),le=it&&it.log[li];if(!le)return;
   mctx={cid,iid,li,pid:per.id};
-  openModal(`<h3>Upravit zápis</h3><div class="md">${esc(it.nm)} · ${esc(c.nm)}${per.id!==P().id?' · '+esc(per.nm):''}</div>
+  openModal(`<h3>Upravit zápis</h3>${per.id!==P().id?`<div class="md">${esc(per.nm)}</div>`:''}
+    <div class="fr"><div class="fg"><span class="fl">Kategorie</span><select class="inp" id="m_cat" onchange="logModalPol()">${per.cats.map(x=>`<option value="${x.id}" ${x.id===cid?'selected':''}>${esc(x.nm)}</option>`).join('')}</select></div>
+      <div class="fg"><span class="fl">Položka</span><select class="inp" id="m_it" onchange="logModalLink()"></select></div></div>
     <div class="fr"><div class="fg"><span class="fl">Datum</span><input class="inp" id="m_d" type="date" value="${le.d||todayISO()}"></div>
       <div class="fg"><span class="fl">Částka</span><input class="inp num" id="m_a" type="number" step="0.01" value="${le.a||0}" onkeydown="if(event.key==='Enter')saveLog()"></div></div>
     <div class="fg"><span class="fl">Poznámka</span><input class="inp" id="m_n" value="${esc(le.n||'')}" onkeydown="if(event.key==='Enter')saveLog()"></div>
-    ${linkTarget(it)?`<div class="mini" style="margin-top:10px">${ic('check',13)} Propisuje se do „${esc(linkTarget(it).obj.nm)}", oprava se přenese i tam.</div>`:''}
+    <div id="m_link"></div>
     ${S.accounts.length?`<div class="fg"><span class="fl">Zaplaceno z účtu</span>
       <select class="inp" id="m_acc">
         <option value="" ${le.acc?'':'selected'}>Bez účtu</option>
@@ -3256,13 +3266,37 @@ function logModal(cid,iid,li,pid){
       <div class="mini" style="margin-top:5px">Změna účtu peníze přesune: vrátí je tam, odkud odešly, a odečte z nově vybraného.</div></div>`:''}
     <div class="macts"><button class="btn gho" onclick="closeModal()">Zrušit</button><button class="btn fill" onclick="saveLog()">Uložit</button></div>
     <div style="margin-top:14px;padding-top:14px;border-top:1.5px solid var(--line)"><button class="btn dgr sm" onclick="delLog('${cid}','${iid}',${li},'${per.id}')">${ic('trash',14)} Smazat zápis</button></div>`);
+  logModalPol();
   setTimeout(()=>{const el=document.getElementById('m_a');el?.focus();el?.select();},50);
 }
+/* Zápis jde přeřadit do jiné kategorie a položky (Patrik 5. 10. 2026:
+   „nemůžu upravit kategorii"). Po změně kategorie se položka
+   nepředvybírá, stejně jako v Zápisu, ať částka omylem nespadne jinam.
+   Propojení se přerovná v saveLog: starý odraz zmizí, nový vznikne. */
+const logModalPer=()=>mctx.pid?(S.periods.find(x=>x.id===mctx.pid)||P()):P();
+function logModalPol(){
+  const per=logModalPer(),cid=document.getElementById('m_cat').value,c=per.cats.find(x=>x.id===cid),el=document.getElementById('m_it');
+  const puvodni=cid===mctx.cid;
+  el.innerHTML=(puvodni?'':`<option value="">${c&&c.it.length?'Vyber položku':'V kategorii nejsou položky'}</option>`)
+    +(c?c.it.map(x=>`<option value="${x.id}" ${puvodni&&x.id===mctx.iid?'selected':''}>${esc(x.nm)}</option>`).join(''):'');
+  logModalLink();}
+function logModalLink(){
+  const per=logModalPer(),box=document.getElementById('m_link');if(!box)return;
+  const c0=per.cats.find(x=>x.id===mctx.cid),it0=c0&&c0.it.find(x=>x.id===mctx.iid);
+  const c=per.cats.find(x=>x.id===document.getElementById('m_cat').value),it=c&&c.it.find(x=>x.id===document.getElementById('m_it').value);
+  const lo=linkTarget(it0),ln=it?linkTarget(it):lo;
+  let t='';
+  if(ln&&lo&&ln.obj===lo.obj)t=`Propisuje se do „${esc(ln.obj.nm)}", oprava se přenese i tam.`;
+  else{if(lo)t+=`Z „${esc(lo.obj.nm)}" se zápis odebere. `;if(ln)t+=`Nově se propíše do „${esc(ln.obj.nm)}".`;}
+  box.innerHTML=t?`<div class="mini" style="margin-top:10px">${ic('check',13)} ${t.trim()}</div>`:'';}
 function saveLog(){
   const per=mctx.pid?(S.periods.find(x=>x.id===mctx.pid)||P()):P();
   const c=per.cats.find(x=>x.id===mctx.cid),it=c&&c.it.find(x=>x.id===mctx.iid),le=it&&it.log[mctx.li];if(!le)return;
   const a=Math.abs(num(document.getElementById('m_a').value));if(!a){toast('Zadej částku');return;}
   const d=document.getElementById('m_d').value||le.d,n=document.getElementById('m_n').value.trim();
+  const catEl=document.getElementById('m_cat'),itEl=document.getElementById('m_it');
+  const tc=catEl?per.cats.find(x=>x.id===catEl.value):c,ti=tc&&(itEl?tc.it.find(x=>x.id===itEl.value):it);
+  if(!ti){toast('Vyber položku');return;}
   if(!le.id)le.id=uid();          // hodně stará data nemusí mít id
   removeLinked(le.id);
   it.log.splice(mctx.li,1);
@@ -3272,8 +3306,9 @@ function saveLog(){
   const accEl=document.getElementById('m_acc'),novyAcc=accEl?accEl.value:(le.acc||'');
   if(le.acc)accBump(le.acc,le.a);
   if(novyAcc&&accById(novyAcc)){novy.acc=novyAcc;accBump(novyAcc,-a);}
-  const r=logToDate(c,it,novy);
-  openItem=mctx.iid;closeModal();toast('Upraveno'+(r.jinam?` · přesunuto do „${r.period.nm}"`:''));commit();
+  const r=logToDate(tc,ti,novy);
+  openItem=ti.id;closeModal();
+  toast((ti!==it?`Přesunuto do „${tc.nm}: ${ti.nm}"`:'Upraveno')+(r.jinam?` · období „${r.period.nm}"`:''));commit();
 }
 function addItem(cid){const c=P().cats.find(x=>x.id===cid);if(!c)return;const nm=document.getElementById('nit-'+cid).value.trim();if(!nm){toast('Zadej název');return;}c.it.push({id:uid(),nm,pl:num(document.getElementById('nitp-'+cid).value),log:[]});commit();
   toast('Položka '+nm+' přidána');setTimeout(()=>document.getElementById('nit-'+cid)?.focus(),30);}   // pole zůstanou otevřená pro další

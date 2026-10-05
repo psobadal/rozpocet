@@ -581,6 +581,17 @@ S.tax            — daň z úroků (výchozí 15 %)
   Stejná záloha jde obnovit v Můj budget (přesun dat, viz
   `mujrozpocet/CLAUDE.md`); akcie a ETF se tam vedou ručně.
 
+- **Úprava zápisu umí změnit kategorii a položku** (`logModal`,
+  `logModalPol`, `logModalLink`, `saveLog`; Patrik 5. 10. 2026). Po změně
+  kategorie se položka nepředvybírá, stejně jako v Zápisu. Propojení se
+  přerovná samo: starý odraz v dluhu, obálce nebo investici zmizí
+  (`removeLinked`) a nová položka si případně založí svůj (`pushLinked`
+  přes `logToDate`). Dialog to předem napíše.
+- **Vybraný účet zúží Pohyby na Přehledu** (`pohAcc`). Klik na účet
+  v pruhu nad hlavním číslem dál nastavuje účet pro nové zápisy, a k tomu
+  Pohyby ukážou jen jeho pohyby, s plusem a mínusem ze strany účtu
+  (`accSign`) jako výpis z banky. „všechny účty" v nadpisu výběr zruší.
+
 ## Nástrahy při editaci/testování
 
 - **Read/Grep tool občas zobrazí `/` jako `\`** ve výstupu (vizuální artefakt,
