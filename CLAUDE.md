@@ -603,6 +603,16 @@ S.tax            — daň z úroků (výchozí 15 %)
   výdaj se dál nepočítá (sinking fund). Starší vrácení příznak nemají
   a zůstávají, jak byla.
 
+- **Barvy u úspor** (`stavBarva`, položky, řádky kategorií, koláč;
+  Patrik 5. 10. 2026: „proč je to žluté"). U výdajů je nad 85 % plánu
+  zlatá a přes plán červená. U úspor (kategorie nebo položka typu
+  `save`) je splněný i překročený plán zelený a pod názvem stojí
+  „o X víc", ne „přes o X".
+- **Nové období plusem v hlavičce.** Na posledním období je místo
+  vypnuté šipky vpřed tlačítko plus (`.period .nav.novy`), které otevře
+  `newPeriodModal`. Dřív šlo jen přes Nastavení a banner po konci
+  cyklu a Patrik ho musel hledat.
+
 ## Nástrahy při editaci/testování
 
 - **Read/Grep tool občas zobrazí `/` jako `\`** ve výstupu (vizuální artefakt,

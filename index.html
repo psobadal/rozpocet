@@ -99,6 +99,9 @@ svg.i{display:inline-block;vertical-align:-2.5px;flex:none}
 .period .nav{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line2);background:var(--bg);cursor:pointer;color:var(--text2);display:grid;place-items:center;flex:none}
 .period .nav:hover{border-color:var(--accent);color:var(--accent)}
 .period .nav[disabled]{opacity:.3;cursor:default}
+/* Na posledním období je místo šipky vpřed plus: nové období se dřív
+   zakládalo jen v Nastavení a Patrik ho musel hledat (5. 10. 2026). */
+.period .nav.novy{border-color:var(--accent);color:var(--accent-d)}
 .period .mid{flex:1;text-align:center;min-width:0}
 .period .pn{font-size:16px;font-weight:500}
 .period .pd{font-size:12px;color:var(--text3);margin-top:1px}
@@ -1595,7 +1598,8 @@ function R(){
   h+=`<div class="period">
     <button class="nav" ${idx<=0?'disabled':''} onclick="switchPeriod(-1)">${ic('cleft',18)}</button>
     <div class="mid"><div class="pn">${esc(p.nm)}</div><div class="pd">${fdFull(p.from)} → ${fdFull(p.to)}</div></div>
-    <button class="nav" ${idx>=S.periods.length-1?'disabled':''} onclick="switchPeriod(1)">${ic('cright',18)}</button>
+    ${idx>=S.periods.length-1?`<button class="nav novy" title="Nové období" aria-label="Založit nové období" onclick="newPeriodModal()">${ic('plus',18)}</button>`
+      :`<button class="nav" title="Další období" aria-label="Další období" onclick="switchPeriod(1)">${ic('cright',18)}</button>`}
     <button class="edit" title="Upravit období" onclick="periodEditModal()">${ic('edit',17)}</button>
   </div>`;
   h+=`<div class="tabs">`+visTabs.map((t,i)=>`<button class="tab ${tab===t.id?'on':''}${i>=4?' tov':''}" onclick="go('${t.id}')">${ic(t.icon,16)} <span class="tl">${esc(t.label)}</span></button>`).join('')
@@ -1714,7 +1718,7 @@ function vPrehled(p){
   h+=`<div class="card"><div class="ch"><span class="ct">Kam jdou peníze</span><a onclick="go('vydaje')">detail →</a></div>`;
   const cats=p.cats.map((c,i)=>({c,a:catActualDisplay(c,p.id),pl:catPlan(c),i})).filter(x=>x.a>0||x.pl>0).sort((a,b)=>b.a-a.a);
   if(!cats.length)h+=`<div class="empty">Zatím žádné výdaje. Přidej první přes „Rychlý výdaj".</div>`;
-  cats.forEach(({c,a,pl,i})=>{const mx=Math.max(a,pl,1),over=a>pl&&pl>0;
+  cats.forEach(({c,a,pl,i})=>{const mx=Math.max(a,pl,1),over=a>pl&&pl>0&&c.kind!=='save';
     h+=`<div class="barrow" onclick="openCat('${c.id}')"><div class="barinfo"><span class="n"><span style="color:${col(i)}">${ic(c.icon,16)}</span>${esc(c.nm)}</span><span class="v">${fm(a)}${pl?' / '+fm(pl):''}</span></div>
       <div class="track"><div class="plan" style="width:${pl/mx*100}%;background:${col(i)}"></div><div class="act" style="width:${a/mx*100}%;background:${over?'var(--neg)':col(i)}"></div></div></div>`;});
   if(cats.length)h+=`<div class="totals"><span style="color:var(--text3)">Celkem výdaje</span><span class="num">${fm(sumPlan(p))} → ${fm(sumActualDisplay(p))}</span></div>`;
@@ -1760,9 +1764,9 @@ function vydajeKolac(rows,tot,plan){
   const zb=plan-tot;
   /* Řádek pod koláčem mluví o tom samém co prostředek: bez výběru o celém
      cyklu, s vybranou výsečí o její kategorii (Patrik 29. 9. 2026). */
-  const pod=(a,pl,celk)=>pl>0?(a>pl?{t:'přes plán o '+fm(a-pl),c:'neg'}:{t:'zbývá '+fm(pl-a)+(celk?' do výplaty':' z plánu'),c:'pos'}):{t:'bez plánu',c:'nic'};
+  const pod=(a,pl,celk,sp)=>pl>0?(a>pl?(sp?{t:'o '+fm(a-pl)+' víc, než je plán',c:'pos'}:{t:'přes plán o '+fm(a-pl),c:'neg'}):{t:'zbývá '+fm(pl-a)+(celk?' do výplaty':' z plánu'),c:'pos'}):{t:'bez plánu',c:'nic'};
   const def=`<div class="l">utraceno</div><div class="v">${fmN(tot)}</div><div class="l">${plan>0?'z '+fmN(plan):'bez plánu'}</div>`;
-  donuts[id]={sw:13,def,cum:donutCum(s.map(r=>r.a)),pod:{def:pod(tot,plan,true),seg:s.map(r=>pod(r.a,r.pl))},mid:s.map(r=>`<div class="l nm"><i class="dd" style="background:${col(r.i)}"></i>${esc(r.c.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${Math.round(r.a/tot*100)} %${r.pl>0?' · plán '+fmN(r.pl):''}</div>`)};
+  donuts[id]={sw:13,def,cum:donutCum(s.map(r=>r.a)),pod:{def:pod(tot,plan,true),seg:s.map(r=>pod(r.a,r.pl,false,r.c.kind==='save'))},mid:s.map(r=>`<div class="l nm"><i class="dd" style="background:${col(r.i)}"></i>${esc(r.c.nm)}</div><div class="v">${fmN(r.a)}</div><div class="l">${Math.round(r.a/tot*100)} %${r.pl>0?' · plán '+fmN(r.pl):''}</div>`)};
   return `<div class="vkolac">
     <div class="vk-in" id="${id}" onclick="donutKlep(event,'${id}')">
       <svg viewBox="0 0 150 150" width="180" height="180" role="group" aria-label="Podíl kategorií na výdajích">
@@ -1812,9 +1816,13 @@ function donutKlep(e,id){
 const donutCum=a=>{const t=a.reduce((x,y)=>x+y,0);let c=0;return a.map(v=>(c+=v)/(t||1));};
 /* Řádek kategorie: pruh se barví podle stavu (v pořádku / blízko plánu /
    přečerpáno), ne podle kategorie — ta má svou barvu v ikoně. */
+/* Barva stavu podle plánu. U výdajů je blízko plánu zlatá a přes plán
+   červená. U úspor (50/30/20 „Úspora") je splněný i překročený plán dobrá
+   zpráva, proto zelená (Patrik 5. 10. 2026: „proč je to žluté"). */
+const stavBarva=(a,pl,sp)=>pl>0&&a>pl?(sp?'var(--teal)':'var(--neg)'):(pl>0&&Math.round(a/pl*100)>85&&!sp?'var(--gold)':'var(--teal)');
 function catRow({c,i,a,pl,k}){
-  const pu=pl>0?Math.round(a/pl*100):0,over=pl>0&&a>pl;
-  const stav=over?'var(--neg)':pu>85?'var(--gold)':'var(--teal)';
+  const pu=pl>0?Math.round(a/pl*100):0,sp=c.kind==='save',over=pl>0&&a>pl&&!sp;
+  const stav=stavBarva(a,pl,sp);
   return `<div class="catrow"${k>=0?donutRow('dn-vyd',k):''} onclick="openCat('${c.id}')">
     <div class="crh">
       <div class="cic" style="background:${col(i)}1f;color:${col(i)}">${ic(c.icon,18)}</div>
@@ -1827,8 +1835,8 @@ function catRow({c,i,a,pl,k}){
 function catDetail(p,c){
   const aDirect=catActual(c),envA=envSpendForCat(c.nm,p.id),a=aDirect+envA,pl=catPlan(c),diff=pl-a;
   const ci=p.cats.findIndex(x=>x.id===c.id);
-  const pu=pl>0?Math.round(a/pl*100):0,over=pl>0&&a>pl;
-  const stav=over?'var(--neg)':pu>85?'var(--gold)':'var(--teal)';
+  const pu=pl>0?Math.round(a/pl*100):0,sp=c.kind==='save',over=pl>0&&a>pl&&!sp;
+  const stav=stavBarva(a,pl,sp);
   /* Hlava detailu mluví stejně jako přehled Výdajů: ikona v barvě
      kategorie, velká částka, pruh obarvený podle stavu. Ovládání
      kategorie je tichá řada pod ní, ať nepřekřikuje čísla. */
@@ -1837,7 +1845,7 @@ function catDetail(p,c){
     <div class="cic" style="background:${col(ci)}1f;color:${col(ci)}">${ic(c.icon,24)}</div>
     <div class="nm">${esc(c.nm)}</div>
     <div class="big" style="${over?'color:var(--neg)':''}">${fm(a)}</div>
-    <div class="sub">${pl>0?(over?`přes plán ${fm(pl)} o ${fm(-diff)}`:`z plánu ${fm(pl)} · zbývá ${fm(diff)}`):'bez plánu'}${envA>0?` · z toho ${fm(envA)} z obálek`:''}</div>
+    <div class="sub">${pl>0?(over?`přes plán ${fm(pl)} o ${fm(-diff)}`:diff<0?`plán ${fm(pl)} · o ${fm(-diff)} víc`:`z plánu ${fm(pl)} · zbývá ${fm(diff)}`):'bez plánu'}${envA>0?` · z toho ${fm(envA)} z obálek`:''}</div>
     ${pl>0?`<div class="cdbar"><i style="width:${Math.min(100,pu)}%;background:${stav}"></i></div>`:''}
     <div class="cdacts">
       <button onclick="catModal('${c.id}')">${ic('edit',14)} Upravit</button>
@@ -1848,16 +1856,16 @@ function catDetail(p,c){
   h+=`<div class="card itlist"><div class="ct" style="margin-bottom:4px">Položky</div>`;
   if(!c.it.length)h+=`<div class="empty">Zatím žádné položky.</div>`;
   c.it.forEach(it=>{const ia=itemActual(it),d=(it.pl||0)-ia,isOpen=openItem===it.id;const logs=(it.log||[]).slice().sort((x,y)=>(y.d||'').localeCompare(x.d||''));
-    const ipu=it.pl>0?Math.round(ia/it.pl*100):0,istav=it.pl>0&&ia>it.pl?'var(--neg)':ipu>85?'var(--gold)':'var(--teal)';
+    const ipu=it.pl>0?Math.round(ia/it.pl*100):0,isp=itemKind(it,c)==='save';
     /* Varianta D (vybral Patrik 29. 9. 2026): řádek se podbarví tak daleko,
        kolik z plánu je utraceno, v barvě stavu (v pořádku, blízko plánu,
        přes plán). Žádný zvláštní pruh ani podtitulek; pod názvem je jen to,
        co za řeč stojí: o kolik je položka přes plán a kam se propisuje. */
-    const over=it.pl>0&&ia>it.pl,w=it.pl>0?Math.min(100,ia/it.pl*100):0;
+    const nad=it.pl>0&&ia>it.pl,over=nad&&!isp,w=it.pl>0?Math.min(100,ia/it.pl*100):0;   // úspora nad plán není přešvih
     // pevná platba zaplacená celá je hotová věc, ne varování „blízko plánu“
-    const tint=over?'var(--neg-bg)':ipu>85&&!it.fixAmt?'var(--gold-bg)':'var(--teal-bg)';
+    const tint=over?'var(--neg-bg)':ipu>85&&!it.fixAmt&&!isp?'var(--gold-bg)':'var(--teal-bg)';
     const stitek=(it.kind||it.link)?`<span class="tag ${itemKind(it,c)==='save'?'ok':itemKind(it,c)==='want'?'wr':''}" style="${itemKind(it,c)==='need'?'background:var(--bg2);color:var(--text3)':''}">${KIND_LABEL[itemKind(it,c)]}</span>`:'';
-    const pod=[over?`<span class="neg">přes o ${fm(ia-it.pl)}</span>`:'',stitek,linkTarget(it)?'→ '+esc(linkTarget(it).obj.nm):''].filter(Boolean).join(' ');
+    const pod=[over?`<span class="neg">přes o ${fm(ia-it.pl)}</span>`:nad?`<span class="pos">o ${fm(ia-it.pl)} víc</span>`:'',stitek,linkTarget(it)?'→ '+esc(linkTarget(it).obj.nm):''].filter(Boolean).join(' ');
     h+=`<div class="item ${isOpen?'op':''}"><div class="itr" onclick="toggleItem('${it.id}')" aria-expanded="${isOpen}">
       ${w>0?`<div class="itfill" style="width:${w}%;background:${tint}"></div>`:''}
       <div class="itc">
