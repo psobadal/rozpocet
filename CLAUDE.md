@@ -622,6 +622,14 @@ S.tax            — daň z úroků (výchozí 15 %)
   koláč počítá odeslání na spoření jako výdaj a o penězích vrácených
   Přesunem neví. Čísla se nemění, je to jen vysvětlení.
 
+- **Grafy jdou projet myší i prstem** (`grafUkaz`, `grafObal`, `grafy[id]`;
+  Patrik 5. 10. 2026). Graf investic i graf jmění ve Statistikách: svislá
+  čára, tečka na křivce a štítek s datem a hodnotou, u čistého jmění
+  i rozpad. Prst štítek nechá, dokud neklepneš jinam; myš ho schová po
+  odjetí. `touch-action:pan-y`, takže svislý tah dál posouvá stránku.
+  Nativní `<title>` u grafu jmění zmizely (na dotyku nefungovaly).
+- „tento cyklus vloženo" se při záporu píše jako „vybráno X".
+
 ## Nástrahy při editaci/testování
 
 - **Read/Grep tool občas zobrazí `/` jako `\`** ve výstupu (vizuální artefakt,

@@ -441,6 +441,15 @@ select.inp{appearance:none;padding-right:30px;background-image:url("data:image/s
 .invhead .cy{font-size:12px;color:var(--text3);margin-top:2px}
 .invch{margin:12px 0 14px}
 .invch svg{width:100%;height:150px;display:block}
+/* Graf, po kterém jde přejet myší nebo prstem (grafUkaz): svislá čára,
+   tečka na křivce a štítek s datem a hodnotou nad grafem. Svisle se
+   stránka dál posouvá (pan-y), vodorovný tah prstem graf prochází. */
+.gch{position:relative;touch-action:pan-y;cursor:crosshair}
+.gch .gl{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed var(--line2);pointer-events:none;display:none}
+.gch .gd{position:absolute;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:var(--card);border:2.5px solid var(--cyan);pointer-events:none;display:none}
+.gch .gt{position:absolute;top:-6px;transform:translate(-50%,-100%);background:var(--text);color:var(--card);font-size:12px;line-height:1.4;padding:5px 10px;border-radius:9px;white-space:nowrap;pointer-events:none;display:none;z-index:3;text-align:center}
+.gch .gt b{font-weight:600}
+.gch.on .gl,.gch.on .gd,.gch.on .gt{display:block}
 .invax{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text3);margin-top:4px}
 .invax b{font-weight:500}
 .invrng{margin-top:10px;max-width:320px}
@@ -1932,7 +1941,7 @@ function catDetail(p,c){
 /* ---------- OBÁLKY ---------- */
 function vObalky(p){
   let h=tipBan('bulb','Obálka = peníze odložené na účel. <b>Vklad</b> se rovnou započítá jako „odloženo" (žádné dvojí psaní). Když <b>čerpáš</b>, jen ubyde z obálky. Zapisuješ starší úspory, co jsi neodkládal teď z výplaty? Uprav zůstatek přímo v ✏️, nesrazí ti to zbytečně tenhle cyklus.');
-  h+=pageHero('Odloženo v obálkách',fm(totalEnvelopes()),`tento cyklus ${fm(savedInPeriod(p.id))}`,'var(--gold)');
+  h+=pageHero('Odloženo v obálkách',fm(totalEnvelopes()),(x=>x<0?`tento cyklus vybráno ${fm(-x)}`:`tento cyklus ${fm(x)}`)(savedInPeriod(p.id)),'var(--gold)');
   h+=`<div style="text-align:center;margin-bottom:16px"><button class="btn fill" onclick="envModal()">${ic('plus',15)} Nová obálka</button></div>`;
   if(!S.envelopes.length)h+=`<div class="card"><div class="empty">Zatím žádné obálky.</div></div>`;
   S.envelopes.forEach((e,i)=>{h+=envCard(p,e,i);});
@@ -1992,7 +2001,7 @@ function vInvestice(p){
     <div class="lbl">Hodnota investic a úspor</div>
     <div class="big">${fm(ti)}</div>
     ${put>0?`<div class="gn ${gain>=0?'pos':'neg'}">${gain>=0?'+':'−'}${fm(Math.abs(gain))} · ${gain>=0?'+':'−'}${(Math.abs(gain)/put*100).toFixed(1).replace('.',',')} % <span>od vložení</span></div>`:''}
-    <div class="cy">tento cyklus vloženo ${fm(investedInPeriod(p.id))}</div></div>`;
+    <div class="cy">${(x=>x<0?'tento cyklus vybráno '+fm(-x):'tento cyklus vloženo '+fm(x))(investedInPeriod(p.id))}</div></div>`;
   if(S.investments.length)h+=invChart(S.investments);
   h+=tipBan('percent',`<b>Spořicí účet s pevným úrokem:</b> nastav <b>úrok % p.a.</b> a appka k 1. dni v měsíci sama připíše úrok po zdanění (daň ${S.tax} %).<br><b>Akcie a ETF:</b> úrok nech na 0 a jednou za čas dej <b>Přecenit</b>. Zadáš hodnotu podle brokera a rozdíl se zapíše jako zhodnocení.`,'info');
   h+=`<div class="invtools">
@@ -2037,6 +2046,25 @@ function invSeries(list){
     pts.push({d:t,v:list.reduce((s,inv)=>s+invValAt(inv,t),0)});}
   return pts;
 }
+/* Body grafu pro grafUkaz: vodorovná a svislá poloha jako podíl šířky
+   a výšky (graf se roztahuje), plus funkce na text štítku. */
+const grafy={};
+function grafUkaz(e,id){
+  const g=grafy[id],box=e.currentTarget;if(!g||!g.xs.length)return;
+  const r=box.getBoundingClientRect();if(!r.width)return;
+  const fx=(e.clientX-r.left)/r.width;
+  let k=0,best=1e9;g.xs.forEach((x,i)=>{const d=Math.abs(x-fx);if(d<best){best=d;k=i;}});
+  const x=g.xs[k]*r.width,y=g.ys[k]*r.height;
+  box.classList.add('on');
+  box.querySelector('.gl').style.left=x+'px';
+  const d=box.querySelector('.gd');d.style.left=x+'px';d.style.top=y+'px';
+  const t=box.querySelector('.gt');t.innerHTML=g.tip(k);
+  const tw=t.offsetWidth;t.style.left=Math.min(r.width-tw/2,Math.max(tw/2,x))+'px';
+}
+// myš: zmizí po odjetí; prst: zůstane, dokud neklepneš jinam
+function grafSkryj(e){if(e.pointerType==='mouse')e.currentTarget.classList.remove('on');}
+document.addEventListener('pointerdown',e=>{document.querySelectorAll('.gch.on').forEach(b=>{if(!b.contains(e.target))b.classList.remove('on');});});
+const grafObal=(id,svg,barva)=>`<div class="gch" onpointermove="grafUkaz(event,'${id}')" onpointerdown="grafUkaz(event,'${id}')" onpointerleave="grafSkryj(event)">${svg}<i class="gl"></i><i class="gd"${barva?` style="border-color:${barva}"`:''}></i><div class="gt"></div></div>`;
 function invChart(list){
   const pts=invSeries(list),vals=pts.map(x=>x.v),n=pts.length,W=640,H=150,PT=10,PB=8;
   let mn=Math.min(...vals),mx=Math.max(...vals);const pad=(mx-mn)*.15||Math.abs(mx)*.05||1;mn-=pad;mx+=pad;
@@ -2045,10 +2073,11 @@ function invChart(list){
   // zhodnocení za období bez vkladů — rozdíl hodnot by vydával vložené peníze za zisk
   const zm=list.reduce((s,v)=>s+invGainSince(v,pts[0].d),0);
   const od=pts[0].d,odTxt=INV_RNG[invRange]&&INV_RNG[invRange]<=31?fd(od):(+od.slice(5,7))+'/'+od.slice(2,4);
+  grafy.inv={xs:pts.map((q,i)=>X(i)/W),ys:pts.map(q=>Y(q.v)/H),tip:k=>`${fdFull(pts[k].d)}<br><b>${fm(pts[k].v)}</b>`};
   return `<div class="invch">
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    ${grafObal('inv',`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
       <path d="${line} L ${W} ${H} L 0 ${H} Z" fill="var(--cyan)" opacity=".10"/>
-      <path d="${line}" fill="none" stroke="var(--cyan)" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      <path d="${line}" fill="none" stroke="var(--cyan)" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`)}
     <div class="invax"><span>${odTxt}</span><span>zhodnocení <b class="${zm>=0?'pos':'neg'}">${zm>=0?'+':'−'}${fm(Math.abs(zm))}</b></span><span>dnes</span></div>
     <div class="seg invrng">${Object.keys(INV_RNG).map(k=>`<button class="${invRange===k?'on':''}" onclick="invRange='${k}';R()">${k}</button>`).join('')}</div>
   </div>`;
@@ -2449,22 +2478,22 @@ function nwChart(){
   const good=diff*s.up>=0;                          // u dluhu je pokles dobrá zpráva
   let h=`<div class="card">${head}
     <div class="seg" style="margin-bottom:16px">${Object.entries(NW_SER).map(([k,v])=>`<button class="${nwSub===k?'on':''}" onclick="setNwSub('${k}')">${v.label}</button>`).join('')}</div>
-    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+    ${grafObal('nw',`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
       ${mn<0&&mx>0?`<line x1="${PL}" y1="${Y(0).toFixed(1)}" x2="${W-PR}" y2="${Y(0).toFixed(1)}" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="4 4"/>`:''}
       <path d="${line} L ${X(n-1).toFixed(1)} ${base} L ${X(0).toFixed(1)} ${base} Z" fill="${s.col}" opacity=".10"/>
       <path d="${line}" fill="none" stroke="${s.col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-      <circle cx="${X(n-1).toFixed(1)}" cy="${Y(last).toFixed(1)}" r="4" fill="${s.col}"/>`;
-  pts.forEach((p,i)=>{h+=`<rect x="${(X(i)-(W-PL-PR)/(n-1)/2).toFixed(1)}" y="0" width="${((W-PL-PR)/(n-1)).toFixed(1)}" height="${H}" fill="transparent"><title>${fdFull(p.d)}
-Čisté jmění: ${fm(p.nw)}
-Investice: ${fm(p.inv)} · Obálky: ${fm(p.env)} · Dluhy: −${fm(p.debt)}</title></rect>`;});
-  h+=`</svg>
+      <circle cx="${X(n-1).toFixed(1)}" cy="${Y(last).toFixed(1)}" r="4" fill="${s.col}"/></svg>`,s.col)}`;
+  grafy.nw={xs:pts.map((p,i)=>X(i)/W),ys:pts.map(p=>Y(s.get(p))/H),
+    tip:k=>{const p=pts[k];return `${nwMon(p.d)}<br><b>${s.label}: ${s===NW_SER.debt?'−':''}${fm(s.get(p))}</b>`
+      +(s===NW_SER.nw?`<br>Investice ${fm(p.inv)}<br>Obálky ${fm(p.env)} · Dluhy −${fm(p.debt)}`:'');}};
+  h+=`
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:8px">
       <div><div class="mini">${nwMon(pts[0].d)}</div><div class="num" style="font-size:14px;color:var(--text2)">${fm(first)}</div></div>
       <div style="text-align:right"><div class="mini">${nwMon(pts[n-1].d)}</div><div class="num" style="font-size:14px;color:${s.col}">${fm(last)}</div></div></div>
     <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1.5px solid var(--line)">
       <span class="mini">Za ${n-1} ${n-1===1?'měsíc':n-1<5?'měsíce':'měsíců'}</span><div style="flex:1"></div>
       <span class="tag ${good?'ok':'bd'}">${diff>=0?'+':'−'}${fm(Math.abs(diff))}</span></div>
-    <div class="mini" style="margin-top:10px">Minulost se dopočítá zpětně ze zapsaných pohybů: vkladů, čerpání z obálek a splátek dluhů. Každá složka má vlastní měřítko, proto se přepíná. Najetím na graf uvidíš celý rozpad k danému dni.</div></div>`;
+    <div class="mini" style="margin-top:10px">Minulost se dopočítá zpětně ze zapsaných pohybů: vkladů, čerpání z obálek a splátek dluhů. Každá složka má vlastní měřítko, proto se přepíná. Přejeď po grafu myší nebo prstem a uvidíš hodnotu k danému měsíci, u čistého jmění i rozpad.</div></div>`;
   return h;
 }
 function nwBlock(){return mrow([['Investice',fm(totalInvest()),'color:var(--cyan)'],['Obálky',fm(totalEnvelopes()),'color:var(--gold)'],['Dluhy','−'+fm(totalDebt()),'color:var(--blue)']])+`<div class="card" style="text-align:center"><div class="ct" style="margin-bottom:6px">Čisté jmění</div><div class="num" style="font-size:28px;color:${netWorth()>=0?'var(--teal)':'var(--neg)'}">${fm(netWorth())}</div><div class="mini">investice + obálky − dluhy</div></div>`+nwChart();}
