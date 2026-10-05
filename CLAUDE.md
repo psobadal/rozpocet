@@ -592,6 +592,17 @@ S.tax            — daň z úroků (výchozí 15 %)
   Pohyby ukážou jen jeho pohyby, s plusem a mínusem ze strany účtu
   (`accSign`) jako výpis z banky. „všechny účty" v nadpisu výběr zruší.
 
+- **Přesun má Kam a vrácení z obálky snižuje odloženo** (Patrik
+  5. 10. 2026). Přesun (zpět na účet) dřív připsal peníze jen na účet
+  vybraný nahoře na Přehledu, a bez něj nikam. Teď se cílový účet vybírá
+  v panelu (`zapisKam`, na dotyku štítek v kroku Kolik); když účty
+  existují a žádný vybraný není, nic se nezapíše. Vrácení z obálky na
+  účet dostane `zpet:true` a `savedInPeriod` ho odečte, stejně jako
+  výběr z investice odjakživa snižuje `investedInPeriod`: peníze jsou
+  zase volné a „zbývá volných" o ně vzroste. **Čerpání** z obálky na
+  výdaj se dál nepočítá (sinking fund). Starší vrácení příznak nemají
+  a zůstávají, jak byla.
+
 ## Nástrahy při editaci/testování
 
 - **Read/Grep tool občas zobrazí `/` jako `\`** ve výstupu (vizuální artefakt,

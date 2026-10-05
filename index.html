@@ -1002,7 +1002,12 @@ const incActual=p=>p.income.reduce((s,r)=>s+(r.ac||0),0);
 const incBase=p=>{const a=incActual(p);return a>0?a:incPlan(p);};
 // .src = záznam vznikl z propojené položky výdajů → do „zbývá" se počítá už tam, tady ne (žádné dvojí počítání)
 // .adj = oprava/historický zůstatek, ne nové odložení z výplaty tenhle cyklus
-const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pid===pid&&h.t==='in'&&!h.src&&!h.adj).reduce((ss,h)=>ss+h.a,0),0);
+/* Vrácení z obálky zpátky na účet (`zpet`, Přesun) je opak vkladu: peníze
+   se vrací mezi volné, takže odloženo v cyklu o ně klesne, stejně jako
+   výběr z investice snižuje investováno (Patrik 5. 10. 2026). Obyčejné
+   čerpání na výdaj se sem nepočítá, ty peníze se utratily už při vkladu.
+   Starší vrácení příznak nemají a zůstávají, jak byla. */
+const savedInPeriod=pid=>S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pid===pid&&!h.src&&!h.adj&&(h.t==='in'||h.zpet)).reduce((ss,h)=>ss+(h.t==='in'?h.a:-h.a),0),0);
 // h.k='gain' = zhodnocení/úrok, ne tvoje vložené peníze
 const investedInPeriod=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid&&!h.src&&!h.k).reduce((ss,h)=>ss+h.a,0),0);
 const invIn=inv=>(inv.base||0)+(inv.hist||[]).filter(h=>!h.k).reduce((s,h)=>s+h.a,0);
@@ -1954,7 +1959,7 @@ function envCard(p,e,i){
       <button class="in" onclick="envMove('${e.id}','in')">${ic('plus',15)} Vložit</button>
       <button onclick="envMove('${e.id}','out')">Čerpat</button></div>
     ${hist.length?`<div class="envhist"><div class="mini" style="margin-bottom:4px">Tento cyklus</div>${hist.map(x=>{const oi=histAll.indexOf(x);
-      return `<div class="envh"><span class="tag ${x.t==='in'?'ok':'bd'}">${x.t==='in'?'vklad':'čerpáno'}</span><span class="t">${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span>
+      return `<div class="envh"><span class="tag ${x.t==='in'?'ok':'bd'}">${x.t==='in'?'vklad':x.zpet?'výběr':'čerpáno'}</span><span class="t">${esc(x.n||'')}${x.cat?` · ${esc(x.cat)}`:''}</span>
         <span class="a" style="color:${x.t==='in'?'var(--teal)':'var(--neg)'}">${x.t==='in'?'+':'−'}${fm(x.a)}</span>
         <button class="ib" title="Smazat záznam" onclick="delEnvHist('${e.id}',${oi})">${ic('x',12)}</button></div>`;}).join('')}</div>`:''}
   </div>`;
@@ -2733,8 +2738,9 @@ const qaFixAmt=p=>{const it=qaSelItem(p);return it&&it.fixAmt&&it.pl>0?it.pl:0;}
    Pravidlo je vždy stejné: ze zdroje Výplata se prostě zapíše normální
    vklad/výdaj (to je to, co appka dělala vždycky). Ze zdroje Obálka/
    Investice se navíc PŘED tím odečte z té truhlice — u obálky je odečet
-   strukturálně neviditelný pro „zbývá volných" (stejně jako dosavadní
-   čerpání), u investice je to opravdový záporný zápis, který se v součtu
+   do kategorie neviditelný pro „zbývá volných" (stejně jako dosavadní
+   čerpání), vrácení na účet nese `zpet` a vrací peníze mezi volné
+   (viz savedInPeriod), u investice je to opravdový záporný zápis, který se v součtu
    sám vyruší s tím, co přibude na druhé straně. Jediné místo, kde se to
    samo nevyruší, je obálka jako zdroj mimo kategorii (obálka → obálka/
    investice/dluh) — tam se druhá strana označí `src`, ať se nezapočítá
@@ -2758,12 +2764,14 @@ function quickAdd(){const p=P();
   // fyzicky žádný účet neprochází.
   const accEl=document.getElementById('qacc');
   const acc=accEl?accEl.value:(S.ui.activeAcc||'');
+  if(qaXfer&&S.accounts.length&&!accById(acc)){toast('Vyber, na který účet');return;}
   let srcEntry=null;
 
   if(from.startsWith('env:')){
     const e=S.envelopes.find(x=>x.id===from.slice(4));if(!e)return;
     if(amt>(e.bal||0)){toast('V obálce '+e.nm+' není dost peněz');return;}
     const out={id:uid(),d:date,t:'out',a:amt,n:nm,pid:tp.id};
+    if(val==='vyplata')out.zpet=true;   // zpátky mezi volné, viz savedInPeriod
     if(val.startsWith('cat:')){const c=p.cats.find(x=>'cat:'+x.id===val);if(c)out.cat=c.nm;}
     e.bal=(e.bal||0)-amt;e.hist.push(out);srcEntry=out;
     if(val.startsWith('cat:')){   // obálka → kategorie: appka to odjakživa řeší jen značkou na obálce
@@ -2778,7 +2786,7 @@ function quickAdd(){const p=P();
 
   if(val==='vyplata'){   // zpátky na účet, bez kategorie — jen truhlice → výplata
     if(acc&&srcEntry){srcEntry.acc=acc;accBump(acc,amt);}
-    commit();toast(`${zNazev} → Účet: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
+    commit();toast(`${zNazev} → ${acc&&accById(acc)?accById(acc).nm:'Účet'}: ${fm(amt)}`+(jinam?` · ${tp.nm}`:''));
     setTimeout(()=>{const a=document.getElementById('qamt');if(a)a.value='';},60);return true;
   }
 
@@ -2836,7 +2844,7 @@ function allMovements(od){
   S.envelopes.forEach(e=>(e.hist||[]).forEach((h,hidx)=>{
     if(h.d<od)return;
     const volne=h.t==='in'&&!h.src;
-    out.push({d:h.d,a:h.a,ikona:e.icon,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):'čerpání'+(h.cat?' · '+h.cat:''))+accSub(h.acc,h.t==='out'),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
+    out.push({d:h.d,a:h.a,ikona:e.icon,label:'Obálka: '+e.nm,sub:(h.n?h.n+' · ':'')+(h.adj?'oprava zůstatku':h.t==='in'?(h.src?'z '+h.src:'vklad'):h.zpet?'výběr':'čerpání'+(h.cat?' · '+h.cat:''))+accSub(h.acc,h.t==='out'),icon:h.t==='in'?'arrowupright':'arrowdownleft',volne,rid:h.id||'',
       kind:'env',eid:e.id,hidx,acc:h.acc||'',accSign:h.t==='in'?-1:1});
   }));
   S.investments.forEach(inv=>(inv.hist||[]).forEach((h,hidx)=>{
@@ -2989,6 +2997,7 @@ function zapisPick(v){qaSel=v;qaItem='';
     if(c){zapisKrok=2;if(!c.it.length)qaItem='__new';}else zapisKrok=3;}
   zapisRe(true);if(qaItem==='__new')zapisFokus('qname');}
 function zapisFrom(v){qaFrom=v;if(zapisDotyk())zapisKrok=3;zapisRe();}
+function zapisKam(id){const q=document.getElementById('qacc');if(q)q.value=id;zapisAcc=id;zapisRe();}
 function zapisSubmit(){if(quickAdd()===true){zapisAmt='';zapisNote='';zapisName='';closeModal();}}
 
 /* ---------- Zápis na dotykovém displeji ----------
@@ -3108,7 +3117,7 @@ function zapisHTMLDotyk(){
   if(zapisKrok===1){
     if(qaXfer){
       const zdroje=[...S.envelopes.map(e=>({v:'env:'+e.id,nm:e.nm,ik:e.icon})),...S.investments.map(i=>({v:'inv:'+i.id,nm:i.nm,ik:i.icon}))];
-      h+=`<div class="zs-note-line" style="margin:2px 0 12px">Peníze zpět na účet${acc?`: <b>${esc(acc.nm)}</b>`:''}</div>`;
+      h+=`<div class="zs-note-line" style="margin:2px 0 12px">Peníze zpět na účet. Účet vybereš v dalším kroku.</div>`;
       h+=zdroje.length?zsGrid(zdroje.map(z=>`<button class="zt ${qaFrom===z.v?'on':''}" onclick="zapisFrom('${z.v}')">${ic(z.ik,21)}<span>${esc(z.nm)}</span></button>`))
         :`<div class="mini" style="padding:10px 0">Zatím nemáš žádnou obálku ani investici, ze které by šlo peníze vrátit.</div>`;
       return h;
@@ -3148,7 +3157,7 @@ function zapisHTMLDotyk(){
     :(S.ui.activeAcc&&accById(S.ui.activeAcc)?S.ui.activeAcc:(accById(S.ui.defAcc)?S.ui.defAcc:'')));
   let cesta,ik;
   if(qaXfer){const z=presunNazev(qaFrom);ik=(qaFrom.startsWith('env:')?S.envelopes.find(e=>'env:'+e.id===qaFrom):S.investments.find(i=>'inv:'+i.id===qaFrom))?.icon||'repeat';
-    cesta=`${esc(z)} ${ic('cright',13)} ${acc?esc(acc.nm):'účet'}`;}
+    cesta=`${esc(z)} ${ic('cright',13)} účet`;}
   else if(cc){ik=cc.icon;cesta=`${esc(cc.nm)} ${ic('cright',13)} ${qaItem==='__new'?esc(zapisName)+' <em>(nová)</em>':esc(itm?itm.nm:'')}`;}
   else{const o=cur.startsWith('env:')?S.envelopes.find(e=>'env:'+e.id===cur):cur.startsWith('inv:')?S.investments.find(i=>'inv:'+i.id===cur):S.debts.find(d=>'debt:'+d.id===cur);
     ik=o?.icon||'wallet';cesta=esc(o?o.nm:'');}
@@ -3171,8 +3180,8 @@ function zapisHTMLDotyk(){
   const dnes=qaDate||todayISO(),uc=accById(predvolAcc);
   h+=`<div class="zs-chips">
     <label class="zc">${ic('calendar',14)}<span id="qdatel">${datumPopis(dnes)}</span><input id="qdate" type="date" value="${dnes}" aria-label="Datum" onchange="document.getElementById('qdatel').textContent=datumPopis(this.value)"></label>
-    ${!qaXfer&&S.accounts.length?`<label class="zc">${ic('wallet',14)}<span id="qaccl">${uc?esc(uc.nm):'Bez účtu'}</span>${ic('cdown',13)}<select id="qacc" aria-label="Účet" onchange="zapisAcc=this.value;document.getElementById('qaccl').textContent=this.options[this.selectedIndex].text">
-      <option value="" ${predvolAcc?'':'selected'}>Bez účtu</option>
+    ${S.accounts.length?`<label class="zc">${ic('wallet',14)}<span id="qaccl">${qaXfer?(uc?'na '+esc(uc.nm):'Vyber účet'):(uc?esc(uc.nm):'Bez účtu')}</span>${ic('cdown',13)}<select id="qacc" aria-label="${qaXfer?'Na který účet':'Účet'}" onchange="zapisAcc=this.value;document.getElementById('qaccl').textContent=${qaXfer?"'na '+":''}this.options[this.selectedIndex].text">
+      <option value="" ${predvolAcc?'':'selected'} ${qaXfer?'disabled':''}>${qaXfer?'Vyber účet':'Bez účtu'}</option>
       ${S.accounts.map(a=>`<option value="${a.id}" ${predvolAcc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
     </select></label>`:''}</div>
     <div class="zs-pad" role="group" aria-label="Číselník">${['1','2','3','4','5','6','7','8','9',',','0','del'].map(k=>
@@ -3206,8 +3215,12 @@ function zapisHTML(){
     ${qaXfer?`<input type="hidden" id="qfrom" value="${esc(qaFrom)}">`:''}
     <div class="zs-amt"><input id="qamt" type="number" step="0.01" inputmode="decimal" placeholder="0" value="${esc(zapisAmt||(fix?String(fix):''))}" onkeydown="if(event.key==='Enter')zapisSubmit()"><span>Kč</span></div>`;
   if(qaXfer){
-    h+=`<div class="zs-lbl">Odkud</div>`+zsGrid(zdroje.map(z=>`<button class="zt ${qaFrom===z.v?'on':''}" onclick="zapisFrom('${z.v}')">${ic(z.ik,21)}<span>${esc(z.nm)}</span></button>`))
-      +`<div class="zs-note-line">${ic('cright',13)} Připíše se na účet${acc?`: <b>${esc(acc.nm)}</b>`:''}</div>`;
+    h+=`<div class="zs-lbl">Odkud</div>`+zsGrid(zdroje.map(z=>`<button class="zt ${qaFrom===z.v?'on':''}" onclick="zapisFrom('${z.v}')">${ic(z.ik,21)}<span>${esc(z.nm)}</span></button>`));
+    /* Kam: dřív se peníze připsaly jen na účet vybraný nahoře na Přehledu,
+       a bez něj nikam (Patrik 5. 10. 2026: „není kam"). */
+    if(S.accounts.length)h+=`<div class="zs-lbl">Kam</div>`+zsGrid(S.accounts.map(a=>`<button class="zt ${predvolAcc===a.id?'on':''}" onclick="zapisKam('${a.id}')">${ic(a.icon,21)}<span>${esc(a.nm)}</span></button>`))
+      +`<input type="hidden" id="qacc" value="${esc(predvolAcc)}">`;
+    h+=`<div class="zs-note-line">Peníze se vrátí mezi volné. Odloženo nebo investováno v cyklu se o ně sníží.</div>`;
   }else{
     h+=`<div class="zs-seg">`+ZSEG.filter(x=>x.k==='cat'||(x.k==='env'&&S.envelopes.length)||(x.k==='inv'&&S.investments.length)||(x.k==='debt'&&S.debts.length))
       .map(x=>`<button class="${seg===x.k?'on':''}" onclick="zapisSeg2('${x.k}')">${esc(x.l)}</button>`).join('')+`</div>`;
@@ -3229,8 +3242,7 @@ function zapisHTML(){
       <option value="" ${predvolAcc?'':'selected'}>Bez účtu</option>
       ${S.accounts.map(a=>`<option value="${a.id}" ${predvolAcc===a.id?'selected':''}>${esc(a.nm)}</option>`).join('')}
     </select></label>
-`:''}
-    ${qaXfer&&acc?`<span class="zp">${ic('wallet',15)}${esc(acc.nm)}</span>`:''}</div>
+`:''}</div>
     <button class="btn fill zs-go" onclick="zapisSubmit()">${qaXfer?'Přesunout':'Zapsat'}</button>`;
   return h;
 }
@@ -4190,7 +4202,7 @@ function delPeriod(){if(S.periods.length<=1){toast('Musí zůstat aspoň jedno o
 function exportData(){S.lastExport=todayISO();saveLS();const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='rozpocet-zaloha-'+todayISO()+'.json';a.click();URL.revokeObjectURL(url);toast('Záloha stažena');R();}
 function exportCSV(){const rows=[['Období','Kategorie','Položka','Datum','Poznámka','Částka']];
   S.periods.forEach(p=>p.cats.forEach(c=>c.it.forEach(it=>(it.log||[]).forEach(l=>rows.push([p.nm,c.nm,it.nm,l.d||'',l.n||'',l.a])))));
-  S.envelopes.forEach(e=>(e.hist||[]).forEach(x=>{const p=S.periods.find(q=>q.id===x.pid);rows.push([p?p.nm:'','Obálka: '+e.nm,x.t==='in'?'vklad':'čerpání',x.d||'',x.n||'',x.t==='in'?x.a:-x.a]);}));
+  S.envelopes.forEach(e=>(e.hist||[]).forEach(x=>{const p=S.periods.find(q=>q.id===x.pid);rows.push([p?p.nm:'','Obálka: '+e.nm,x.t==='in'?'vklad':x.zpet?'výběr na účet':'čerpání',x.d||'',x.n||'',x.t==='in'?x.a:-x.a]);}));
   S.debts.forEach(d=>(d.pay||[]).forEach(x=>{rows.push(['','Dluh: '+d.nm,'splátka',x.d||'',x.n||'',x.a]);}));
   // vklad vs. zhodnocení se rozlišuje, ať se v Excelu nesčítá dohromady
   S.investments.forEach(v=>(v.hist||[]).forEach(x=>{const p=S.periods.find(q=>q.id===x.pid);
