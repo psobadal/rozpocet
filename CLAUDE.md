@@ -613,6 +613,15 @@ S.tax            — daň z úroků (výchozí 15 %)
   `newPeriodModal`. Dřív šlo jen přes Nastavení a banner po konci
   cyklu a Patrik ho musel hledat.
 
+- **Worker osobní appky slouží i Můj budget** (od 5. 10. 2026). Patrikův
+  účet v Můj budget si z něj bere kurzy akcií (`/px`, `/find`) s jeho
+  připojovacím kódem, viz `mujrozpocet/CLAUDE.md`. Worker proto nesmí
+  zúžit CORS jen na github.io a dokud Patrik akcie v Můj budget používá,
+  nesmí se zrušit.
+- **Pod koláčem na Výdajích je „z úspor vybráno X"** (`vybranoZUspor`):
+  koláč počítá odeslání na spoření jako výdaj a o penězích vrácených
+  Přesunem neví. Čísla se nemění, je to jen vysvětlení.
+
 ## Nástrahy při editaci/testování
 
 - **Read/Grep tool občas zobrazí `/` jako `\`** ve výstupu (vizuální artefakt,

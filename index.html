@@ -1744,7 +1744,7 @@ function vVydaje(p){
   const rows=p.cats.map((c,i)=>({c,i,a:catActualDisplay(c,p.id),pl:catPlan(c)}));
   let kk=0;rows.forEach(r=>{r.k=r.a>0?kk++:-1;});   // pořadí výseče v koláči (jen kategorie s výdaji)
   const tot=sumActualDisplay(p),plan=sumPlan(p);
-  let h=vydajeKolac(rows,tot,plan);
+  let h=vydajeKolac(rows,tot,plan,vybranoZUspor(p.id));
   h+=`<div style="text-align:center;margin-bottom:14px"><button class="btn" onclick="plansModal()">${ic('list',15)} Měsíční plány</button></div>`;
   h+=`<div class="card catlist">`+rows.map(catRow).join('')+`</div>`;
   h+=`<button class="adddash" onclick="catModal()">${ic('plus',16)} Přidat kategorii</button>`;
@@ -1755,7 +1755,7 @@ function vVydaje(p){
    pod koláčem kolik z plánu zbývá (nebo o kolik je přes). Najetí na
    výseč (nebo na řádek kategorie pod grafem) ukáže uprostřed její
    částku a podíl, viz donutSeg. */
-function vydajeKolac(rows,tot,plan){
+function vydajeKolac(rows,tot,plan,vyb){
   const R=57,C=2*Math.PI*R,s=rows.filter(r=>r.a>0),id='dn-vyd';
   let off=0;
   const vysece=tot>0?s.map((r,k)=>{const len=r.a/tot*C,mez=s.length>1?2:0;
@@ -1774,8 +1774,16 @@ function vydajeKolac(rows,tot,plan){
       <div class="vk-mid dmid">${def}</div>
     </div>
     ${plan>0?`<div class="vk-zb ${zb<0?'neg':'pos'}" data-pod="${id}" aria-live="polite">${zb<0?'přes plán o '+fm(-zb):'zbývá '+fm(zb)+' do výplaty'}</div>`:''}
+    ${vyb>0?`<div class="vk-zb nic" style="margin-top:2px;font-weight:400">z úspor vybráno ${fm(vyb)}, zbývá volných to připočítává</div>`:''}
   </div>`;
 }
+/* Kolik se v cyklu vzalo zpátky z investic a obálek (Přesun na účet).
+   Koláč počítá odeslání na spoření jako výdaj a o vrácených penězích nic
+   neví, takže by to vypadalo, že tisícovka vydaná ze spoření je utracená
+   dvakrát. „Zbývá volných" ji přičte, tady se to aspoň řekne (Patrik
+   5. 10. 2026). */
+const vybranoZUspor=pid=>S.investments.reduce((s,i)=>s+(i.hist||[]).filter(h=>h.pid===pid&&h.a<0&&!h.src&&!h.k).reduce((ss,h)=>ss-h.a,0),0)
+  +S.envelopes.reduce((s,e)=>s+(e.hist||[]).filter(h=>h.pid===pid&&h.zpet&&!h.src).reduce((ss,h)=>ss+h.a,0),0);
 /* Donut: najetí myší nebo focus klávesnicí na výseč ukáže uprostřed její
    název, částku a podíl a ostatní výseče ztlumí. Na dotykovém displeji
    to udělá klepnutí (a druhé klepnutí vrátí souhrn), protože tam žádné
